@@ -7,16 +7,45 @@ import { supabase } from './supabase';
 
 const ADMIN_UID = import.meta.env.VITE_ADMIN_UID;
 
-// --- CUSTOM SLEEK MARKER ---
+// --- CUSTOM SLEEK MARKER WITH PULSE ---
 const sleekIcon = (isDark) => L.divIcon({
   className: 'custom-marker',
   html: `
-    <div style="position: relative; display: flex; align-items: center; justify-content: center;">
-      <div style="position: absolute; width: 24px; height: 24px; background: rgba(16, 185, 129, 0.2); border-radius: 50%; animation: pulse 2s infinite;"></div>
-      <div style="width: 10px; height: 10px; background: #10b981; border: 2px solid ${isDark ? '#09090b' : '#fff'}; border-radius: 50%; box-shadow: 0 0 10px rgba(16, 185, 129, 0.8);"></div>
+    <div class="marker-container">
+      <div class="pulse-ring"></div>
+      <div class="marker-core" style="border-color: ${isDark ? '#09090b' : '#fff'};"></div>
     </div>
     <style>
-      @keyframes pulse { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+      .marker-container {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+      }
+      .pulse-ring {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: rgba(16, 185, 129, 0.4);
+        border-radius: 50%;
+        animation: marker-pulse 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+      }
+      .marker-core {
+        position: relative;
+        width: 10px;
+        height: 10px;
+        background: #10b981;
+        border: 2px solid;
+        border-radius: 50%;
+        box-shadow: 0 0 12px rgba(16, 185, 129, 0.8);
+        z-index: 2;
+      }
+      @keyframes marker-pulse {
+        0% { transform: scale(0.6); opacity: 0.8; }
+        100% { transform: scale(2.2); opacity: 0; }
+      }
     </style>
   `,
   iconSize: [24, 24],
@@ -110,7 +139,6 @@ export default function App() {
     glass: isDark ? 'bg-white/[0.02] backdrop-blur-xl border-white/[0.05]' : 'bg-white/40 backdrop-blur-xl border-white/20'
   };
 
-  // --- THEME SWITCHER COMPONENT (Global) ---
   const ThemeToggle = () => (
     <button 
       ref={themeMag.ref} onMouseMove={themeMag.handleMouseMove} onMouseLeave={themeMag.reset}
@@ -147,6 +175,8 @@ export default function App() {
       <ThemeToggle />
       <style>{`
         .leaflet-control-attribution, .leaflet-control-container img[src*="apple"], img[src*="apple-logo"] { display: none !important; }
+        /* Fixes the white bar glitch by forcing the background of the container early */
+        .leaflet-container { background: ${isDark ? '#09090b' : '#f0f4f2'} !important; }
         .mist-overlay {
           background: radial-gradient(circle at top, ${isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)'} 0%, transparent 60%);
         }
@@ -216,7 +246,17 @@ export default function App() {
 
         {activeTab === 'explore' && (
           <div className={`${colors.card} rounded-[3rem] p-2 shadow-2xl border h-[520px] overflow-hidden backdrop-blur-md`}>
-            <MapContainer key={`${activeTab}-${theme}`} center={mapCenter} zoom={12} zoomControl={false} className="h-full w-full rounded-[2.5rem] z-0">
+            <MapContainer 
+              key={`${activeTab}-${theme}`} 
+              center={mapCenter} 
+              zoom={12} 
+              zoomControl={false} 
+              className="h-full w-full rounded-[2.5rem] z-0"
+              whenReady={(mapInstance) => {
+                // Fix for the white bar/sizing bug
+                setTimeout(() => mapInstance.target.invalidateSize(), 100);
+              }}
+            >
               <TileLayer url={isDark ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"} />
               {Object.values(spots).map(spot => (
                 <Marker key={spot.id} position={[spot.lat, spot.lng]} icon={sleekIcon(isDark)}>
@@ -227,7 +267,6 @@ export default function App() {
           </div>
         )}
 
-        {/* --- IDENTITY OVERRIDE (FROSTED) --- */}
         {activeTab === 'profile' && (
            <div className={`${colors.glass} p-10 rounded-[3rem] border space-y-8 animate-in fade-in zoom-in-95 duration-300`}>
               <div className="space-y-3">
@@ -243,7 +282,6 @@ export default function App() {
            </div>
         )}
 
-        {/* --- NODE OVERRIDE (FROSTED) --- */}
         {activeTab === 'dev' && isAdmin && (
            <div className={`${colors.glass} p-8 rounded-[3rem] border space-y-6 animate-in fade-in zoom-in-95 duration-300`}>
               <h2 className="font-bold uppercase flex items-center gap-2 text-[10px] tracking-widest text-emerald-500">
