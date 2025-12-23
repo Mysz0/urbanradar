@@ -108,7 +108,7 @@ export default function App() {
     if (userLocation && Object.values(spots).length > 0) {
       const nearby = Object.values(spots).some(spot => {
         const dist = getDistance(userLocation.lat, userLocation.lng, spot.lat, spot.lng);
-        return dist < 1.0; // 1km threshold
+        return dist < 0.25; // 250m threshold
       });
       setIsNearSpot(nearby);
     }
