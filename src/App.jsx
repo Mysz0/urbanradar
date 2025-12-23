@@ -55,12 +55,10 @@ export default function App() {
 
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
 
-  // FIXED LOGOUT: Await the signout before redirecting
+  // FIXED LOGOUT
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (!error) {
-      window.location.href = '/';
-    }
+    await supabase.auth.signOut();
+    window.location.href = '/';
   };
 
   const claimSpot = async (spotId) => {
@@ -84,90 +82,90 @@ export default function App() {
 
   const totalPoints = unlockedSpots.reduce((sum, id) => sum + (spots[id]?.points || 0), 0);
 
-  // --- REFINED PALETTE (Restored Dark + Enhanced Light) ---
+  // --- REFINED COLOR PALETTE ---
   const colors = {
-    bg: isDark ? 'bg-zinc-950' : 'bg-[#f0f9f6]', // Light mode gets a very soft mint tint
-    card: isDark ? 'bg-zinc-900 border-zinc-800 shadow-black' : 'bg-white border-emerald-100 shadow-emerald-200/50',
-    header: isDark ? 'from-zinc-900 to-zinc-950 border-emerald-500/10' : 'from-emerald-500 to-emerald-600 border-emerald-400',
+    bg: isDark ? 'bg-zinc-950' : 'bg-[#f4f7f5]', // Very soft mint light mode
+    card: isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-emerald-100 shadow-emerald-900/5',
+    header: isDark ? 'from-zinc-900 to-zinc-950 border-zinc-800' : 'from-emerald-500 to-emerald-600 border-emerald-400',
     text: isDark ? 'text-zinc-100' : 'text-slate-900',
-    muted: isDark ? 'text-zinc-500' : 'text-emerald-600/60',
-    nav: isDark ? 'bg-zinc-900/90 border-zinc-800' : 'bg-white/90 border-emerald-200',
-    adminPanel: isDark ? 'bg-zinc-900 border-emerald-500/30' : 'bg-emerald-100 border-emerald-300',
+    muted: isDark ? 'text-zinc-500' : 'text-emerald-700/50',
+    nav: isDark ? 'bg-zinc-900/95 border-zinc-800' : 'bg-white/95 border-emerald-200',
+    adminPanel: isDark ? 'bg-zinc-900 border-emerald-500/30' : 'bg-emerald-50 border-emerald-200',
   };
 
   if (loading) return (
     <div className={`min-h-screen ${colors.bg} flex items-center justify-center`}>
-      <div className="w-8 h-8 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
+      <div className="w-10 h-10 border-4 border-emerald-500/10 border-t-emerald-500 rounded-full animate-spin" />
     </div>
   );
 
   if (!user) return (
     <div className={`min-h-screen flex flex-col items-center justify-center ${colors.bg} p-6`}>
-      <div className="w-20 h-20 bg-emerald-500 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-emerald-500/30">
+      <div className="w-20 h-20 bg-emerald-500 rounded-3xl flex items-center justify-center mb-6 shadow-xl">
         <MapPin size={40} className="text-white" />
       </div>
-      <h1 className={`text-5xl font-black mb-8 italic tracking-tighter uppercase ${colors.text}`}>SPOT<span className="text-emerald-500">HUNT</span></h1>
+      <h1 className={`text-5xl font-black mb-10 italic uppercase ${colors.text}`}>SPOT<span className="text-emerald-500">HUNT</span></h1>
       <button onClick={() => supabase.auth.signInWithOAuth({ provider: 'github' })} 
-        className="bg-emerald-500 text-white px-10 py-4 rounded-2xl font-black shadow-lg shadow-emerald-500/30 hover:scale-105 transition-all">
+        className="bg-emerald-500 text-white px-10 py-4 rounded-2xl font-black shadow-lg">
         LOGIN
       </button>
     </div>
   );
 
   return (
-    <div className={`min-h-screen ${colors.bg} ${colors.text} pb-32 font-sans transition-colors duration-500`}>
+    <div className={`min-h-screen ${colors.bg} ${colors.text} pb-36 transition-colors duration-500`}>
       
       {/* HEADER */}
-      <header className={`bg-gradient-to-b ${colors.header} p-8 pt-12 pb-20 rounded-b-[2.5rem] border-b shadow-lg relative`}>
+      <header className={`bg-gradient-to-b ${colors.header} p-10 pt-16 pb-24 rounded-b-[3rem] border-b shadow-2xl relative overflow-hidden`}>
         <div className="max-w-md mx-auto flex justify-between items-center relative z-10">
           <div>
-            <h1 className={`text-2xl font-black uppercase tracking-tight ${isDark ? 'text-emerald-400' : 'text-white'}`}>
+            <h1 className={`text-2xl font-black uppercase tracking-tighter ${isDark ? 'text-emerald-500' : 'text-white'}`}>
               @{username || 'HUNTER'} {isAdmin && "👑"}
             </h1>
-            <p className={`${isDark ? 'text-zinc-500' : 'text-emerald-100/70'} text-[10px] font-mono font-bold mt-0.5`}>
+            <p className={`${isDark ? 'text-zinc-500' : 'text-emerald-100'} text-[10px] font-mono font-bold tracking-widest mt-1`}>
               {user.email}
             </p>
           </div>
           <div className="flex gap-2">
-            <button onClick={toggleTheme} className={`p-2.5 rounded-xl border transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-emerald-400' : 'bg-white/20 border-white/30 text-white'}`}>
+            <button onClick={toggleTheme} className={`p-3 rounded-xl border transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-emerald-400' : 'bg-white/20 border-white/30 text-white'}`}>
               {isDark ? <Sun size={18}/> : <Moon size={18}/>}
             </button>
-            <button onClick={handleLogout} className={`p-2.5 rounded-xl border transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500' : 'bg-white/20 border-white/30 text-white'}`}>
+            <button onClick={handleLogout} className={`p-3 rounded-xl border transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500' : 'bg-white/20 border-white/30 text-white'}`}>
               <LogOut size={18}/>
             </button>
           </div>
         </div>
       </header>
 
-      <div className="max-w-md mx-auto px-6 -mt-10 relative z-20">
+      <div className="max-w-md mx-auto px-6 -mt-12 relative z-20">
         
         {activeTab === 'home' && (
-          <div className="space-y-6">
-            <div className={`${colors.card} rounded-[2rem] p-6 shadow-xl border flex justify-between items-center transition-all`}>
+          <div className="space-y-8">
+            <div className={`${colors.card} rounded-[2.5rem] p-8 shadow-xl border flex justify-between items-center`}>
               <div>
-                <p className="text-5xl font-black tracking-tighter">{totalPoints}</p>
-                <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mt-1">XP Score</p>
+                <p className="text-5xl font-black tracking-tighter leading-none">{totalPoints}</p>
+                <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mt-2">XP Score</p>
               </div>
               <div className="text-right">
                 <p className="text-2xl font-black leading-none">{unlockedSpots.length}</p>
-                <p className={`${colors.muted} text-[9px] font-black uppercase mt-1`}>Found</p>
+                <p className={`${colors.muted} text-[10px] font-black uppercase mt-1`}>Found</p>
               </div>
             </div>
 
-            <div className="space-y-3">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500 px-1 opacity-70">Inventory</h2>
+            <div className="space-y-4">
+              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-500 px-2">Achievements</h2>
               {unlockedSpots.length === 0 ? (
-                <div className={`${colors.card} rounded-[1.5rem] p-10 text-center border-2 border-dashed border-emerald-500/20`}>
-                  <p className={`${colors.muted} font-bold text-[10px] uppercase`}>Empty</p>
+                <div className={`${colors.card} rounded-[2rem] p-12 text-center border-2 border-dashed border-emerald-500/10`}>
+                  <p className={`${colors.muted} font-bold text-xs uppercase`}>Inventory Empty</p>
                 </div>
               ) : (
                 unlockedSpots.map(id => (
-                  <div key={id} className={`${colors.card} p-4 rounded-2xl flex items-center justify-between border shadow-sm`}>
+                  <div key={id} className={`${colors.card} p-5 rounded-[2rem] flex items-center justify-between border shadow-sm group hover:border-emerald-500/50 transition-all`}>
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-emerald-500 text-white rounded-xl flex items-center justify-center font-black">✓</div>
+                      <div className="w-11 h-11 bg-emerald-500 text-white rounded-2xl flex items-center justify-center font-black">✓</div>
                       <div>
-                        <p className="font-black text-xs uppercase tracking-tight">{spots[id]?.name}</p>
-                        <p className="text-[9px] text-emerald-500 font-bold">+{spots[id]?.points} XP</p>
+                        <p className="font-black text-sm uppercase tracking-tight">{spots[id]?.name}</p>
+                        <p className="text-[10px] text-emerald-500 font-bold">+{spots[id]?.points} XP</p>
                       </div>
                     </div>
                   </div>
@@ -178,12 +176,12 @@ export default function App() {
         )}
 
         {activeTab === 'explore' && (
-          <div className={`${colors.card} rounded-[2rem] p-2 shadow-2xl border h-[420px] overflow-hidden`}>
-            <MapContainer key={`${activeTab}-${theme}`} center={mapCenter} zoom={12} className="h-full w-full rounded-[1.6rem]">
+          <div className={`${colors.card} rounded-[2.5rem] p-2 shadow-2xl border h-[480px] overflow-hidden`}>
+            <MapContainer key={`${activeTab}-${theme}`} center={mapCenter} zoom={12} className="h-full w-full rounded-[1.8rem]">
               <TileLayer url={isDark ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"} />
               {Object.values(spots).map(spot => (
                 <Marker key={spot.id} position={[spot.lat, spot.lng]}>
-                  <Popup><span className="font-black uppercase text-[10px]">{spot.name}</span></Popup>
+                  <Popup><span className="font-black uppercase text-xs">{spot.name}</span></Popup>
                 </Marker>
               ))}
             </MapContainer>
@@ -191,33 +189,33 @@ export default function App() {
         )}
 
         {activeTab === 'profile' && (
-           <div className={`${colors.card} p-8 rounded-[2rem] shadow-xl border space-y-4`}>
-              <div className="space-y-1">
-                <label className="text-[9px] font-black text-emerald-500 uppercase tracking-widest ml-1">Identity</label>
+           <div className={`${colors.card} p-10 rounded-[2.5rem] shadow-xl border space-y-6`}>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest ml-1">Callsign</label>
                 <input type="text" value={tempUsername} onChange={(e) => setTempUsername(e.target.value)}
-                  className={`w-full ${isDark ? 'bg-zinc-950 border-zinc-800' : 'bg-emerald-50/50 border-emerald-200'} border-2 rounded-xl py-3 px-4 font-black outline-none focus:border-emerald-500 transition-all text-sm`}
+                  className={`w-full ${isDark ? 'bg-zinc-950 border-zinc-800' : 'bg-emerald-50/50 border-emerald-100'} border-2 rounded-2xl py-4 px-6 font-black outline-none focus:border-emerald-500 transition-all text-sm`}
                 />
               </div>
-              <button onClick={saveUsername} className="w-full bg-emerald-500 text-white py-4 rounded-xl font-black shadow-lg shadow-emerald-500/20 text-sm">SAVE</button>
+              <button onClick={saveUsername} className="w-full bg-emerald-500 text-white py-4 rounded-2xl font-black shadow-lg shadow-emerald-500/20 active:scale-95 transition-all">SAVE IDENTITY</button>
            </div>
         )}
 
         {activeTab === 'dev' && isAdmin && (
-           <div className={`${colors.adminPanel} p-6 rounded-[2rem] border-2 space-y-5 shadow-xl`}>
-              <h2 className={`font-black uppercase italic flex items-center gap-2 text-xs tracking-widest ${isDark ? 'text-emerald-400' : 'text-emerald-700'}`}>
-                <Terminal size={16}/> SYSTEM_ADMIN
+           <div className={`${colors.adminPanel} p-8 rounded-[2.5rem] border-4 text-white space-y-6 shadow-xl`}>
+              <h2 className={`font-black uppercase italic flex items-center gap-2 tracking-widest ${isDark ? 'text-emerald-500' : 'text-emerald-800'}`}>
+                <Terminal size={18}/> SYSTEM_ADMIN
               </h2>
-              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+              <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
                 {Object.values(spots).map(spot => {
                   const isClaimed = unlockedSpots.includes(spot.id);
                   return (
-                    <div key={spot.id} className={`${isDark ? 'bg-zinc-950/40' : 'bg-white/80'} p-3 rounded-xl border ${isDark ? 'border-white/5' : 'border-emerald-200'} flex justify-between items-center`}>
-                      <span className={`text-[10px] font-black uppercase ${isDark ? 'text-zinc-300' : 'text-emerald-900'}`}>{spot.name}</span>
-                      <div className="flex gap-1">
+                    <div key={spot.id} className={`${isDark ? 'bg-zinc-950/50' : 'bg-white/80 border-emerald-100'} p-4 rounded-3xl border flex justify-between items-center`}>
+                      <span className={`text-xs font-black uppercase tracking-tighter ${!isDark && 'text-emerald-950'}`}>{spot.name}</span>
+                      <div className="flex gap-2">
                         {isClaimed ? (
-                          <button onClick={() => removeSpot(spot.id)} className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-sm"><Trash2 size={12}/></button>
+                          <button onClick={() => removeSpot(spot.id)} className="p-2.5 bg-red-500 text-white rounded-xl hover:scale-110 transition-all"><Trash2 size={14}/></button>
                         ) : (
-                          <button onClick={() => claimSpot(spot.id)} className="p-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors shadow-sm"><Zap size={12}/></button>
+                          <button onClick={() => claimSpot(spot.id)} className="p-2.5 bg-emerald-500 text-white rounded-xl hover:scale-110 transition-all"><Zap size={14}/></button>
                         )}
                       </div>
                     </div>
@@ -228,16 +226,16 @@ export default function App() {
         )}
       </div>
 
-      {/* SLIM CENTERED NAV BAR */}
-      <nav className={`fixed bottom-6 left-1/2 -translate-x-1/2 w-[80%] max-w-[280px] ${colors.nav} backdrop-blur-md rounded-2xl p-1 shadow-2xl z-[9999] flex justify-between items-center border transition-all`}>
+      {/* FULL WIDTH SLIM NAV BAR */}
+      <nav className={`fixed bottom-8 left-8 right-8 ${colors.nav} backdrop-blur-md rounded-[2rem] p-1.5 shadow-2xl z-[9999] flex justify-around items-center border transition-all`}>
         {['home', 'explore', 'profile', 'dev'].map((tab) => (
           (tab !== 'dev' || isAdmin) && (
             <button key={tab} onClick={() => setActiveTab(tab)} 
-              className={`p-2.5 px-3.5 rounded-xl transition-all relative ${activeTab === tab ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20' : colors.muted + ' hover:text-emerald-500'}`}>
-              {tab === 'home' && <Home size={18}/>}
-              {tab === 'explore' && <Compass size={18}/>}
-              {tab === 'profile' && <User size={18}/>}
-              {tab === 'dev' && <Terminal size={18}/>}
+              className={`p-3.5 px-6 rounded-[1.5rem] transition-all relative ${activeTab === tab ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20' : colors.muted + ' hover:text-emerald-500'}`}>
+              {tab === 'home' && <Home size={20}/>}
+              {tab === 'explore' && <Compass size={20}/>}
+              {tab === 'profile' && <User size={20}/>}
+              {tab === 'dev' && <Terminal size={20}/>}
             </button>
           )
         ))}
