@@ -36,7 +36,7 @@ body {
   display: none !important;
 }
 
-/* 3. Add the Fake Apple Maps Watermark */
+/* 3. Add the Fake Apple Maps Watermark 
 .leaflet-container::after {
   content: " Maps";
   position: absolute;
@@ -54,7 +54,7 @@ body {
   pointer-events: none;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
-
+*/
 /* 4. Fix for the default markers looking weird */
 .leaflet-marker-icon {
   border: none !important;
