@@ -134,33 +134,40 @@ export default function App() {
         )}
 
         {activeTab === 'explore' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-[40px] p-2 shadow-2xl border border-slate-100 h-[450px] relative overflow-hidden">
-              <MapContainer center={mapCenter} zoom={12} scrollWheelZoom={true} style={{ height: '100%', width: '100%', borderRadius: '32px' }}>
-                <TileLayer
-                  url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                  attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                />
-                {Object.values(SPOTS).map(spot => (
-                  <Marker key={spot.id} position={[spot.lat, spot.lng]}>
-                    <Popup className="custom-popup">
-                      <div className="p-1">
-                        <p className="font-black text-slate-900 uppercase text-xs mb-1">{spot.name}</p>
-                        <p className="font-bold text-emerald-500 text-[10px] uppercase">
-                          {unlockedSpots.includes(spot.id) ? 'ALREADY CLAIMED' : `${spot.points} POINTS AVAILABLE`}
-                        </p>
-                      </div>
-                    </Popup>
-                  </Marker>
-                ))}
-              </MapContainer>
-            </div>
-            <div className="bg-slate-900 p-6 rounded-3xl text-white border-l-4 border-emerald-500">
-              <p className="font-black uppercase italic tracking-tighter">Satellite Feed Active</p>
-              <p className="text-xs text-slate-400 mt-1">Markers represent verified NFC tag locations.</p>
-            </div>
-          </div>
-        )}
+  <div className="space-y-6">
+    {/* Notice the height is set here (h-[450px]) and we use h-full inside */}
+    <div className="bg-white rounded-[40px] p-2 shadow-2xl border border-slate-100 h-[450px] relative overflow-hidden">
+      <MapContainer 
+        key={activeTab} // THIS IS THE MAGIC FIX FOR VISIBILITY
+        center={mapCenter} 
+        zoom={12} 
+        scrollWheelZoom={true} 
+        className="h-full w-full rounded-[32px]"
+      >
+        <TileLayer
+          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" // CLEAN APPLE LOOK
+          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+        />
+        {Object.values(SPOTS).map(spot => (
+          <Marker key={spot.id} position={[spot.lat, spot.lng]}>
+            <Popup className="custom-popup">
+              <div className="p-1">
+                <p className="font-black text-slate-900 uppercase text-xs mb-1">{spot.name}</p>
+                <p className="font-bold text-emerald-500 text-[10px] uppercase">
+                  {unlockedSpots.includes(spot.id) ? 'ALREADY CLAIMED' : `${spot.points} POINTS AVAILABLE`}
+                </p>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+      </MapContainer>
+    </div>
+    <div className="bg-slate-900 p-6 rounded-3xl text-white border-l-4 border-emerald-500 shadow-xl">
+      <p className="font-black uppercase italic tracking-tighter">Satellite Feed Active</p>
+      <p className="text-xs text-slate-400 mt-1">Markers represent verified NFC tag locations.</p>
+    </div>
+  </div>
+)}
 
         {activeTab === 'profile' && (
           <div className="bg-white p-8 rounded-[40px] shadow-xl border border-slate-100 space-y-6">
