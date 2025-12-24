@@ -73,10 +73,12 @@ export default function App() {
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
+      
+      // Update Top Status
       setIsAtTop(currentScrollY < 15);
 
-      // Instant shrink trigger
-      if (currentScrollY > lastScrollY && currentScrollY > 10) {
+      // Instant Shrink Trigger (iOS 26 Safari Style)
+      if (currentScrollY > lastScrollY && currentScrollY > 5) {
         setIsNavbarShrunk(true);
       } else if (currentScrollY < lastScrollY) {
         setIsNavbarShrunk(false);
@@ -189,14 +191,21 @@ export default function App() {
         </div>
       )}
 
-      {/* THEME TOGGLE - ALIGNED HORIZONTALLY TO LOGOUT */}
+      {/* THEME TOGGLE: Always visible. When isAtTop, it aligns exactly left of Logout button */}
       <button 
-        ref={themeMag.ref} onMouseMove={themeMag.handleMouseMove} onMouseLeave={themeMag.reset}
-        style={{ transform: `translate(${themeMag.position.x}px, ${themeMag.position.y}px)` }}
+        ref={themeMag.ref} 
+        onMouseMove={themeMag.handleMouseMove} 
+        onMouseLeave={themeMag.reset}
+        style={{ 
+          transform: `translate(${themeMag.position.x}px, ${themeMag.position.y}px)`,
+          transition: themeMag.position.x === 0 ? 'transform 0.5s cubic-bezier(0.2, 0, 0.2, 1)' : 'none'
+        }}
         onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')} 
-        className={`fixed top-[4.2rem] right-[5.5rem] p-3 rounded-2xl border z-[10000] transition-all ${isDark ? 'bg-zinc-900/80 border-white/10 text-emerald-400' : 'bg-white/80 border-emerald-200 text-emerald-600 shadow-lg'}`}
+        className={`fixed p-3 rounded-2xl border z-[10000] transition-all duration-300 ${
+          isAtTop ? 'top-[3.05rem] right-[5.5rem]' : 'top-6 right-6'
+        } ${isDark ? 'bg-zinc-900/80 border-white/10 text-emerald-400' : 'bg-white/80 border-emerald-200 text-emerald-600 shadow-sm'}`}
       >
-        {isDark ? <Sun size={16}/> : <Moon size={16}/>}
+        {isDark ? <Sun size={18}/> : <Moon size={18}/>}
       </button>
 
       <Header isAdmin={isAdmin} username={username} email={user?.email} showEmail={showEmail} isDark={isDark} logoutMag={logoutMag} handleLogout={handleLogout} />
