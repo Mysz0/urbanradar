@@ -1,7 +1,7 @@
 import React from 'react';
 import { Radar, Flame, CheckCircle2, MapPin, Zap, Lock } from 'lucide-react';
 import StatCard from '../Shared/StatCard';
-import { getDistance } from '../utils/geoUtils'; // Needed to calculate the live distance string
+import { getDistance } from '../../utils/geoUtils'; // Needed to calculate the live distance string
 
 export default function HomeTab({ 
   isNearSpot, 
