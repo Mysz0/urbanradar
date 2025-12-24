@@ -22,7 +22,6 @@ export default function App() {
   // --- STATE ---
   const [spots, setSpots] = useState({});
   const [unlockedSpots, setUnlockedSpots] = useState([]);
-  const [visitData, setVisitData] = useState({}); 
   const [user, setUser] = useState(null);
   const [username, setUsername] = useState('');
   const [tempUsername, setTempUsername] = useState('');
@@ -34,19 +33,24 @@ export default function App() {
   const [isNearSpot, setIsNearSpot] = useState(false);
   const [mapCenter] = useState([40.730610, -73.935242]);
   const [leaderboard, setLeaderboard] = useState([]);
+  const [isAtTop, setIsAtTop] = useState(true);
 
+  // NEW: Cooldown and Custom Notification State
   const [lastChange, setLastChange] = useState(null);
   const [statusMsg, setStatusMsg] = useState({ text: '', type: '' }); 
-  const [detectionRadius, setDetectionRadius] = useState(0.25); 
 
+  // --- HELPERS ---
   const isAdmin = user?.id === ADMIN_UID;
   const isDark = theme === 'dark';
+  const themeMag = useMagnetic();
   const logoutMag = useMagnetic();
 
   const colors = {
     bg: isDark ? 'bg-[#09090b]' : 'bg-[#f0f4f2]',
     card: isDark ? 'bg-zinc-900/40 border-white/[0.03] shadow-2xl' : 'bg-white/70 border-emerald-200/50 shadow-md shadow-emerald-900/5',
+    nav: isDark ? 'bg-zinc-900/80 border-white/[0.05]' : 'bg-white/95 border-emerald-200/60',
     text: isDark ? 'text-zinc-100' : 'text-zinc-900',
+    glass: isDark ? 'bg-white/[0.02] backdrop-blur-xl border-white/[0.05]' : 'bg-white/40 backdrop-blur-xl border-white/20'
   };
 
   const showToast = (text, type = 'success') => {
@@ -54,175 +58,214 @@ export default function App() {
     setTimeout(() => setStatusMsg({ text: '', type: '' }), 4000);
   };
 
-  // --- ACTIONS ---
-  const resetMyTimer = async () => {
-    const { error } = await supabase.from('profiles').update({ last_username_change: null }).eq('id', user.id);
-    if (!error) { setLastChange(null); showToast("Cooldown nuked."); }
-  };
-
-  const updateRadius = async (newRadius) => {
-    const { error } = await supabase.from('profiles').update({ custom_radius: newRadius }).eq('id', user.id);
-    if (!error) { setDetectionRadius(newRadius); showToast(`Radius set to ${newRadius * 1000}m`); }
-  };
-
-  const claimSpot = async (spotId) => {
-    const now = new Date();
-    const today = now.toISOString().split('T')[0];
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-    const spot = spots[spotId];
-    if (!spot) return;
-
-    // CRASH PROTECTION: Default to empty object if visitData[spotId] doesn't exist
-    const currentData = (visitData && visitData[spotId]) ? visitData[spotId] : { streak: 0, lastVisit: null, totalEarned: 0 };
-
-    if (currentData.lastVisit === today) {
-      showToast("Already checked in today!", "error");
-      return;
-    }
-
-    let newStreak = 1;
-    if (currentData.lastVisit === yesterdayStr) {
-      newStreak = (currentData.streak || 0) + 1;
-    }
-
-    const multiplier = 1 + (newStreak * 0.1);
-    const earnedThisTime = Math.round(spot.points * multiplier);
-    const newTotalEarned = (currentData.totalEarned || 0) + earnedThisTime;
-
-    const updatedVisitData = {
-      ...(visitData || {}),
-      [spotId]: { streak: newStreak, lastVisit: today, totalEarned: newTotalEarned }
-    };
-
-    const { error } = await supabase.from('profiles').update({ 
-      visit_data: updatedVisitData,
-      unlocked_spots: Array.from(new Set([...(unlockedSpots || []), spotId]))
-    }).eq('id', user.id);
-
-    if (!error) {
-      setVisitData(updatedVisitData);
-      setUnlockedSpots(Object.keys(updatedVisitData));
-      showToast(`Checked in! Streak: ${newStreak}`);
-      fetchLeaderboard(spots);
-    }
-  };
-
-  const removeSpot = async (spotId) => {
-    const updatedVisitData = { ...(visitData || {}) };
-    delete updatedVisitData[spotId];
-    const newUnlocked = (unlockedSpots || []).filter(id => id !== spotId);
-    
-    const { error } = await supabase.from('profiles').update({ 
-      visit_data: updatedVisitData, unlocked_spots: newUnlocked 
-    }).eq('id', user.id);
-
-    if (!error) {
-      setVisitData(updatedVisitData);
-      setUnlockedSpots(newUnlocked);
-      fetchLeaderboard(spots);
-    }
-  };
-
   // --- SYSTEM EFFECTS ---
   useEffect(() => {
     const root = window.document.documentElement;
     isDark ? root.classList.add('dark') : root.classList.remove('dark');
+    root.style.colorScheme = theme;
     localStorage.setItem('theme', theme);
   }, [theme, isDark]);
 
   useEffect(() => {
+    const handleScroll = () => {
+      setIsAtTop(window.scrollY < 100);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
     const initApp = async () => {
       const { data: dbSpots } = await supabase.from('spots').select('*');
-      const spotsObj = dbSpots ? dbSpots.reduce((acc, s) => ({ ...acc, [s.id]: s }), {}) : {};
-      setSpots(spotsObj);
-      
+      if (dbSpots) {
+        const spotsObj = dbSpots.reduce((acc, s) => ({ ...acc, [s.id]: s }), {});
+        setSpots(spotsObj);
+        fetchLeaderboard(spotsObj);
+      }
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         setUser(session.user);
         const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
         if (data) {
           setUnlockedSpots(data.unlocked_spots || []);
-          setVisitData(data.visit_data || {});
           setUsername(data.username || '');
           setTempUsername(data.username || '');
           setShowEmail(data.show_email ?? false);
-          setLastChange(data.last_username_change);
-          setDetectionRadius(data.custom_radius || 0.25);
-          fetchLeaderboard(spotsObj);
+          setLastChange(data.last_username_change); // Load the timestamp
         }
       }
       setLoading(false);
     };
     initApp();
-    navigator.geolocation.watchPosition((pos) => {
+    const watchId = navigator.geolocation.watchPosition((pos) => {
       setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
     }, null, { enableHighAccuracy: true });
+    return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
-  const fetchLeaderboard = async (currentSpots) => {
-    const { data: profiles } = await supabase.from('profiles').select('username, visit_data, unlocked_spots');
-    if (profiles) {
-      const ranked = profiles.map(p => {
-        const vData = p.visit_data || {};
-        // Use visit_data if available, otherwise fallback to basic point sum for legacy users
-        const score = Object.keys(vData).length > 0 
-          ? Object.values(vData).reduce((sum, item) => sum + (item?.totalEarned || 0), 0)
-          : (p.unlocked_spots || []).reduce((sum, id) => sum + (currentSpots[id]?.points || 0), 0);
+  useEffect(() => {
+    if (userLocation && Object.values(spots).length > 0) {
+      const nearby = Object.values(spots).some(spot => 
+        getDistance(userLocation.lat, userLocation.lng, spot.lat, spot.lng) < 0.25
+      );
+      setIsNearSpot(nearby);
+    }
+  }, [userLocation, spots]);
 
-        return {
-          username: p.username || 'Anonymous',
-          score: score,
-          found: (p.unlocked_spots || []).length
-        };
-      }).sort((a, b) => b.score - a.score);
+  const fetchLeaderboard = async (currentSpots) => {
+    const { data: profiles } = await supabase.from('profiles').select('username, unlocked_spots');
+    if (profiles) {
+      const ranked = profiles.map(p => ({
+        username: p.username || 'Anonymous',
+        score: (p.unlocked_spots || []).reduce((sum, id) => sum + (currentSpots[id]?.points || 0), 0),
+        found: (p.unlocked_spots || []).length
+      })).sort((a, b) => b.score - a.score);
       setLeaderboard(ranked);
     }
   };
 
-  // CRASH PROTECTION: Total points calculation
-  const totalPoints = (visitData && Object.keys(visitData).length > 0)
-    ? Object.values(visitData).reduce((sum, item) => sum + (item?.totalEarned || 0), 0)
-    : (unlockedSpots || []).reduce((sum, id) => sum + (spots[id]?.points || 0), 0);
+  const handleLogout = async () => { await supabase.auth.signOut(); window.location.href = '/'; };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-zinc-950"><div className="w-6 h-6 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" /></div>;
+  const toggleEmailVisibility = async () => {
+    const newValue = !showEmail;
+    const { error } = await supabase.from('profiles').update({ show_email: newValue }).eq('id', user.id);
+    if (!error) setShowEmail(newValue);
+  };
+
+  const saveUsername = async () => {
+    const cleaned = tempUsername.replace('@', '').trim();
+    
+    // Check if name actually changed
+    if (cleaned === username) {
+      return showToast("Name is already set to this", "error");
+    }
+
+    // Check Cooldown (7 days)
+    if (lastChange) {
+      const last = new Date(lastChange).getTime();
+      const now = new Date().getTime();
+      const daysPassed = (now - last) / (1000 * 60 * 60 * 24);
+      
+      if (daysPassed < 7) {
+        const remaining = Math.ceil(7 - daysPassed);
+        return showToast(`Cooldown: ${remaining} days left`, "error");
+      }
+    }
+
+    const { error } = await supabase.from('profiles').upsert({ 
+      id: user.id, 
+      username: cleaned, 
+      show_email: showEmail,
+      last_username_change: new Date().toISOString() // Save update time
+    });
+
+    if (!error) { 
+      setUsername(cleaned); 
+      setLastChange(new Date().toISOString());
+      showToast("Identity updated successfully!"); 
+      fetchLeaderboard(spots); 
+    } else {
+      showToast("Something went wrong", "error");
+    }
+  };
+
+  const claimSpot = async (spotId) => {
+    const newUnlocked = [...unlockedSpots, spotId];
+    const { error } = await supabase.from('profiles').update({ unlocked_spots: newUnlocked }).eq('id', user.id);
+    if (!error) { setUnlockedSpots(newUnlocked); fetchLeaderboard(spots); }
+  };
+
+  const removeSpot = async (spotId) => {
+    const newUnlocked = unlockedSpots.filter(id => id !== spotId);
+    const { error } = await supabase.from('profiles').update({ unlocked_spots: newUnlocked }).eq('id', user.id);
+    if (!error) { setUnlockedSpots(newUnlocked); fetchLeaderboard(spots); }
+  };
+
+  const totalPoints = unlockedSpots.reduce((sum, id) => sum + (spots[id]?.points || 0), 0);
+
+  if (loading) return (
+    <div className={`min-h-screen ${colors.bg} flex items-center justify-center transition-colors duration-500`}>
+      <div className="w-6 h-6 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
+    </div>
+  );
+
+  if (!user) return (
+    <div className={`min-h-screen flex flex-col items-center justify-center ${colors.bg} p-6 relative transition-colors duration-500`}>
+      <button ref={themeMag.ref} onMouseMove={themeMag.handleMouseMove} onMouseLeave={themeMag.reset}
+        style={{ 
+          transform: `translate(${themeMag.position.x}px, ${themeMag.position.y}px)`,
+          transition: themeMag.position.x === 0 ? 'transform 0.5s cubic-bezier(0.23, 1, 0.32, 1)' : 'none'
+        }}
+        onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')} 
+        className={`fixed top-6 right-6 p-3.5 rounded-2xl border transition-all duration-300 ease-out active:scale-90 z-[10000] ${isDark ? 'bg-zinc-900/80 border-white/10 text-emerald-400' : 'bg-white/80 border-emerald-200 text-emerald-600 shadow-lg backdrop-blur-md'}`}>
+        {isDark ? <Sun size={18}/> : <Moon size={18}/>}
+      </button>
+
+      <div className="w-16 h-16 bg-emerald-500 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-emerald-500/20 rotate-3">
+        <MapPin size={32} className="text-white" />
+      </div>
+
+      <h1 className={`text-3xl font-bold mb-8 tracking-tight ${colors.text} transition-colors duration-500`}>
+        SpotHunt
+      </h1>
+
+      <button onClick={() => supabase.auth.signInWithOAuth({ provider: 'github' })} 
+        className="bg-emerald-500 text-white px-10 py-4 rounded-2xl font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all">
+        Sign in with GitHub
+      </button>
+    </div>
+  );
 
   return (
-    <div className={`min-h-screen ${colors.bg} ${colors.text} pb-36 transition-colors duration-500`}>
-      {/* HOPPING THEME BUTTON */}
-      <button 
+    <div className={`min-h-screen ${colors.bg} ${colors.text} pb-36 transition-colors duration-500 selection:bg-emerald-500/30`}>
+      
+      {/* CUSTOM TOAST NOTIFICATION */}
+      {statusMsg.text && (
+        <div className={`fixed top-24 left-1/2 -translate-x-1/2 z-[10001] flex items-center gap-2 px-6 py-3 rounded-2xl border backdrop-blur-xl shadow-2xl transition-all animate-in fade-in slide-in-from-top-4 duration-300 ${
+          statusMsg.type === 'error' 
+            ? 'bg-red-500/10 border-red-500/20 text-red-400' 
+            : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+        }`}>
+          {statusMsg.type === 'error' ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
+          <span className="text-sm font-bold tracking-tight">{statusMsg.text}</span>
+        </div>
+      )}
+
+      <button ref={themeMag.ref} onMouseMove={themeMag.handleMouseMove} onMouseLeave={themeMag.reset}
+        style={{ 
+          transform: `translate(${themeMag.position.x + (isAtTop ? -58 : 0)}px, ${themeMag.position.y}px)`,
+          transition: themeMag.position.x === 0 
+            ? 'transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)' 
+            : 'none'
+        }}
         onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')} 
-        className={`fixed top-16 right-10 p-3.5 rounded-2xl border active:scale-90 z-[10000] transition-all duration-500 
-          ${isDark ? 'bg-zinc-900 border-white/10 text-emerald-400' : 'bg-white border-emerald-200 shadow-lg'}
-          md:right-32 lg:right-40`}
+        className={`fixed top-16 right-10 p-3.5 rounded-2xl border active:scale-90 z-[10000] ${
+          isDark 
+          ? 'bg-zinc-900/80 border-white/10 text-emerald-400' 
+          : 'bg-white/80 border-emerald-200 text-emerald-600 shadow-lg backdrop-blur-md'
+        }`}
       >
         {isDark ? <Sun size={18}/> : <Moon size={18}/>}
       </button>
 
-      <Header isAdmin={isAdmin} username={username} email={user?.email} isDark={isDark} handleLogout={() => supabase.auth.signOut()} />
-      
+      <Header 
+        isAdmin={isAdmin} 
+        username={username} 
+        email={user?.email}
+        showEmail={showEmail}
+        isDark={isDark} 
+        logoutMag={logoutMag} 
+        handleLogout={handleLogout} 
+      />
+
       <div className="max-w-md mx-auto px-6 -mt-16 relative z-30">
-        {activeTab === 'home' && (
-          <HomeTab 
-            isNearSpot={isNearSpot} 
-            totalPoints={totalPoints} 
-            foundCount={(unlockedSpots || []).length} 
-            unlockedSpots={unlockedSpots || []} 
-            visitData={visitData || {}} 
-            spots={spots || {}} 
-            colors={colors} 
-          />
-        )}
-        {/* ... Other Tabs remain the same ... */}
+        {activeTab === 'home' && <HomeTab isNearSpot={isNearSpot} totalPoints={totalPoints} foundCount={unlockedSpots.length} unlockedSpots={unlockedSpots} spots={spots} colors={colors} />}
         {activeTab === 'leaderboard' && <LeaderboardTab leaderboard={leaderboard} username={username} colors={colors} />}
         {activeTab === 'explore' && <ExploreTab mapCenter={mapCenter} isDark={isDark} spots={spots} colors={colors} />}
-        {activeTab === 'profile' && <ProfileTab tempUsername={tempUsername} setTempUsername={setTempUsername} saveUsername={() => {}} colors={colors} isDark={isDark} />}
-        {activeTab === 'dev' && isAdmin && (
-          <AdminTab spots={spots} unlockedSpots={unlockedSpots} claimSpot={claimSpot} removeSpot={removeSpot} isDark={isDark} colors={colors} resetTimer={resetMyTimer} currentRadius={detectionRadius} updateRadius={updateRadius} />
-        )}
+        {activeTab === 'profile' && <ProfileTab tempUsername={tempUsername} setTempUsername={setTempUsername} saveUsername={saveUsername} showEmail={showEmail} toggleEmailVisibility={toggleEmailVisibility} colors={colors} isDark={isDark} lastChange={lastChange} />}
+        {activeTab === 'dev' && isAdmin && <AdminTab spots={spots} unlockedSpots={unlockedSpots} claimSpot={claimSpot} removeSpot={removeSpot} isDark={isDark} colors={colors} />}
       </div>
+
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} isAdmin={isAdmin} colors={colors} />
     </div>
   );
