@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sun, Moon, MapPin } from 'lucide-react'; // Added MapPin import
+import { Sun, Moon, MapPin } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
 // MODULAR IMPORTS
@@ -50,7 +50,28 @@ export default function App() {
   // --- SYSTEM EFFECTS ---
   useEffect(() => {
     const root = window.document.documentElement;
-    isDark ? root.classList.add('dark') : root.classList.remove('dark');
+    
+    // 1. Tailwind Dark Mode
+    if (isDark) {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+
+    // 2. Browser System UI (Scrollbars/Forms)
+    root.style.colorScheme = theme;
+
+    // 3. Dynamic Meta Theme Color (Safari/Chrome Address Bar & Overscroll)
+    let metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    const themeHex = isDark ? '#09090b' : '#f0f4f2';
+
+    if (!metaThemeColor) {
+      metaThemeColor = document.createElement('meta');
+      metaThemeColor.name = 'theme-color';
+      document.getElementsByTagName('head')[0].appendChild(metaThemeColor);
+    }
+    metaThemeColor.setAttribute('content', themeHex);
+
     localStorage.setItem('theme', theme);
   }, [theme, isDark]);
 
@@ -136,7 +157,6 @@ export default function App() {
 
   if (!user) return (
     <div className={`min-h-screen flex flex-col items-center justify-center ${colors.bg} p-6 relative transition-colors duration-500`}>
-      {/* Theme Toggle Button - Matching Main App Styling */}
       <button ref={themeMag.ref} onMouseMove={themeMag.handleMouseMove} onMouseLeave={themeMag.reset}
         style={{ transform: `translate(${themeMag.position.x}px, ${themeMag.position.y}px)` }}
         onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')} 
