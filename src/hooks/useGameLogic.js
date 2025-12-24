@@ -9,7 +9,7 @@ export function useGameLogic(user, showToast) {
   const [tempUsername, setTempUsername] = useState('');
   const [showEmail, setShowEmail] = useState(false);
   const [lastChange, setLastChange] = useState(null);
-  const [customRadius, setCustomRadius] = useState(50); 
+  const [customRadius, setCustomRadius] = useState(50);
   const [leaderboard, setLeaderboard] = useState([]);
 
   // --- LEADERBOARD LOGIC ---
@@ -42,27 +42,37 @@ export function useGameLogic(user, showToast) {
     if (!user) return;
 
     const fetchData = async () => {
-      // 1. Fetch Spots
+      // 1. Fetch All Spots (Points data needed for leaderboard calc)
       const { data: dbSpots } = await supabase.from('spots').select('*');
       const spotsObj = dbSpots ? dbSpots.reduce((acc, s) => ({ ...acc, [s.id]: s }), {}) : {};
       setSpots(spotsObj);
 
-      // 2. Fetch or CREATE User Profile (The "Self-Heal" logic)
-      let { data: profile, error } = await supabase
+      // 2. Fetch or CREATE User Profile (Self-Heal)
+      let { data: profile } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .maybeSingle(); // Use maybeSingle to avoid 406 errors
+        .maybeSingle();
 
       if (!profile) {
-        // If trigger didn't catch them, create it now
-        const { data: created } = await supabase.from('profiles').insert([{
-          id: user.id,
-          username: user.user_metadata?.full_name || 'Hunter',
-          unlocked_spots: [],
-          custom_radius: 50
-        }]).select().single();
-        profile = created;
+        // Generate a safe fallback name that isn't their email
+        const fallbackName = user.user_metadata?.full_name || 
+                             user.user_metadata?.user_name || 
+                             `Hunter_${user.id.substring(0, 4)}`;
+
+        const { data: created, error: insertError } = await supabase
+          .from('profiles')
+          .insert([{
+            id: user.id,
+            username: fallbackName,
+            unlocked_spots: [],
+            custom_radius: 50,
+            visit_data: { last_visit: null, streak: 0 }
+          }])
+          .select()
+          .single();
+        
+        if (!insertError) profile = created;
       }
 
       if (profile) {
@@ -114,10 +124,12 @@ export function useGameLogic(user, showToast) {
 
   // --- PROFILE ACTIONS ---
   const saveUsername = async () => {
-    // We do NOT strip @ anymore as requested, but we trim whitespace
-    const cleaned = tempUsername.trim(); 
+    const cleaned = tempUsername.trim(); // No more @ stripping
     
     if (cleaned.length < 3) return showToast("Name too short", "error");
+    if (cleaned.includes('@') && cleaned.includes('.')) {
+        return showToast("Emails not allowed as names", "error");
+    }
 
     const { error } = await supabase.from('profiles')
       .update({ 
@@ -127,7 +139,6 @@ export function useGameLogic(user, showToast) {
       .eq('id', user.id);
     
     if (error) {
-      // Error code 23505 is the "Unique Constraint Violation" from SQL
       if (error.code === '23505') {
         showToast("That username is already taken!", "error");
       } else {
