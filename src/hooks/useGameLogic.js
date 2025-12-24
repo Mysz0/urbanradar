@@ -62,12 +62,11 @@ export function useGameLogic(user, showToast) {
     fetchData();
   }, [user]);
 
-  // --- STREAK EDITOR (ADMIN TAB FIX) ---
+  // --- STREAK EDITOR: FIXED TO SAVE PROPERLY ---
   const updateNodeStreak = async (spotId, newStreakValue) => {
     if (!user) return;
     const safeVal = Math.max(0, parseInt(newStreakValue) || 0);
 
-    // 1. Prepare the updated object
     const updatedStreaks = {
       ...(spotStreaks || {}),
       [spotId]: {
@@ -77,17 +76,15 @@ export function useGameLogic(user, showToast) {
       }
     };
     
-    // 2. Optimistic Update
     setSpotStreaks(updatedStreaks);
 
-    // 3. Save to DB
     const { error } = await supabase.from('profiles')
       .update({ spot_streaks: updatedStreaks })
       .eq('id', user.id);
 
     if (error) {
-      showToast("Streak sync failed", "error");
-      setSpotStreaks(spotStreaks); // Rollback
+      console.error("Streak save error:", error);
+      showToast("Sync Failed", "error");
     }
   };
 
@@ -144,7 +141,7 @@ export function useGameLogic(user, showToast) {
       setSpotStreaks(newSpotStreaks);
       setTotalPoints(newTotalPoints);
       fetchLeaderboard();
-      showToast("Node & points removed");
+      showToast("Removed from Inventory");
     }
   };
 
@@ -154,29 +151,23 @@ export function useGameLogic(user, showToast) {
     if (!error) { setSpots(prev => ({ ...prev, [id]: { id, ...s } })); showToast("Deployed!"); }
   };
 
+  // --- DELETE SPOT: FIXED TO USE RPC SLEDGEHAMMER ---
   const deleteSpotFromDB = async (id) => { 
-    try {
-      // 1. First, tell Supabase to remove this ID from EVERY user's array in the profiles table
-      // We do this via a manual update call to clear the "blockers"
-      await supabase.rpc('remove_spot_from_all_profiles', { spot_id: id });
-
-      // 2. Now delete the actual spot from the spots table
-      const { error } = await supabase.from('spots').delete().eq('id', id); 
-      
-      if (!error) {
-        setSpots(prev => { const n = {...prev}; delete n[id]; return n; });
-        showToast("Purged from DB");
-      } else {
-        // If it still fails, it's the constraint issue
-        showToast("Delete blocked. Run the SQL script I gave you!", "error");
-      }
-    } catch (err) {
-      // If the RPC above doesn't exist yet, we fall back to a simple delete
-      const { error } = await supabase.from('spots').delete().eq('id', id);
-      if (error) showToast("Database still protected. Use SQL Editor.", "error");
+    // This calls the SQL function that clears ALL references first
+    const { error } = await supabase.rpc('force_delete_spot', { target_id: id });
+    
+    if (!error) {
+      setSpots(prev => {
+        const n = {...prev};
+        delete n[id];
+        return n;
+      });
+      showToast("Global Purge Success");
+    } else {
+      console.error("RPC Error:", error);
+      showToast("Delete blocked by database rules", "error");
     }
   };
-  
 
   const updateRadius = async (v) => { 
     const { error } = await supabase.from('profiles').update({ custom_radius: v }).eq('id', user.id); 
@@ -193,6 +184,6 @@ export function useGameLogic(user, showToast) {
     spots, unlockedSpots, visitData, spotStreaks, username, tempUsername, setTempUsername, 
     userRole, totalPoints, showEmail, lastChange, customRadius, leaderboard, 
     claimSpot, saveUsername, removeSpot, updateRadius, addNewSpot, deleteSpotFromDB,
-    updateNodeStreak, fetchLeaderboard, resetTimer: () => showToast("Bypassed")
+    updateNodeStreak, fetchLeaderboard, resetTimer: () => showToast("Cooldown Bypassed")
   };
 }
