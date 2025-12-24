@@ -7,14 +7,10 @@ export default function Header({ isAdmin, username, email, showEmail, isDark, lo
       <div className="absolute inset-0 mist-overlay z-0 rounded-b-[4.5rem] overflow-hidden" />
       <div className={`absolute inset-0 ${isDark ? 'bg-zinc-950/40' : 'bg-white/10'} backdrop-blur-3xl z-10 rounded-b-[4.5rem]`} />
       
-      {/* This flex container uses items-center. 
-        Because the Logout button is inside this container and the Theme button is 'fixed' in App.jsx,
-        the Theme button will land exactly to the left of this Logout button based on the coordinates 
-        we set in App.jsx.
-      */}
       <div className="max-w-md mx-auto flex justify-between items-center relative z-20">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1.5">
+        {/* TEXT SECTION: Wrapped in a fixed-height container to prevent shifting */}
+        <div className="flex-1 min-w-0 h-12 flex flex-col justify-center">
+          <div className="flex items-center gap-2 mb-0.5">
              {isAdmin ? (
                <span className="text-[7px] font-black tracking-[0.2em] text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 uppercase">Admin Access</span>
              ) : (
@@ -26,17 +22,17 @@ export default function Header({ isAdmin, username, email, showEmail, isDark, lo
             {username || 'Hunter'}<span className="text-emerald-500 font-normal">.</span>
           </h1>
 
-          {showEmail && email && (
-            <p className="text-[10px] font-medium text-zinc-500 mt-1.5 lowercase opacity-60 truncate tracking-wide">
-              {email}
-            </p>
-          )}
+          {/* EMAIL: Positioned absolute so it floats below without pushing the button container */}
+          <div className="relative h-0">
+            {showEmail && email && (
+              <p className="absolute top-1 left-0 text-[10px] font-medium text-zinc-500 lowercase opacity-60 truncate tracking-wide w-full">
+                {email}
+              </p>
+            )}
+          </div>
         </div>
         
-        {/* LOGOUT BUTTON 
-          Aligned to the right. 
-          The Theme button in App.jsx is coordinated to sit exactly to the left of this button.
-        */}
+        {/* LOGOUT BUTTON */}
         <button 
           ref={logoutMag.ref} 
           onMouseMove={logoutMag.handleMouseMove} 
