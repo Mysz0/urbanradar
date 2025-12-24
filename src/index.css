@@ -125,3 +125,40 @@ button, a {
 
 .custom-scrollbar::-webkit-scrollbar { width: 4px; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.2); border-radius: 10px; }
+
+
+/* --- USER LOCATION MARKER (BLUE) --- */
+.user-marker-container { 
+  position: relative; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  width: 24px; 
+  height: 24px; 
+}
+
+.user-pulse-ring { 
+  position: absolute; 
+  width: 100%; 
+  height: 100%; 
+  background: rgba(59, 130, 246, 0.4); 
+  border-radius: 50%; 
+  animation: marker-pulse 2s infinite cubic-bezier(0.4, 0, 0.6, 1); 
+}
+
+.user-marker-core { 
+  position: relative; 
+  width: 12px; 
+  height: 12px; 
+  background: #3b82f6; 
+  border: 2px solid #fff; 
+  border-radius: 50%; 
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.8); 
+  z-index: 2; 
+}
+
+/* Custom Leaflet overrides for the user icon */
+.leaflet-user-icon {
+  background: none !important;
+  border: none !important;
+}

@@ -185,25 +185,35 @@ export function useGameLogic(user, showToast) {
     const newSpotStreaks = { ...spotStreaks };
     delete newSpotStreaks[id];
 
-    await supabase.from('profiles').update({ 
+    const { error } = await supabase.from('profiles').update({ 
       unlocked_spots: newUnlocked,
       spot_streaks: newSpotStreaks
     }).eq('id', user.id);
 
-    setUnlockedSpots(newUnlocked); 
-    setSpotStreaks(newSpotStreaks);
-    fetchLeaderboard(spots);
+    if (!error) {
+      setUnlockedSpots(newUnlocked); 
+      setSpotStreaks(newSpotStreaks);
+      fetchLeaderboard(spots);
+      showToast("Node removed from logs", "info");
+    }
   };
 
   const updateRadius = async (v) => { 
-    await supabase.from('profiles').update({ custom_radius: v }).eq('id', user.id); 
-    setCustomRadius(v); 
+    const { error } = await supabase.from('profiles').update({ custom_radius: v }).eq('id', user.id); 
+    if (!error) {
+      setCustomRadius(v); 
+      showToast(`Detection range: ${v}m`, "success"); // ADDED NOTIFICATION
+    }
   };
 
   const resetTimer = async () => { 
     const { error } = await supabase.from('profiles').update({ last_username_change: null }).eq('id', user.id);  
-    if (!error) { setLastChange(null); showToast("Cooldown Reset!", "success"); }
+    if (!error) { 
+      setLastChange(null); 
+      showToast("Identity cooldown reset", "success"); 
+    }
   };
+
 
   const addNewSpot = async (s) => { 
     const id = s.name.toLowerCase().replace(/\s+/g, '-'); 

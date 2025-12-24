@@ -122,7 +122,8 @@ export default function App() {
             unlockedSpots={unlockedSpots} 
             spots={spots} 
             colors={colors} 
-            streak={visitData.streak} 
+            streak={visitData.streak}
+            spotStreaks={spotStreaks}
           />
         )}
         
