@@ -78,6 +78,29 @@ export default function App() {
     }
   };
 
+  const addNewSpot = async (spotData) => {
+    const { data, error } = await supabase.from('spots').insert([spotData]).select();
+    if (!error && data) {
+      const newSpot = data[0];
+      setSpots(prev => ({ ...prev, [newSpot.id]: newSpot }));
+      showToast(`${newSpot.name} deployed to map!`);
+    } else {
+      showToast("Error adding spot", "error");
+    }
+  };
+
+  const deleteSpotFromDB = async (spotId) => {
+    const { error } = await supabase.from('spots').delete().eq('id', spotId);
+    if (!error) {
+      const updatedSpots = { ...spots };
+      delete updatedSpots[spotId];
+      setSpots(updatedSpots);
+      showToast("Spot deleted from database");
+    } else {
+      showToast("Error deleting spot", "error");
+    }
+  };
+
   // --- SYSTEM EFFECTS ---
   useEffect(() => {
     const root = window.document.documentElement;
@@ -87,9 +110,7 @@ export default function App() {
   }, [theme, isDark]);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsAtTop(window.scrollY < 100);
-    };
+    const handleScroll = () => setIsAtTop(window.scrollY < 100);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -155,33 +176,27 @@ export default function App() {
 
   const saveUsername = async () => {
     const cleaned = tempUsername.replace('@', '').trim();
-    if (cleaned === username) return showToast("Name is already set to this", "error");
+    if (cleaned === username) return showToast("Name already set", "error");
 
     if (lastChange) {
       const last = new Date(lastChange).getTime();
       const now = new Date().getTime();
       const daysPassed = (now - last) / (1000 * 60 * 60 * 24);
-      if (daysPassed < 7) {
-        const remaining = Math.ceil(7 - daysPassed);
-        return showToast(`Cooldown: ${remaining} days left`, "error");
+      if (daysPassed < 7 && !isAdmin) { // Admins bypass cooldown or reset it
+        return showToast(`Cooldown: ${Math.ceil(7 - daysPassed)} days left`, "error");
       }
     }
 
     const { error } = await supabase.from('profiles').upsert({ 
-      id: user.id, 
-      username: cleaned, 
-      show_email: showEmail,
-      last_username_change: new Date().toISOString() 
+      id: user.id, username: cleaned, show_email: showEmail, last_username_change: new Date().toISOString() 
     });
 
     if (!error) { 
       setUsername(cleaned); 
       setLastChange(new Date().toISOString());
-      showToast("Identity updated successfully!"); 
+      showToast("Identity updated!"); 
       fetchLeaderboard(spots); 
-    } else {
-      showToast("Something went wrong", "error");
-    }
+    } else { showToast("Error updating name", "error"); }
   };
 
   const claimSpot = async (spotId) => {
@@ -199,60 +214,34 @@ export default function App() {
   const totalPoints = unlockedSpots.reduce((sum, id) => sum + (spots[id]?.points || 0), 0);
 
   if (loading) return (
-    <div className={`min-h-screen ${colors.bg} flex items-center justify-center transition-colors duration-500`}>
+    <div className={`min-h-screen ${colors.bg} flex items-center justify-center`}>
       <div className="w-6 h-6 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
     </div>
   );
 
   if (!user) return (
-    <div className={`min-h-screen flex flex-col items-center justify-center ${colors.bg} p-6 relative transition-colors duration-500`}>
-      <button ref={themeMag.ref} onMouseMove={themeMag.handleMouseMove} onMouseLeave={themeMag.reset}
-        style={{ 
-          transform: `translate(${themeMag.position.x}px, ${themeMag.position.y}px)`,
-          transition: themeMag.position.x === 0 ? 'transform 0.5s cubic-bezier(0.23, 1, 0.32, 1)' : 'none'
-        }}
-        onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')} 
-        className={`fixed top-6 right-6 p-3.5 rounded-2xl border transition-all duration-300 ease-out active:scale-90 z-[10000] ${isDark ? 'bg-zinc-900/80 border-white/10 text-emerald-400' : 'bg-white/80 border-emerald-200 text-emerald-600 shadow-lg backdrop-blur-md'}`}>
-        {isDark ? <Sun size={18}/> : <Moon size={18}/>}
+    <div className={`min-h-screen flex flex-col items-center justify-center ${colors.bg} p-6 transition-colors duration-500`}>
+      <button onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')} className="fixed top-6 right-6 p-4 rounded-2xl border bg-white/10 backdrop-blur-md">
+        {isDark ? <Sun size={18} className="text-emerald-400"/> : <Moon size={18} className="text-emerald-600"/>}
       </button>
-
       <div className="w-16 h-16 bg-emerald-500 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-emerald-500/20 rotate-3">
         <MapPin size={32} className="text-white" />
       </div>
-
-      <h1 className={`text-3xl font-bold mb-8 tracking-tight ${colors.text} transition-colors duration-500`}>
-        SpotHunt
-      </h1>
-
-      <button onClick={() => supabase.auth.signInWithOAuth({ provider: 'github' })} 
-        className="bg-emerald-500 text-white px-10 py-4 rounded-2xl font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all">
-        Sign in with GitHub
-      </button>
+      <h1 className={`text-3xl font-bold mb-8 tracking-tight ${colors.text}`}>SpotHunt</h1>
+      <button onClick={() => supabase.auth.signInWithOAuth({ provider: 'github' })} className="bg-emerald-500 text-white px-10 py-4 rounded-2xl font-bold shadow-lg shadow-emerald-500/20">Sign in with GitHub</button>
     </div>
   );
 
   return (
     <div className={`min-h-screen ${colors.bg} ${colors.text} pb-36 transition-colors duration-500 selection:bg-emerald-500/30`}>
-      
       {statusMsg.text && (
-        <div className={`fixed top-24 left-1/2 -translate-x-1/2 z-[10001] flex items-center gap-2 px-6 py-3 rounded-2xl border backdrop-blur-xl shadow-2xl transition-all animate-in fade-in slide-in-from-top-4 duration-300 ${
-          statusMsg.type === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-        }`}>
+        <div className={`fixed top-24 left-1/2 -translate-x-1/2 z-[10001] flex items-center gap-2 px-6 py-3 rounded-2xl border backdrop-blur-xl shadow-2xl animate-in fade-in slide-in-from-top-4 ${statusMsg.type === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'}`}>
           {statusMsg.type === 'error' ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
-          <span className="text-sm font-bold tracking-tight">{statusMsg.text}</span>
+          <span className="text-sm font-bold">{statusMsg.text}</span>
         </div>
       )}
 
-      <button ref={themeMag.ref} onMouseMove={themeMag.handleMouseMove} onMouseLeave={themeMag.reset}
-        style={{ 
-          transform: `translate(${themeMag.position.x + (isAtTop ? -58 : 0)}px, ${themeMag.position.y}px)`,
-          transition: themeMag.position.x === 0 ? 'transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none'
-        }}
-        onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')} 
-        className={`fixed top-16 right-10 p-3.5 rounded-2xl border active:scale-90 z-[10000] ${
-          isDark ? 'bg-zinc-900/80 border-white/10 text-emerald-400' : 'bg-white/80 border-emerald-200 text-emerald-600 shadow-lg backdrop-blur-md'
-        }`}
-      >
+      <button onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')} className={`fixed top-16 right-10 p-3.5 rounded-2xl border active:scale-90 z-[10000] ${isDark ? 'bg-zinc-900 border-white/10 text-emerald-400' : 'bg-white border-emerald-200 shadow-lg'}`}>
         {isDark ? <Sun size={18}/> : <Moon size={18}/>}
       </button>
 
@@ -265,15 +254,11 @@ export default function App() {
         {activeTab === 'profile' && <ProfileTab tempUsername={tempUsername} setTempUsername={setTempUsername} saveUsername={saveUsername} showEmail={showEmail} toggleEmailVisibility={toggleEmailVisibility} colors={colors} isDark={isDark} lastChange={lastChange} />}
         {activeTab === 'dev' && isAdmin && (
           <AdminTab 
-            spots={spots} 
-            unlockedSpots={unlockedSpots} 
-            claimSpot={claimSpot} 
-            removeSpot={removeSpot} 
-            isDark={isDark} 
-            colors={colors}
-            resetTimer={resetMyTimer}
-            currentRadius={detectionRadius}
-            updateRadius={updateRadius}
+            spots={spots} unlockedSpots={unlockedSpots} 
+            claimSpot={claimSpot} removeSpot={removeSpot} 
+            isDark={isDark} colors={colors}
+            resetTimer={resetMyTimer} currentRadius={detectionRadius} updateRadius={updateRadius}
+            addNewSpot={addNewSpot} deleteSpotFromDB={deleteSpotFromDB}
           />
         )}
       </div>
