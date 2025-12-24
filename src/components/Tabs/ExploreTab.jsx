@@ -14,44 +14,31 @@ const DefaultIcon = L.icon({
   iconAnchor: [12, 41]
 });
 
-// Component to handle auto-centering on load
 function MapController({ coords }) {
   const map = useMap();
-  const [hasCentered, setHasCentered] = useState(false);
-
   useEffect(() => {
-    // FIXED: Changed .latitude/.longitude to .lat/.lng to match your hook
-    if (coords?.lat && coords?.lng && !hasCentered) {
-      map.flyTo([coords.lat, coords.lng], 16, {
-        duration: 2,
-        easeLinearity: 0.25
-      });
-      setHasCentered(true);
+    // Reverting to your previous logic: Fly to user whenever coords change
+    if (coords?.lat && coords?.lng) {
+      map.flyTo([coords.lat, coords.lng], 15);
     }
-  }, [coords, map, hasCentered]);
-
+  }, [coords, map]);
   return null;
 }
 
 export default function ExploreTab({ spots = {}, unlockedSpots = [], userLocation, radius }) {
   
-  // Custom Blue Pulse Marker for the User
   const userIcon = L.divIcon({
     className: 'leaflet-user-icon',
-    html: `
-      <div class="user-marker-container">
-        <div class="user-pulse-ring"></div>
-        <div class="user-marker-core"></div>
-      </div>
-    `,
+    html: `<div class="user-marker-container"><div class="user-pulse-ring"></div><div class="user-marker-core"></div></div>`,
     iconSize: [24, 24],
     iconAnchor: [12, 12]
   });
 
   return (
-    <div className="h-full w-full rounded-[2.5rem] overflow-hidden border border-white/5 shadow-2xl relative bg-zinc-950">
+    /* We force a height here so it CANNOT be 0px */
+    <div style={{ height: '70vh', width: '100%', position: 'relative' }} className="rounded-[2.5rem] overflow-hidden border border-white/5 shadow-2xl bg-zinc-950">
       <MapContainer 
-        center={[50.0121, 22.6742]} // Default to your general area (Jarosław)
+        center={[50.0121, 22.6742]} 
         zoom={13} 
         style={{ height: '100%', width: '100%' }}
         zoomControl={false}
@@ -61,77 +48,40 @@ export default function ExploreTab({ spots = {}, unlockedSpots = [], userLocatio
           attribution='&copy; CARTO'
         />
 
-        {/* Auto-Centering Logic */}
         <MapController coords={userLocation} />
 
-        {/* USER LOCATION & RANGE CIRCLE */}
         {userLocation?.lat && (
           <>
-            <Marker 
-              position={[userLocation.lat, userLocation.lng]} 
-              icon={userIcon}
-            >
-              <Popup>
-                <span className="font-bold text-zinc-900">Current Position</span>
-              </Popup>
+            <Marker position={[userLocation.lat, userLocation.lng]} icon={userIcon}>
+              <Popup>Current Position</Popup>
             </Marker>
-            
             <Circle 
               center={[userLocation.lat, userLocation.lng]}
-              radius={radius || 10} // The 10m claim zone
-              pathOptions={{ 
-                color: '#10b981', 
-                fillColor: '#10b981', 
-                fillOpacity: 0.05, 
-                weight: 2,
-                dashArray: '8, 12'
-              }}
+              radius={radius || 10} 
+              pathOptions={{ color: '#10b981', fillColor: '#10b981', fillOpacity: 0.1 }}
             />
           </>
         )}
 
-        {/* WORLD NODES */}
-        {Object.values(spots).map((spot) => {
-          const isUnlocked = unlockedSpots.includes(spot.id);
-          return (
-            <Marker 
-              key={spot.id} 
-              position={[spot.lat, spot.lng]} 
-              icon={DefaultIcon}
-              opacity={isUnlocked ? 1 : 0.4}
-            >
-              <Popup>
-                <div className="p-1">
-                  <h3 className="font-black text-sm text-zinc-900 uppercase tracking-tighter">{spot.name}</h3>
-                  <p className="text-[10px] text-zinc-500 font-bold uppercase mt-1">
-                    {isUnlocked ? '✓ Node Secured' : '🔒 Signal Detected'}
-                  </p>
-                </div>
-              </Popup>
-            </Marker>
-          );
-        })}
+        {Object.values(spots).map((spot) => (
+          <Marker 
+            key={spot.id} 
+            position={[spot.lat, spot.lng]} 
+            icon={DefaultIcon}
+            opacity={unlockedSpots.includes(spot.id) ? 1 : 0.4}
+          >
+            <Popup>{spot.name}</Popup>
+          </Marker>
+        ))}
       </MapContainer>
 
-      {/* GPS OVERLAY PANEL */}
-      <div className="absolute bottom-6 left-6 right-6 pointer-events-none">
-        <div className="bg-zinc-950/90 backdrop-blur-xl border border-white/10 p-4 rounded-[2rem] flex justify-between items-center shadow-2xl">
-          <div className="flex items-center gap-3">
-            <div className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-white uppercase tracking-widest leading-none">GPS ACTIVE</p>
-              <p className="text-[8px] font-bold text-zinc-500 uppercase tracking-tighter mt-1">
-                {userLocation ? `${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)}` : 'Scanning for satellites...'}
-              </p>
-            </div>
+      {/* Reverting to your previous status overlay style */}
+      <div className="absolute bottom-6 left-6 right-6 z-[1000] pointer-events-none">
+        <div className="bg-zinc-950/90 backdrop-blur-xl border border-white/10 p-4 rounded-2xl flex justify-between items-center">
+          <div className="text-white text-[10px] font-bold">
+            {userLocation ? `GPS: ${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)}` : 'SCANNING...'}
           </div>
-          <div className="text-right">
-            <p className="text-[10px] font-black text-emerald-500 uppercase italic leading-none">{radius}m</p>
-            <p className="text-[8px] font-bold text-zinc-600 uppercase mt-1">Detection</p>
-          </div>
+          <div className="text-emerald-500 font-black text-[10px] italic">{radius}M RANGE</div>
         </div>
       </div>
     </div>
