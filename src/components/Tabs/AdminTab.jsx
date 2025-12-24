@@ -210,7 +210,7 @@ export default function AdminTab({
         
         <div className="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
           {filteredSpots.map(spot => {
-            const currentStreak = spotStreaks?.[spot.id]?.streak || 0;
+            const currentStreak = spotStreaks?.[spot.id]?.streak ?? 0;
             const isUnlocked = unlockedSpots.includes(spot.id);
 
             return (
@@ -238,8 +238,9 @@ export default function AdminTab({
                       min="0"
                       value={currentStreak}
                       onChange={(e) => {
-                        const val = parseInt(e.target.value);
-                        updateNodeStreak(spot.id, isNaN(val) ? 0 : val);
+                        e.stopPropagation();
+                        // Passing the raw string is fine because updateNodeStreak handles parseInt
+                        updateNodeStreak(spot.id, e.target.value);
                       }}
                       className="w-12 bg-transparent text-xs font-black text-orange-500 outline-none focus:ring-0 border-b border-orange-500/20"
                     />

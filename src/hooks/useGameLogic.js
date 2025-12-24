@@ -62,20 +62,24 @@ export function useGameLogic(user, showToast) {
     fetchData();
   }, [user]);
 
-  // --- STREAK EDITOR: FIXED TO SAVE PROPERLY ---
+  // --- STREAK EDITOR: FIXED TO HANDLE INPUTS PROPERLY ---
   const updateNodeStreak = async (spotId, newStreakValue) => {
     if (!user) return;
-    const safeVal = Math.max(0, parseInt(newStreakValue) || 0);
+    
+    // Ensure we have a clean number
+    const safeVal = parseInt(newStreakValue, 10);
+    const finalVal = isNaN(safeVal) ? 0 : Math.max(0, safeVal);
 
     const updatedStreaks = {
       ...(spotStreaks || {}),
       [spotId]: {
         ...(spotStreaks?.[spotId] || {}),
-        streak: safeVal,
+        streak: finalVal,
         last_claim: spotStreaks?.[spotId]?.last_claim || new Date().toISOString()
       }
     };
     
+    // Optimistic Update
     setSpotStreaks(updatedStreaks);
 
     const { error } = await supabase.from('profiles')
@@ -92,7 +96,10 @@ export function useGameLogic(user, showToast) {
     if (!user || !spots[spotId]) return;
     const today = new Date();
     const todayStr = today.toDateString();
-    const spotInfo = spotStreaks[spotId] || { last_claim: null, streak: 0 };
+    
+    // Ensure spotStreaks exists as an object
+    const currentStreaks = spotStreaks || {};
+    const spotInfo = currentStreaks[spotId] || { last_claim: null, streak: 0 };
 
     if (spotInfo.last_claim && new Date(spotInfo.last_claim).toDateString() === todayStr) {
       return showToast("Already logged today", "error");
@@ -102,9 +109,13 @@ export function useGameLogic(user, showToast) {
     const newTotalPoints = (totalPoints || 0) + earnedPoints;
     const newUnlocked = unlockedSpots.includes(spotId) ? unlockedSpots : [...unlockedSpots, spotId];
     
+    // Explicitly use Number() to prevent doubling or string issues
     const newSpotStreaks = { 
-      ...spotStreaks, 
-      [spotId]: { last_claim: today.toISOString(), streak: (spotInfo.streak || 0) + 1 } 
+      ...currentStreaks, 
+      [spotId]: { 
+        last_claim: today.toISOString(), 
+        streak: (Number(spotInfo.streak) || 0) + 1 
+      } 
     };
 
     const { error } = await supabase.from('profiles').update({ 
@@ -127,7 +138,7 @@ export function useGameLogic(user, showToast) {
     const spotValue = spots[id]?.points || 0;
     const newTotalPoints = Math.max(0, totalPoints - spotValue);
     const newUnlocked = (unlockedSpots || []).filter(x => x !== id);
-    const newSpotStreaks = { ...spotStreaks };
+    const newSpotStreaks = { ...(spotStreaks || {}) };
     delete newSpotStreaks[id];
 
     const { error } = await supabase.from('profiles').update({ 
@@ -151,9 +162,7 @@ export function useGameLogic(user, showToast) {
     if (!error) { setSpots(prev => ({ ...prev, [id]: { id, ...s } })); showToast("Deployed!"); }
   };
 
-  // --- DELETE SPOT: FIXED TO USE RPC SLEDGEHAMMER ---
   const deleteSpotFromDB = async (id) => { 
-    // This calls the SQL function that clears ALL references first
     const { error } = await supabase.rpc('force_delete_spot', { target_id: id });
     
     if (!error) {
