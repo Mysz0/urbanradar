@@ -22,41 +22,116 @@ body {
 
 /* --- LEAFLET MAP FIXES --- */
 
-/* 1. This forces the map to actually have a height */
 .leaflet-container {
   width: 100%;
   height: 100% !important; 
   z-index: 1;
   outline: none;
-  background: #f8fafc;
+  /* Background will transition with theme via App.jsx logic */
 }
 
-/* 2. Hide the "Leaflet | OpenStreetMap" watermark */
-.leaflet-control-attribution {
-  display: none !important;
+/* Hide the attribution and unnecessary logos */
+.leaflet-control-attribution, 
+.leaflet-control-container img[src*="apple"], 
+img[src*="apple-logo"] { 
+  display: none !important; 
 }
 
-/* 3. Add the Fake Apple Maps Watermark 
-.leaflet-container::after {
-  content: " Maps";
-  position: absolute;
-  bottom: 12px;
-  right: 12px;
-  z-index: 1000;
-  color: rgba(0, 0, 0, 0.7);
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  pointer-events: none;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-*/
-/* 4. Fix for the default markers looking weird */
 .leaflet-marker-icon {
   border: none !important;
   background: none !important;
+}
+
+/* --- CUSTOM ANIMATIONS & EFFECTS --- */
+
+/* Mist Overlay for the Header */
+.mist-overlay {
+  background: radial-gradient(circle at top, rgba(16, 185, 129, 0.15) 0%, transparent 60%);
+}
+
+.dark .mist-overlay {
+  background: radial-gradient(circle at top, rgba(16, 185, 129, 0.25) 0%, transparent 60%);
+}
+
+/* The Animated Border on Found Cards */
+.collection-card {
+  position: relative;
+  background-clip: padding-box;
+  border: 1px solid transparent;
+}
+
+.collection-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 2.2rem; 
+  padding: 2px; 
+  background: linear-gradient(45deg, transparent, transparent);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  transition: all 0.8s ease; 
+  opacity: 0;
+}
+
+.collection-card:hover::before {
+  opacity: 1;
+  background: linear-gradient(45deg, #10b981, #34d399, transparent, #059669);
+  background-size: 200% 200%;
+  animation: move-gradient 6s linear infinite; 
+}
+
+@keyframes move-gradient {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+/* Custom Pulsing Leaflet Marker */
+.marker-container { 
+  position: relative; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  width: 24px; 
+  height: 24px; 
+}
+
+.pulse-ring { 
+  position: absolute; 
+  width: 100%; 
+  height: 100%; 
+  background: rgba(16, 185, 129, 0.4); 
+  border-radius: 50%; 
+  animation: marker-pulse 2s infinite cubic-bezier(0.4, 0, 0.6, 1); 
+}
+
+.marker-core { 
+  position: relative; 
+  width: 10px; 
+  height: 10px; 
+  background: #10b981; 
+  border: 2px solid; 
+  border-radius: 50%; 
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.8); 
+  z-index: 2; 
+}
+
+@keyframes marker-pulse {
+  0% { transform: scale(0.6); opacity: 0.8; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* Scrollbar Styling for the Dev/Admin Panel */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(16, 185, 129, 0.2);
+  border-radius: 10px;
 }

@@ -1,52 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapPin, Trophy, User, Home, Compass, LogOut, Terminal, Zap, Trash2, Sun, Moon, Radar } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+
+// MODULAR IMPORTS
 import { supabase } from './supabase'; 
+import { getDistance, sleekIcon } from './utils/geoUtils';
+import { useMagnetic } from './hooks/useMagnetic';
 
 const ADMIN_UID = import.meta.env.VITE_ADMIN_UID;
 
-// --- UTILS: Distance Calculation ---
-const getDistance = (lat1, lon1, lat2, lon2) => {
-  const R = 6371; // Earth's radius in km
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-            Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-};
-
-// --- CUSTOM SLEEK MARKER ---
-const sleekIcon = (isDark) => L.divIcon({
-  className: 'custom-marker',
-  html: `
-    <div class="marker-container">
-      <div class="pulse-ring"></div>
-      <div class="marker-core" style="border-color: ${isDark ? '#09090b' : '#fff'};"></div>
-    </div>
-  `,
-  iconSize: [24, 24],
-  iconAnchor: [12, 12],
-});
-
-const useMagnetic = () => {
-  const ref = useRef(null);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const handleMouseMove = (e) => {
-    const { clientX, clientY } = e;
-    const { left, top, width, height } = ref.current.getBoundingClientRect();
-    const x = (clientX - (left + width / 2)) * 0.35;
-    const y = (clientY - (top + height / 2)) * 0.35;
-    setPosition({ x, y });
-  };
-  const reset = () => setPosition({ x: 0, y: 0 });
-  return { ref, position, handleMouseMove, reset };
-};
-
 export default function App() {
+  // --- STATE ---
   const [spots, setSpots] = useState({});
   const [unlockedSpots, setUnlockedSpots] = useState([]);
   const [user, setUser] = useState(null);
@@ -58,23 +23,26 @@ export default function App() {
   const [userLocation, setUserLocation] = useState(null);
   const [isNearSpot, setIsNearSpot] = useState(false);
   const [mapCenter] = useState([40.730610, -73.935242]);
-  
-  // --- NEW LEADERBOARD STATE ---
   const [leaderboard, setLeaderboard] = useState([]);
 
+  // --- HELPERS ---
   const isAdmin = user?.id === ADMIN_UID;
   const isDark = theme === 'dark';
   const themeMag = useMagnetic();
   const logoutMag = useMagnetic();
 
-  // --- THEME FIX: Instant apply to root ---
+  const colors = {
+    bg: isDark ? 'bg-[#09090b]' : 'bg-[#f0f4f2]',
+    card: isDark ? 'bg-zinc-900/40 border-white/[0.03] shadow-2xl' : 'bg-white/70 border-emerald-200/50 shadow-md shadow-emerald-900/5',
+    nav: isDark ? 'bg-zinc-900/80 border-white/[0.05]' : 'bg-white/95 border-emerald-200/60',
+    text: isDark ? 'text-zinc-100' : 'text-zinc-900',
+    glass: isDark ? 'bg-white/[0.02] backdrop-blur-xl border-white/[0.05]' : 'bg-white/40 backdrop-blur-xl border-white/20'
+  };
+
+  // --- EFFECTS ---
   useEffect(() => {
     const root = window.document.documentElement;
-    if (isDark) {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
+    isDark ? root.classList.add('dark') : root.classList.remove('dark');
     localStorage.setItem('theme', theme);
   }, [theme, isDark]);
 
@@ -102,12 +70,21 @@ export default function App() {
 
     const watchId = navigator.geolocation.watchPosition((pos) => {
       setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-    }, (err) => console.log("Location Error:", err), { enableHighAccuracy: true });
+    }, null, { enableHighAccuracy: true });
 
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
-  // --- LEADERBOARD FETCH ---
+  useEffect(() => {
+    if (userLocation && Object.values(spots).length > 0) {
+      const nearby = Object.values(spots).some(spot => 
+        getDistance(userLocation.lat, userLocation.lng, spot.lat, spot.lng) < 0.25
+      );
+      setIsNearSpot(nearby);
+    }
+  }, [userLocation, spots]);
+
+  // --- ACTIONS ---
   const fetchLeaderboard = async (currentSpots) => {
     const { data: profiles } = await supabase.from('profiles').select('username, unlocked_spots');
     if (profiles) {
@@ -120,69 +97,29 @@ export default function App() {
     }
   };
 
-  // --- PROXIMITY CHECK (1KM) ---
-  useEffect(() => {
-    if (userLocation && Object.values(spots).length > 0) {
-      const nearby = Object.values(spots).some(spot => {
-        const dist = getDistance(userLocation.lat, userLocation.lng, spot.lat, spot.lng);
-        return dist < 0.25; // 250m threshold
-      });
-      setIsNearSpot(nearby);
-    }
-  }, [userLocation, spots]);
-
-  const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
   const handleLogout = async () => { await supabase.auth.signOut(); window.location.href = '/'; };
+
+  const saveUsername = async () => {
+    const cleaned = tempUsername.replace('@', '').trim();
+    const { error } = await supabase.from('profiles').upsert({ id: user.id, username: cleaned });
+    if (!error) { setUsername(cleaned); alert("Profile secured."); fetchLeaderboard(spots); }
+  };
 
   const claimSpot = async (spotId) => {
     const newUnlocked = [...unlockedSpots, spotId];
     const { error } = await supabase.from('profiles').update({ unlocked_spots: newUnlocked }).eq('id', user.id);
-    if (!error) {
-      setUnlockedSpots(newUnlocked);
-      fetchLeaderboard(spots);
-    }
+    if (!error) { setUnlockedSpots(newUnlocked); fetchLeaderboard(spots); }
   };
 
   const removeSpot = async (spotId) => {
     const newUnlocked = unlockedSpots.filter(id => id !== spotId);
     const { error } = await supabase.from('profiles').update({ unlocked_spots: newUnlocked }).eq('id', user.id);
-    if (!error) {
-      setUnlockedSpots(newUnlocked);
-      fetchLeaderboard(spots);
-    }
-  };
-
-  const saveUsername = async () => {
-    const cleaned = tempUsername.replace('@', '').trim();
-    const { error } = await supabase.from('profiles').upsert({ id: user.id, username: cleaned });
-    if (!error) { 
-      setUsername(cleaned); 
-      alert("Profile secured."); 
-      fetchLeaderboard(spots);
-    }
+    if (!error) { setUnlockedSpots(newUnlocked); fetchLeaderboard(spots); }
   };
 
   const totalPoints = unlockedSpots.reduce((sum, id) => sum + (spots[id]?.points || 0), 0);
 
-  const colors = {
-    bg: isDark ? 'bg-[#09090b]' : 'bg-[#f0f4f2]',
-    card: isDark ? 'bg-zinc-900/40 border-white/[0.03] shadow-2xl' : 'bg-white/70 border-emerald-200/50 shadow-md shadow-emerald-900/5',
-    nav: isDark ? 'bg-zinc-900/80 border-white/[0.05]' : 'bg-white/95 border-emerald-200/60',
-    text: isDark ? 'text-zinc-100' : 'text-zinc-900',
-    glass: isDark ? 'bg-white/[0.02] backdrop-blur-xl border-white/[0.05]' : 'bg-white/40 backdrop-blur-xl border-white/20'
-  };
-
-  const ThemeToggle = () => (
-    <button 
-      ref={themeMag.ref} onMouseMove={themeMag.handleMouseMove} onMouseLeave={themeMag.reset}
-      style={{ transform: `translate(${themeMag.position.x}px, ${themeMag.position.y}px)` }}
-      onClick={toggleTheme} 
-      className={`fixed top-6 right-6 p-3.5 rounded-2xl border transition-all duration-300 ease-out active:scale-90 z-[10000] ${isDark ? 'bg-zinc-900/80 border-white/10 text-emerald-400' : 'bg-white/80 border-emerald-200 text-emerald-600 shadow-lg backdrop-blur-md'}`}
-    >
-      {isDark ? <Sun size={18}/> : <Moon size={18}/>}
-    </button>
-  );
-
+  // --- RENDER HELPERS ---
   if (loading) return (
     <div className={`min-h-screen ${colors.bg} flex items-center justify-center`}>
       <div className="w-6 h-6 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
@@ -191,7 +128,6 @@ export default function App() {
 
   if (!user) return (
     <div className={`min-h-screen flex flex-col items-center justify-center ${colors.bg} p-6 relative`}>
-      <ThemeToggle />
       <div className="w-16 h-16 bg-emerald-500 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-emerald-500/20 rotate-3">
         <MapPin size={32} className="text-white" />
       </div>
@@ -205,53 +141,15 @@ export default function App() {
 
   return (
     <div className={`min-h-screen ${colors.bg} ${colors.text} pb-36 transition-colors duration-500 selection:bg-emerald-500/30`}>
-      <ThemeToggle />
-      <style>{`
-        .leaflet-control-attribution, .leaflet-control-container img[src*="apple"], img[src*="apple-logo"] { display: none !important; }
-        .leaflet-container { background: ${isDark ? '#09090b' : '#f0f4f2'} !important; }
-        .mist-overlay {
-          background: radial-gradient(circle at top, ${isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)'} 0%, transparent 60%);
-        }
-        .leaflet-container { background: ${isDark ? '#09090b' : '#f0f4f2'} !important; }
-        
-        .collection-card {
-          position: relative;
-          background-clip: padding-box;
-          border: 1px solid transparent;
-        }
-        .collection-card::before {
-          content: "";
-          position: absolute;
-          inset: 0;
-          border-radius: 2.2rem; 
-          padding: 2px; 
-          background: linear-gradient(45deg, transparent, transparent);
-          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-          mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-          -webkit-mask-composite: xor;
-          mask-composite: exclude;
-          transition: all 0.8s ease; 
-          opacity: 0;
-        }
-        .collection-card:hover::before {
-          opacity: 1;
-          background: linear-gradient(45deg, #10b981, #34d399, transparent, #059669);
-          background-size: 200% 200%;
-          animation: move-gradient 6s linear infinite; 
-        }
-        @keyframes move-gradient {
-          0% { background-position: 0% 50%; }
-          100% { background-position: 200% 50%; }
-        }
-
-        @keyframes marker-pulse {
-          0% { transform: scale(0.6); opacity: 0.8; }
-          100% { transform: scale(2.2); opacity: 0; }
-        }
-        .marker-container { position: relative; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; }
-        .pulse-ring { position: absolute; width: 100%; height: 100%; background: rgba(16, 185, 129, 0.4); border-radius: 50%; animation: marker-pulse 2s infinite cubic-bezier(0.4, 0, 0.6, 1); }
-        .marker-core { position: relative; width: 10px; height: 10px; background: #10b981; border: 2px solid; border-radius: 50%; box-shadow: 0 0 12px rgba(16, 185, 129, 0.8); z-index: 2; }
-      `}</style>
+      
+      {/* Theme Toggle */}
+      <button ref={themeMag.ref} onMouseMove={themeMag.handleMouseMove} onMouseLeave={themeMag.reset}
+        style={{ transform: `translate(${themeMag.position.x}px, ${themeMag.position.y}px)` }}
+        onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')} 
+        className={`fixed top-6 right-6 p-3.5 rounded-2xl border transition-all duration-300 ease-out active:scale-90 z-[10000] ${isDark ? 'bg-zinc-900/80 border-white/10 text-emerald-400' : 'bg-white/80 border-emerald-200 text-emerald-600 shadow-lg backdrop-blur-md'}`}
+      >
+        {isDark ? <Sun size={18}/> : <Moon size={18}/>}
+      </button>
 
       <header className="relative pt-16 pb-32 px-10 rounded-b-[4.5rem] border-b border-white/[0.05] overflow-hidden">
         <div className="absolute inset-0 mist-overlay z-0" />
@@ -269,8 +167,7 @@ export default function App() {
           </div>
           
           <div className="flex gap-2.5">
-            <button 
-              ref={logoutMag.ref} onMouseMove={logoutMag.handleMouseMove} onMouseLeave={logoutMag.reset}
+            <button ref={logoutMag.ref} onMouseMove={logoutMag.handleMouseMove} onMouseLeave={logoutMag.reset}
               style={{ transform: `translate(${logoutMag.position.x}px, ${logoutMag.position.y}px)` }}
               onClick={handleLogout} 
               className={`p-3.5 rounded-2xl border transition-all duration-300 ease-out active:scale-90 z-30 ${isDark ? 'bg-white/[0.03] border-white/[0.05] text-zinc-500' : 'bg-white/80 border-emerald-100 text-emerald-600 shadow-sm'}`}
@@ -287,10 +184,8 @@ export default function App() {
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-6 duration-700">
             {isNearSpot && (
               <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-3xl animate-in zoom-in-95 duration-500">
-                <div className="bg-emerald-500 p-2 rounded-xl text-white animate-pulse">
-                   <Radar size={16} />
-                </div>
-                <p className="text-xs font-bold text-emerald-500 uppercase tracking-wider">Signal Detected: You are within 1km of a point!</p>
+                <div className="bg-emerald-500 p-2 rounded-xl text-white animate-pulse"><Radar size={16} /></div>
+                <p className="text-xs font-bold text-emerald-500 uppercase tracking-wider">Signal Detected: You are within 250m of a point!</p>
               </div>
             )}
 
@@ -325,44 +220,29 @@ export default function App() {
         )}
 
         {activeTab === 'leaderboard' && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-6 duration-700">
-            <div className="space-y-3">
-              <h2 className="text-[9px] font-black uppercase tracking-[0.3em] text-emerald-500/50 px-4">Global Rankings</h2>
-              {leaderboard.map((entry, index) => (
-                <div key={index} className={`collection-card ${colors.card} p-5 rounded-[2.2rem] flex items-center justify-between border transition-all duration-300 hover:scale-[1.02] backdrop-blur-md`}>
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 ${index === 0 ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-emerald-500/10 text-emerald-500'} rounded-2xl flex items-center justify-center font-black text-xs relative z-10`}>
-                      {index + 1}
-                    </div>
-                    <div>
-                      <p className={`font-bold text-sm tracking-tight ${entry.username === username ? 'text-emerald-500' : ''}`}>
-                        @{entry.username} {entry.username === username && <span className="text-[8px] opacity-60 ml-1">(YOU)</span>}
-                      </p>
-                      <p className="text-[9px] text-emerald-500 font-bold uppercase tracking-widest">{entry.found} Nodes Secured</p>
-                    </div>
-                  </div>
-                  <div className="text-right pr-2">
-                    <p className="text-sm font-black tracking-tighter leading-none">{entry.score}</p>
-                    <p className="text-[8px] font-bold opacity-30 uppercase tracking-tighter">Total XP</p>
+          <div className="space-y-3 animate-in fade-in slide-in-from-bottom-6 duration-700">
+            <h2 className="text-[9px] font-black uppercase tracking-[0.3em] text-emerald-500/50 px-4">Global Rankings</h2>
+            {leaderboard.map((entry, index) => (
+              <div key={index} className={`collection-card ${colors.card} p-5 rounded-[2.2rem] flex items-center justify-between border backdrop-blur-md`}>
+                <div className="flex items-center gap-4">
+                  <div className={`w-10 h-10 ${index === 0 ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-emerald-500/10 text-emerald-500'} rounded-2xl flex items-center justify-center font-black text-xs`}>{index + 1}</div>
+                  <div>
+                    <p className={`font-bold text-sm ${entry.username === username ? 'text-emerald-500' : ''}`}>@{entry.username}</p>
+                    <p className="text-[9px] text-emerald-500 font-bold uppercase tracking-widest">{entry.found} Nodes Secured</p>
                   </div>
                 </div>
-              ))}
-            </div>
+                <div className="text-right">
+                  <p className="text-sm font-black tracking-tighter">{entry.score}</p>
+                  <p className="text-[8px] font-bold opacity-30 uppercase">Total XP</p>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
         {activeTab === 'explore' && (
           <div className={`${colors.card} rounded-[3rem] p-2 shadow-2xl border h-[520px] overflow-hidden backdrop-blur-md`}>
-            <MapContainer 
-              key={`${activeTab}-${theme}`} 
-              center={mapCenter} 
-              zoom={12} 
-              zoomControl={false} 
-              className="h-full w-full rounded-[2.5rem] z-0"
-              whenReady={(mapInstance) => {
-                setTimeout(() => mapInstance.target.invalidateSize(), 100);
-              }}
-            >
+            <MapContainer key={`${activeTab}-${theme}`} center={mapCenter} zoom={12} zoomControl={false} className="h-full w-full rounded-[2.5rem] z-0">
               <TileLayer url={isDark ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"} />
               {Object.values(spots).map(spot => (
                 <Marker key={spot.id} position={[spot.lat, spot.lng]} icon={sleekIcon(isDark)}>
@@ -378,32 +258,28 @@ export default function App() {
              <div className="space-y-3">
                 <label className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest ml-1">Identity</label>
                 <input type="text" value={tempUsername} onChange={(e) => setTempUsername(e.target.value)}
-                  className={`w-full ${isDark ? 'bg-black/20 border-white/10' : 'bg-white/40 border-emerald-200/50'} border rounded-2xl py-5 px-6 font-bold outline-none focus:border-emerald-500/40 transition-all text-sm backdrop-blur-md`}
+                  className={`w-full ${isDark ? 'bg-black/20 border-white/10' : 'bg-white/40 border-emerald-200/50'} border rounded-2xl py-5 px-6 font-bold outline-none focus:border-emerald-500 transition-all text-sm`}
                   placeholder="Your callsign..."
                 />
              </div>
-             <button onClick={saveUsername} className="w-full bg-emerald-500 text-white py-5 rounded-2xl font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 active:scale-95 transition-all text-sm">
-                Apply Changes
-             </button>
+             <button onClick={saveUsername} className="w-full bg-emerald-500 text-white py-5 rounded-2xl font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 active:scale-95 transition-all text-sm">Apply Changes</button>
            </div>
         )}
 
         {activeTab === 'dev' && isAdmin && (
            <div className={`${colors.glass} p-8 rounded-[3rem] border space-y-6 animate-in fade-in zoom-in-95 duration-300`}>
-             <h2 className="font-bold uppercase flex items-center gap-2 text-[10px] tracking-widest text-emerald-500">
-                <Terminal size={14}/> Node Override
-             </h2>
+             <h2 className="font-bold uppercase flex items-center gap-2 text-[10px] tracking-widest text-emerald-500"><Terminal size={14}/> Node Override</h2>
              <div className="space-y-2 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
                 {Object.values(spots).map(spot => {
                   const isClaimed = unlockedSpots.includes(spot.id);
                   return (
-                    <div key={spot.id} className={`${isDark ? 'bg-white/5' : 'bg-white/30'} p-4 rounded-[1.8rem] flex justify-between items-center border border-white/5 hover:border-emerald-500/20 transition-all`}>
-                      <span className="text-xs font-bold tracking-tight">{spot.name}</span>
+                    <div key={spot.id} className={`${isDark ? 'bg-white/5' : 'bg-white/30'} p-4 rounded-[1.8rem] flex justify-between items-center border border-white/5`}>
+                      <span className="text-xs font-bold">{spot.name}</span>
                       <div className="flex gap-2">
                         {isClaimed ? (
-                          <button onClick={() => removeSpot(spot.id)} className="p-2.5 text-red-500 hover:bg-red-500/10 rounded-xl transition-all"><Trash2 size={16}/></button>
+                          <button onClick={() => removeSpot(spot.id)} className="p-2.5 text-red-500 hover:bg-red-500/10 rounded-xl"><Trash2 size={16}/></button>
                         ) : (
-                          <button onClick={() => claimSpot(spot.id)} className="p-2.5 text-emerald-500 hover:bg-emerald-500/10 rounded-xl transition-all"><Zap size={16}/></button>
+                          <button onClick={() => claimSpot(spot.id)} className="p-2.5 text-emerald-500 hover:bg-emerald-500/10 rounded-xl"><Zap size={16}/></button>
                         )}
                       </div>
                     </div>
@@ -420,11 +296,11 @@ export default function App() {
             (tab !== 'dev' || isAdmin) && (
               <button key={tab} onClick={() => setActiveTab(tab)} 
                 className={`p-4 px-6 rounded-[2rem] transition-all duration-500 relative ${activeTab === tab ? 'bg-emerald-500/10 text-emerald-500 scale-110' : 'text-zinc-500 hover:text-emerald-500/40'}`}>
-                {tab === 'home' && <Home size={20} strokeWidth={activeTab === tab ? 2.5 : 2}/>}
-                {tab === 'explore' && <Compass size={20} strokeWidth={activeTab === tab ? 2.5 : 2}/>}
-                {tab === 'leaderboard' && <Trophy size={20} strokeWidth={activeTab === tab ? 2.5 : 2}/>}
-                {tab === 'profile' && <User size={20} strokeWidth={activeTab === tab ? 2.5 : 2}/>}
-                {tab === 'dev' && <Terminal size={20} strokeWidth={activeTab === tab ? 2.5 : 2}/>}
+                {tab === 'home' && <Home size={20}/>}
+                {tab === 'explore' && <Compass size={20}/>}
+                {tab === 'leaderboard' && <Trophy size={20}/>}
+                {tab === 'profile' && <User size={20}/>}
+                {tab === 'dev' && <Terminal size={20}/>}
               </button>
             )
           ))}
