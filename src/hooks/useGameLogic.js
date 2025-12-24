@@ -9,14 +9,12 @@ export function useGameLogic(user, showToast) {
   const [tempUsername, setTempUsername] = useState('');
   const [showEmail, setShowEmail] = useState(false);
   const [lastChange, setLastChange] = useState(null);
-  const [customRadius, setCustomRadius] = useState(50); // Fixed default to 50m
+  const [customRadius, setCustomRadius] = useState(50); 
   const [leaderboard, setLeaderboard] = useState([]);
 
   // --- LEADERBOARD LOGIC ---
-  // Moved up so it can be called immediately
   const fetchLeaderboard = async (currentSpots) => {
-    // Select more fields to ensure we have data to rank
-    const { data: profiles, error } = await supabase
+    const { data: profiles } = await supabase
       .from('profiles')
       .select('username, unlocked_spots, visit_data');
     
@@ -44,27 +42,26 @@ export function useGameLogic(user, showToast) {
     if (!user) return;
 
     const fetchData = async () => {
-      // 1. Fetch All Spots first (needed for score calculations)
+      // 1. Fetch Spots
       const { data: dbSpots } = await supabase.from('spots').select('*');
       const spotsObj = dbSpots ? dbSpots.reduce((acc, s) => ({ ...acc, [s.id]: s }), {}) : {};
       setSpots(spotsObj);
 
-      // 2. Fetch or CREATE User Profile (Fixed for new Google/GitHub users)
+      // 2. Fetch or CREATE User Profile (The "Self-Heal" logic)
       let { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle(); // Use maybeSingle to avoid 406 errors
 
-      // If user is new (e.g. Google login), create their profile row automatically
-      if (!profile && !error) {
-        const newProfile = {
+      if (!profile) {
+        // If trigger didn't catch them, create it now
+        const { data: created } = await supabase.from('profiles').insert([{
           id: user.id,
           username: user.user_metadata?.full_name || 'Hunter',
           unlocked_spots: [],
           custom_radius: 50
-        };
-        const { data: created } = await supabase.from('profiles').insert([newProfile]).select().single();
+        }]).select().single();
         profile = created;
       }
 
@@ -78,7 +75,6 @@ export function useGameLogic(user, showToast) {
         setCustomRadius(profile.custom_radius || 50);
       }
       
-      // 3. Always fetch leaderboard even if profile is fresh
       fetchLeaderboard(spotsObj);
     };
     
@@ -111,26 +107,39 @@ export function useGameLogic(user, showToast) {
     if (!error) {
       setUnlockedSpots(newUnlocked);
       setVisitData(newVisitData);
-      fetchLeaderboard(spots); // Refresh leaderboard after scoring
+      fetchLeaderboard(spots);
       showToast(newStreak > 1 ? `Streak Bonus: ${newStreak} Days!` : "Spot Logged!");
     }
   };
 
   // --- PROFILE ACTIONS ---
   const saveUsername = async () => {
-    const cleaned = tempUsername.replace('@', '').trim();
+    // We do NOT strip @ anymore as requested, but we trim whitespace
+    const cleaned = tempUsername.trim(); 
+    
     if (cleaned.length < 3) return showToast("Name too short", "error");
 
     const { error } = await supabase.from('profiles')
-      .update({ username: cleaned, last_username_change: new Date().toISOString() })
+      .update({ 
+        username: cleaned, 
+        last_username_change: new Date().toISOString() 
+      })
       .eq('id', user.id);
     
-    if (!error) { 
-      setUsername(cleaned); 
-      setLastChange(new Date().toISOString()); 
-      showToast("Identity updated!"); 
-      fetchLeaderboard(spots); 
+    if (error) {
+      // Error code 23505 is the "Unique Constraint Violation" from SQL
+      if (error.code === '23505') {
+        showToast("That username is already taken!", "error");
+      } else {
+        showToast("Failed to update identity", "error");
+      }
+      return;
     }
+
+    setUsername(cleaned); 
+    setLastChange(new Date().toISOString()); 
+    showToast("Identity updated!"); 
+    fetchLeaderboard(spots); 
   };
 
   const toggleEmailVisibility = async () => {
