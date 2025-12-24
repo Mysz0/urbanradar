@@ -79,13 +79,21 @@ export default function App() {
   };
 
   const addNewSpot = async (spotData) => {
-    const { data, error } = await supabase.from('spots').insert([spotData]).select();
+    // Generate an ID to match your pattern if the DB doesn't do it automatically
+    const newId = `spot-${Math.random().toString(36).substr(2, 5)}`;
+    
+    const { data, error } = await supabase
+      .from('spots')
+      .insert([{ ...spotData, id: newId }])
+      .select();
+
     if (!error && data) {
       const newSpot = data[0];
       setSpots(prev => ({ ...prev, [newSpot.id]: newSpot }));
       showToast(`${newSpot.name} deployed to map!`);
     } else {
-      showToast("Error adding spot", "error");
+      console.error("Supabase Error:", error?.message);
+      showToast(error?.message || "Error adding spot", "error");
     }
   };
 
@@ -182,7 +190,7 @@ export default function App() {
       const last = new Date(lastChange).getTime();
       const now = new Date().getTime();
       const daysPassed = (now - last) / (1000 * 60 * 60 * 24);
-      if (daysPassed < 7 && !isAdmin) { // Admins bypass cooldown or reset it
+      if (daysPassed < 7 && !isAdmin) {
         return showToast(`Cooldown: ${Math.ceil(7 - daysPassed)} days left`, "error");
       }
     }
@@ -259,6 +267,7 @@ export default function App() {
             isDark={isDark} colors={colors}
             resetTimer={resetMyTimer} currentRadius={detectionRadius} updateRadius={updateRadius}
             addNewSpot={addNewSpot} deleteSpotFromDB={deleteSpotFromDB}
+            userLocation={userLocation} // Passed for the preview map
           />
         )}
       </div>
