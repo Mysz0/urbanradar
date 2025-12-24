@@ -1,5 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { Terminal, Trash2, Zap, TimerReset, Radio, ShieldAlert, Plus, Target } from 'lucide-react';
+import React, { useState } from 'react';
+import { 
+  Terminal, 
+  Trash2, 
+  Zap, 
+  TimerReset, 
+  Radio, 
+  ShieldAlert, 
+  Plus, 
+  Target, 
+  Flame, 
+  MapPin 
+} from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 
@@ -30,7 +41,9 @@ export default function AdminTab({
   updateRadius,
   addNewSpot,
   deleteSpotFromDB,
-  userLocation // Passed from App.jsx
+  userLocation,
+  spotStreaks = {},
+  updateNodeStreak
 }) {
   const [newSpot, setNewSpot] = useState({ name: '', lat: '', lng: '', points: 50 });
 
@@ -64,11 +77,9 @@ export default function AdminTab({
       points: parseInt(newSpot.points)
     });
 
-    // Reset form
     setNewSpot({ name: '', lat: '', lng: '', points: 50 });
   };
 
-  // Default center if no coordinates entered
   const previewCenter = newSpot.lat && newSpot.lng 
     ? [parseFloat(newSpot.lat), parseFloat(newSpot.lng)] 
     : [40.730610, -73.935242];
@@ -115,7 +126,6 @@ export default function AdminTab({
           <Plus size={14}/> Deploy New Node
         </h2>
 
-        {/* MINI MAP PREVIEW */}
         <div className="h-48 w-full rounded-[2rem] overflow-hidden border border-white/10 relative z-0">
           <MapContainer 
             center={previewCenter} 
@@ -136,11 +146,9 @@ export default function AdminTab({
             )}
           </MapContainer>
           
-          {/* Quick-grab Location Button */}
           <button 
             onClick={handleUseMyLocation}
             className="absolute bottom-4 right-4 z-[1000] bg-emerald-500 text-white p-3 rounded-2xl shadow-lg hover:scale-110 active:scale-90 transition-all"
-            title="Use current GPS"
           >
             <Target size={20} />
           </button>
@@ -175,33 +183,63 @@ export default function AdminTab({
         </form>
       </div>
 
-      {/* 3. ACTIVE NODES LIST */}
-      <div className={`${colors.glass} p-8 rounded-[3rem] border space-y-6`}>
+      {/* 3. ACTIVE NODES LIST WITH STREAK EDITOR */}
+      <div className={`${colors.glass} p-8 rounded-[3rem] border border-white/5 space-y-6`}>
         <h2 className="font-bold uppercase flex items-center gap-2 text-[10px] tracking-widest text-emerald-500 ml-1">
-          <Terminal size={14}/> Active Nodes ({Object.keys(spots).length})
+          <Terminal size={14}/> Node Registry ({Object.keys(spots).length})
         </h2>
-        <div className="space-y-2 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
-          {Object.values(spots).map(spot => (
-            <div key={spot.id} className={`${isDark ? 'bg-white/5' : 'bg-white/30'} p-4 rounded-[1.8rem] border border-white/5 hover:border-emerald-500/20 transition-all`}>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-xs font-bold tracking-tight">{spot.name}</span>
-                <span className="text-[9px] font-black text-emerald-500 px-2 py-1 bg-emerald-500/10 rounded-lg">{spot.points} PTS</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <div className="flex gap-1">
-                  <button onClick={() => unlockedSpots.includes(spot.id) ? removeSpot(spot.id) : claimSpot(spot.id)} className={`p-2 rounded-xl transition-all ${unlockedSpots.includes(spot.id) ? 'text-red-500 bg-red-500/10' : 'text-emerald-500 bg-emerald-500/10'}`}>
-                    {unlockedSpots.includes(spot.id) ? <Trash2 size={14}/> : <Zap size={14}/>}
-                  </button>
+        
+        <div className="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+          {Object.values(spots).map(spot => {
+            const currentStreak = spotStreaks?.[spot.id]?.streak || 0;
+
+            return (
+              <div key={spot.id} className={`${isDark ? 'bg-white/5' : 'bg-white/30'} p-5 rounded-[2rem] border border-white/5 hover:border-emerald-500/20 transition-all space-y-4`}>
+                <div className="flex justify-between items-start">
+                  <div className="flex-1 min-w-0 pr-4">
+                    <p className="text-xs font-bold tracking-tight truncate">{spot.name}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                       <MapPin size={8} className="text-zinc-500" />
+                       <p className="text-[7px] font-mono text-zinc-500 uppercase truncate">{spot.id}</p>
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-black text-emerald-500 px-2 py-1 bg-emerald-500/10 rounded-lg whitespace-nowrap">
+                    {spot.points} PTS
+                  </span>
                 </div>
-                <button 
-                  onClick={() => { if(confirm(`Delete ${spot.name} from DB?`)) deleteSpotFromDB(spot.id) }} 
-                  className="text-[9px] uppercase font-bold text-zinc-500 hover:text-red-500 transition-colors"
-                >
-                  Remove from DB
-                </button>
+
+                <div className="flex items-center gap-4 bg-black/20 p-3 rounded-2xl border border-white/5">
+                  <div className="flex items-center gap-2 flex-1">
+                    <Flame size={12} className={currentStreak > 0 ? "text-orange-500" : "text-zinc-600"} />
+                    <span className="text-[9px] font-black uppercase text-zinc-500 tracking-tighter">Streak</span>
+                    <input 
+                      type="number"
+                      min="0"
+                      value={currentStreak}
+                      onChange={(e) => updateNodeStreak(spot.id, e.target.value)}
+                      className="w-12 bg-transparent text-xs font-black text-orange-500 outline-none focus:ring-0 border-b border-white/5"
+                    />
+                  </div>
+                  
+                  <div className="flex gap-1 border-l border-white/10 pl-3">
+                    <button 
+                      onClick={() => unlockedSpots.includes(spot.id) ? removeSpot(spot.id) : claimSpot(spot.id)} 
+                      className={`p-2 rounded-xl transition-all ${unlockedSpots.includes(spot.id) ? 'text-red-500 bg-red-500/10' : 'text-emerald-500 bg-emerald-500/10'}`}
+                    >
+                      {unlockedSpots.includes(spot.id) ? <Trash2 size={14}/> : <Zap size={14}/>}
+                    </button>
+                    
+                    <button 
+                      onClick={() => { if(confirm(`Purge ${spot.name}?`)) deleteSpotFromDB(spot.id) }} 
+                      className="p-2 text-zinc-600 hover:text-red-600 transition-colors"
+                    >
+                      <ShieldAlert size={14} />
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

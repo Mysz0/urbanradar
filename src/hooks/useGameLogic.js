@@ -124,7 +124,7 @@ export function useGameLogic(user, showToast) {
       newGlobalStreak = 1;
     }
 
-    // 2. MULTIPLIER TIER CALCULATION
+    // 2. PROGRESSIVE MULTIPLIER TIER
     let multiplier = 1.0;
     if (newGlobalStreak >= 7) multiplier = 1.5;
     else if (newGlobalStreak >= 5) multiplier = 1.3;
@@ -163,12 +163,42 @@ export function useGameLogic(user, showToast) {
       setTotalPoints(newTotalPoints);
       fetchLeaderboard();
       
-      const bonusMsg = multiplier > 1 ? ` (${multiplier}x Streak!)` : '';
-      showToast(`${isFirstDiscovery ? "New Discovery!" : "Check-in!"} +${earnedPoints} pts${bonusMsg}`);
+      const bonusMsg = multiplier > 1 ? ` (${multiplier}x Streak Bonus!)` : '';
+      showToast(`${isFirstDiscovery ? "New Node!" : "Check-in!"} +${earnedPoints} pts${bonusMsg}`);
     }
   };
 
   // --- ADMIN & PROFILE ACTIONS ---
+
+  // Manual streak override for Admin console
+  const updateNodeStreak = async (spotId, newStreakValue) => {
+    if (!user) return;
+    
+    const current = spotStreaks || {};
+    const numericStreak = parseInt(newStreakValue) || 0;
+    
+    const newStreaks = {
+      ...current,
+      [spotId]: { 
+        ...current[spotId], 
+        streak: numericStreak,
+        // If we set a streak > 0, ensure it has a valid claim date
+        last_claim: current[spotId]?.last_claim || new Date().toISOString()
+      }
+    };
+
+    const { error } = await supabase.from('profiles')
+      .update({ spot_streaks: newStreaks })
+      .eq('id', user.id);
+
+    if (!error) {
+      setSpotStreaks(newStreaks);
+      showToast(`Node streak updated to ${numericStreak}`, "success");
+    } else {
+      showToast("Failed to update streak", "error");
+    }
+  };
+
   const saveUsername = async () => {
     const cleaned = tempUsername.trim();
     if (cleaned.length < 3) return showToast("Name too short", "error");
@@ -212,6 +242,7 @@ export function useGameLogic(user, showToast) {
     userRole, totalPoints,
     showEmail, lastChange, customRadius, leaderboard, 
     claimSpot, saveUsername, removeSpot, updateRadius, addNewSpot, deleteSpotFromDB,
+    updateNodeStreak, // Exported for AdminTab
     fetchLeaderboard 
   };
 }
