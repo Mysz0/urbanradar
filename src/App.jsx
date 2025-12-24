@@ -1,127 +1,139 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from './supabase';
-import { useGameLogic } from './hooks/useGameLogic';
-import { useLocation } from './hooks/useLocation';
+import React, { useState } from 'react';
+import 'leaflet/dist/leaflet.css';
 
-// Component Imports
-import Navbar from './components/Navbar';
-import HomeTab from './components/HomeTab';
-import ExploreTab from './components/ExploreTab';
-import LeaderboardTab from './components/LeaderboardTab';
-import ProfileTab from './components/ProfileTab';
-import AdminTab from './components/AdminTab';
-import Toast from './components/Shared/Toast';
+// MODULAR IMPORTS
+import { useMagnetic } from './hooks/useMagnetic';
+import { useAuth } from './hooks/useAuth';
+import { useTheme } from './hooks/useTheme';
+import { useGeoLocation } from './hooks/useGeoLocation';
+import { useGameLogic } from './hooks/useGameLogic';
+
+// COMPONENT IMPORTS
+import Header from './components/Layout/Header';
+import Navbar from './components/Layout/Navbar';
+import HomeTab from './components/Tabs/HomeTab';
+import ExploreTab from './components/Tabs/ExploreTab';
+import LeaderboardTab from './components/Tabs/LeaderboardTab';
+import ProfileTab from './components/Tabs/ProfileTab';
+import AdminTab from './components/Tabs/AdminTab';
+import Login from './components/Auth/Login';
+import Toast from './components/UI/Toast';
+import ThemeToggle from './components/UI/ThemeToggle';
+
+const ADMIN_UID = import.meta.env.VITE_ADMIN_UID;
 
 export default function App() {
-  const [user, setUser] = useState(null);
+  // 1. SHARED UI STATE
   const [activeTab, setActiveTab] = useState('home');
-  const [isNavbarShrunk, setIsNavbarShrunk] = useState(false);
-  const [toast, setToast] = useState(null);
-
-  // --- TOAST HANDLER ---
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
+  const [statusMsg, setStatusMsg] = useState({ text: '', type: '' });
+  
+  // 2. LOGIC EXTRACTION (Hooks)
+  const { user, loading } = useAuth();
+  const { theme, setTheme, isDark, isAtTop, isNavbarShrunk } = useTheme();
+  
+  const showToast = (text, type = 'success') => {
+    setStatusMsg({ text, type });
+    setTimeout(() => setStatusMsg({ text: '', type: '' }), 4000);
   };
 
-  // --- AUTH SESSION ---
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-    return () => subscription.unsubscribe();
-  }, []);
-
-  // --- CUSTOM HOOKS ---
-  const { 
+  const {
     spots, unlockedSpots, visitData, spotStreaks,
-    username, tempUsername, setTempUsername, 
-    showEmail, lastChange, customRadius, leaderboard, 
-    claimSpot, saveUsername, toggleEmailVisibility, 
-    removeSpot, updateRadius, resetTimer, addNewSpot, deleteSpotFromDB 
+    username, tempUsername, setTempUsername,
+    showEmail, lastChange, customRadius, leaderboard,
+    claimSpot, saveUsername, toggleEmailVisibility,
+    removeSpot, updateRadius, resetTimer, addNewSpot, deleteSpotFromDB
   } = useGameLogic(user, showToast);
 
-  const { userLocation, isNearSpot, activeSpotId } = useLocation(spots, customRadius);
+  // High-accuracy location + proximity check
+  // ADDED: canClaim (for the 10m check)
+  const { userLocation, mapCenter, isNearSpot, canClaim, activeSpotId } = useGeoLocation(spots, customRadius);
 
-  // --- UI CONSTANTS ---
-  const isAdmin = user?.email === 'admin@yourdomain.com'; // Change to your admin email
-  const isDark = true;
+  // Magnetic refs for the interactive buttons
+  const themeMag = useMagnetic();
+  const logoutMag = useMagnetic();
+
+  // 3. UI HELPERS
+  const isAdmin = user?.id === ADMIN_UID;
   const colors = {
-    bg: 'bg-zinc-950',
-    card: 'bg-zinc-900/50',
-    text: 'text-white',
-    accent: 'text-emerald-500',
-    border: 'border-white/5'
+    bg: isDark ? 'bg-[#09090b]' : 'bg-[#f0f4f2]',
+    card: isDark ? 'bg-zinc-900/40 border-white/[0.03] shadow-2xl' : 'bg-white/70 border-emerald-200/50 shadow-md shadow-emerald-900/5',
+    nav: isDark ? 'bg-zinc-900/80 border-white/[0.05]' : 'bg-white/95 border-emerald-200/60',
+    text: isDark ? 'text-zinc-100' : 'text-zinc-900',
+    glass: isDark ? 'bg-white/[0.02] backdrop-blur-xl border-white/[0.05]' : 'bg-white/40 backdrop-blur-xl border-white/20'
   };
 
-  // --- SCROLL HANDLER (FOR NAVBAR SHRINK) ---
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 50) setIsNavbarShrunk(true);
-      else setIsNavbarShrunk(false);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  const handleLogout = async () => {
+    const { supabase } = await import('./supabase');
+    await supabase.auth.signOut();
+    window.location.href = '/';
+  };
 
-  if (!user) {
-    return (
-      <div className="h-screen w-full bg-zinc-950 flex items-center justify-center p-6">
-        <div className="max-w-sm w-full space-y-8 text-center">
-          <div className="space-y-2">
-            <h1 className="text-4xl font-black text-white tracking-tighter italic">NODE_HUNTER</h1>
-            <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">Initialization Required</p>
-          </div>
-          <button 
-            onClick={() => supabase.auth.signInWithOAuth({ provider: 'google' })}
-            className="w-full py-4 bg-white text-black font-black rounded-3xl hover:bg-zinc-200 transition-all active:scale-95"
-          >
-            SIGN IN WITH GOOGLE
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // 4. AUTH & LOADING SCREENS
+  if (loading) return (
+    <div className={`min-h-screen ${colors.bg} flex items-center justify-center`}>
+      <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+  if (!user) return (
+    <Login theme={theme} setTheme={setTheme} isDark={isDark} colors={colors} />
+  );
 
   return (
-    <div className={`min-h-screen ${colors.bg} ${colors.text} pb-32 transition-colors duration-500`}>
-      {toast && <Toast message={toast.message} type={toast.type} />}
+    <div className={`min-h-screen relative ${colors.bg} ${colors.text} pb-36 transition-colors duration-500`}>
+      
+      {/* Visual Feedback Layer */}
+      <Toast statusMsg={statusMsg} />
 
-      {/* TOP HEADER / MIST OVERLAY */}
-      <div className="fixed top-0 left-0 right-0 h-32 mist-overlay pointer-events-none z-40" />
+      {/* THEME TOGGLE */}
+      <ThemeToggle 
+        themeMag={themeMag} 
+        setTheme={setTheme} 
+        isDark={isDark} 
+        isAtTop={isAtTop} 
+      />
 
-      {/* MAIN CONTENT CONTAINER */}
-      <div className="max-w-md mx-auto px-6 pt-12 relative z-10">
-        
-        {/* TAB RENDERING */}
+      {/* USER HEADER */}
+      <Header 
+        isAdmin={isAdmin} 
+        username={username} 
+        email={user?.email} 
+        showEmail={showEmail} 
+        isDark={isDark} 
+        logoutMag={logoutMag} 
+        handleLogout={handleLogout} 
+      />
+
+      {/* Main Content Sections */}
+      <div className="max-w-md mx-auto px-6 -mt-16 relative z-30">
         {activeTab === 'home' && (
           <HomeTab 
-            isNearSpot={isNearSpot}
+            isNearSpot={isNearSpot} 
+            canClaim={canClaim}       // ADDED: For the 10m logic
+            userLocation={userLocation} // ADDED: For distance display
             activeSpotId={activeSpotId}
             claimSpot={claimSpot}
-            totalPoints={leaderboard.find(p => p.username === username)?.score || 0}
-            foundCount={unlockedSpots.length}
-            unlockedSpots={unlockedSpots}
-            spots={spots}
-            colors={colors}
+            totalPoints={unlockedSpots.reduce((sum, id) => {
+              const basePoints = spots[id]?.points || 0;
+              const multiplier = (visitData?.streak || 0) > 1 ? 1.1 : 1.0;
+              return sum + Math.round(basePoints * multiplier);
+            }, 0)} 
+            foundCount={unlockedSpots.length} 
+            unlockedSpots={unlockedSpots} 
+            spots={spots} 
+            colors={colors} 
             streak={visitData?.streak || 0}
-            spotStreaks={spotStreaks} // Passed for individual flames
+            spotStreaks={spotStreaks} 
           />
         )}
         
         {activeTab === 'leaderboard' && (
-          <LeaderboardTab 
-            leaderboard={leaderboard} 
-            username={username} 
-            colors={colors} 
-          />
+          <LeaderboardTab leaderboard={leaderboard} username={username} colors={colors} />
         )}
         
         {activeTab === 'explore' && (
           <ExploreTab 
+            mapCenter={mapCenter} 
             userLocation={userLocation} 
             isDark={isDark} 
             spots={spots} 
@@ -142,7 +154,6 @@ export default function App() {
             isDark={isDark} 
             lastChange={lastChange}
             user={user}
-            signOut={() => supabase.auth.signOut()}
           />
         )}
         
@@ -164,7 +175,7 @@ export default function App() {
         )}
       </div>
 
-      {/* DYNAMIC BOTTOM NAVIGATION */}
+      {/* DYNAMIC BOTTOM NAVIGATION WRAPPER */}
       <div className={`
         fixed bottom-8 left-0 right-0 z-[5000] px-8
         transition-all duration-700 cubic-bezier(0.16, 1, 0.3, 1)
