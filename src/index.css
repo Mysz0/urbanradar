@@ -17,40 +17,91 @@ body {
   overflow-x: hidden;
 }
 
-/* --- DYNAMIC NAVBAR EFFECTS --- */
+/* --- LEAFLET MAP & POINTS FIX --- */
+.leaflet-container {
+  width: 100%;
+  height: 100% !important; 
+  z-index: 1;
+  outline: none;
+}
 
-/* Instant Safari-style Shrink */
+.leaflet-marker-icon {
+  border: none !important;
+  background: none !important;
+}
+
+.leaflet-control-attribution { display: none !important; }
+
+/* Custom Pulsing Leaflet Marker (Restored) */
+.marker-container { 
+  position: relative; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  width: 24px; 
+  height: 24px; 
+}
+
+.pulse-ring { 
+  position: absolute; 
+  width: 100%; 
+  height: 100%; 
+  background: rgba(16, 185, 129, 0.4); 
+  border-radius: 50%; 
+  animation: marker-pulse 2s infinite cubic-bezier(0.4, 0, 0.6, 1); 
+}
+
+.marker-core { 
+  position: relative; 
+  width: 10px; 
+  height: 10px; 
+  background: #10b981; 
+  border: 2px solid #fff; 
+  border-radius: 50%; 
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.8); 
+  z-index: 2; 
+}
+
+@keyframes marker-pulse {
+  0% { transform: scale(0.6); opacity: 0.8; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* --- DYNAMIC UI EFFECTS --- */
+
+/* Safari iOS 26 style Shrink */
 .nav-shrink {
-  transform: scale(0.92) translateY(8px) !important;
-  opacity: 0.9;
+  transform: scale(0.92) translateY(10px) !important;
+  opacity: 0.85;
   filter: saturate(1.2);
-  /* Faster transition for "Instant" feel */
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-/* Base Navbar Transition */
-.fixed.bottom-0 {
-  will-change: transform, opacity;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+/* Mist Overlay for Header */
+.mist-overlay {
+  background: radial-gradient(circle at top, rgba(16, 185, 129, 0.15) 0%, transparent 60%);
+}
+.dark .mist-overlay {
+  background: radial-gradient(circle at top, rgba(16, 185, 129, 0.25) 0%, transparent 60%);
 }
 
-/* --- THEME TOGGLE ALIGNMENT --- */
-.theme-toggle-aligned {
-  position: fixed;
-  top: 1.5rem; /* Matches Logout button vertical position */
-  right: 5.5rem; /* Positioned exactly to the left of Logout button */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
+/* Streak Flame Glow */
+.flame-glow {
+  filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.5));
+  animation: flame-flicker 3s infinite alternate ease-in-out;
 }
 
-/* --- REMAINING FEATURES PRESERVED --- */
-.leaflet-container { width: 100%; height: 100% !important; z-index: 1; outline: none; }
-.leaflet-control-attribution { display: none !important; }
-.mist-overlay { background: radial-gradient(circle at top, rgba(16, 185, 129, 0.15) 0%, transparent 60%); }
-.dark .mist-overlay { background: radial-gradient(circle at top, rgba(16, 185, 129, 0.25) 0%, transparent 60%); }
-.collection-card { position: relative; background-clip: padding-box; border: 1px solid transparent; }
+@keyframes flame-flicker {
+  0% { opacity: 0.8; transform: scale(1); }
+  100% { opacity: 1; transform: scale(1.1); }
+}
+
+/* --- ANIMATED BORDERS (PRESERVED) --- */
+.collection-card {
+  position: relative;
+  background-clip: padding-box;
+  border: 1px solid transparent;
+}
 .collection-card::before {
   content: ""; position: absolute; inset: 0; border-radius: 2.2rem; padding: 2px; 
   background: linear-gradient(45deg, transparent, transparent);
@@ -58,8 +109,19 @@ body {
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor; mask-composite: exclude; transition: all 0.8s ease; opacity: 0;
 }
-.collection-card:hover::before { opacity: 1; background: linear-gradient(45deg, #10b981, #34d399, transparent, #059669); background-size: 200% 200%; animation: move-gradient 6s linear infinite; }
+.collection-card:hover::before { 
+  opacity: 1; 
+  background: linear-gradient(45deg, #10b981, #34d399, transparent, #059669); 
+  background-size: 200% 200%; 
+  animation: move-gradient 6s linear infinite; 
+}
 @keyframes move-gradient { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
-.flame-glow { filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.4)); animation: flame-flicker 3s infinite alternate ease-in-out; }
-@keyframes flame-flicker { 0% { opacity: 0.8; transform: scale(1); } 100% { opacity: 1; transform: scale(1.1); } }
-button, a { -webkit-tap-highlight-color: transparent; outline: none; }
+
+/* --- GLOBAL UTILITIES --- */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+  outline: none !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.2); border-radius: 10px; }

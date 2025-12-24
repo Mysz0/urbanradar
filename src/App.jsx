@@ -19,7 +19,7 @@ import AdminTab from './components/Tabs/AdminTab';
 const ADMIN_UID = import.meta.env.VITE_ADMIN_UID;
 
 export default function App() {
-  // --- STATE ---
+  // --- ALL STATES PRESERVED ---
   const [spots, setSpots] = useState({});
   const [unlockedSpots, setUnlockedSpots] = useState([]);
   const [visitData, setVisitData] = useState({ last_visit: null, streak: 0 });
@@ -35,8 +35,6 @@ export default function App() {
   const [mapCenter] = useState([40.730610, -73.935242]);
   const [leaderboard, setLeaderboard] = useState([]);
   const [isAtTop, setIsAtTop] = useState(true);
-
-  // DEV & PROFILE STATES
   const [customRadius, setCustomRadius] = useState(0.25);
   const [lastChange, setLastChange] = useState(null);
   const [statusMsg, setStatusMsg] = useState({ text: '', type: '' }); 
@@ -75,17 +73,14 @@ export default function App() {
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      
-      // 1. Instant Top detection
-      setIsAtTop(currentScrollY < 10);
+      setIsAtTop(currentScrollY < 15);
 
-      // 2. Faster Shrink logic: Trigger immediately on direction change
-      if (currentScrollY > lastScrollY && currentScrollY > 20) {
-        setIsNavbarShrunk(true); // Scrolling down
+      // Instant shrink trigger
+      if (currentScrollY > lastScrollY && currentScrollY > 10) {
+        setIsNavbarShrunk(true);
       } else if (currentScrollY < lastScrollY) {
-        setIsNavbarShrunk(false); // Scrolling up
+        setIsNavbarShrunk(false);
       }
-
       setLastScrollY(currentScrollY);
     };
 
@@ -150,19 +145,8 @@ export default function App() {
     }
   };
 
-  // --- ACTIONS ---
   const handleLogout = async () => { await supabase.auth.signOut(); window.location.href = '/'; };
-  const toggleEmailVisibility = async () => {
-    const newValue = !showEmail;
-    const { error } = await supabase.from('profiles').update({ show_email: newValue }).eq('id', user.id);
-    if (!error) setShowEmail(newValue);
-  };
-  const saveUsername = async () => {
-    const cleaned = tempUsername.replace('@', '').trim();
-    if (cleaned === username) return showToast("No changes detected", "error");
-    const { error } = await supabase.from('profiles').update({ username: cleaned, last_username_change: new Date().toISOString() }).eq('id', user.id);
-    if (!error) { setUsername(cleaned); setLastChange(new Date().toISOString()); showToast("Identity updated!"); fetchLeaderboard(spots); }
-  };
+
   const claimSpot = async (spotId) => {
     if (unlockedSpots.includes(spotId)) return showToast("Already logged", "error");
     const today = new Date(); today.setHours(0,0,0,0);
@@ -180,34 +164,14 @@ export default function App() {
     if (!error) { setUnlockedSpots(newUnlocked); setVisitData(newVisitData); fetchLeaderboard(spots); showToast(newStreak > 1 ? `Streak Bonus: ${newStreak} Days!` : "Spot Logged!"); }
   };
 
-  // --- ADMIN / DEV ---
-  const resetTimer = async () => {
-    const { error } = await supabase.from('profiles').update({ last_username_change: null }).eq('id', user.id);
-    if (!error) { setLastChange(null); showToast("Cooldown reset!"); }
-  };
-  const updateRadius = async (newVal) => {
-    const { error } = await supabase.from('profiles').update({ custom_radius: newVal }).eq('id', user.id);
-    if (!error) { setCustomRadius(newVal); showToast(`Radius: ${newVal * 1000}m`); }
-  };
-  const addNewSpot = async (spotData) => {
-    const id = spotData.name.toLowerCase().replace(/\s+/g, '-');
-    const { error } = await supabase.from('spots').insert([{ id, ...spotData }]);
-    if (!error) { setSpots(prev => ({ ...prev, [id]: { id, ...spotData } })); showToast("Node deployed!"); }
-  };
-  const deleteSpotFromDB = async (spotId) => {
-    const { error } = await supabase.from('spots').delete().eq('id', spotId);
-    if (!error) { const newSpots = { ...spots }; delete newSpots[spotId]; setSpots(newSpots); showToast("Node deleted from DB"); }
-  };
-
   const currentMultiplier = visitData.streak > 1 ? 1.1 : 1.0;
   const totalPoints = unlockedSpots.reduce((sum, id) => sum + Math.round((spots[id]?.points || 0) * currentMultiplier), 0);
 
   if (loading) return <div className={`min-h-screen ${colors.bg} flex items-center justify-center`}><div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" /></div>;
 
-  // --- GUEST VIEW ---
   if (!user) return (
     <div className={`min-h-screen flex flex-col items-center justify-center ${colors.bg} p-6 relative transition-colors duration-500`}>
-      <button onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')} className={`theme-toggle-aligned p-3.5 rounded-2xl border ${isDark ? 'bg-zinc-900/80 border-white/10 text-emerald-400' : 'bg-white/80 border-emerald-200 text-emerald-600 shadow-lg backdrop-blur-md'}`}>
+      <button onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')} className={`fixed top-12 right-6 p-3.5 rounded-2xl border transition-all z-[10000] ${isDark ? 'bg-zinc-900/80 border-white/10 text-emerald-400' : 'bg-white/80 border-emerald-200 text-emerald-600 shadow-lg'}`}>
         {isDark ? <Sun size={18}/> : <Moon size={18}/>}
       </button>
       <div className="w-16 h-16 bg-emerald-500 rounded-3xl flex items-center justify-center mb-6 shadow-xl rotate-3"><MapPin size={32} className="text-white" /></div>
@@ -216,7 +180,6 @@ export default function App() {
     </div>
   );
 
-  // --- MAIN APP ---
   return (
     <div className={`min-h-screen ${colors.bg} ${colors.text} pb-36 transition-colors duration-500`}>
       {statusMsg.text && (
@@ -226,16 +189,14 @@ export default function App() {
         </div>
       )}
 
-      {/* HORIZONTALLY ALIGNED THEME BUTTON */}
+      {/* THEME TOGGLE - ALIGNED HORIZONTALLY TO LOGOUT */}
       <button 
-        ref={themeMag.ref} 
-        onMouseMove={themeMag.handleMouseMove} 
-        onMouseLeave={themeMag.reset}
+        ref={themeMag.ref} onMouseMove={themeMag.handleMouseMove} onMouseLeave={themeMag.reset}
         style={{ transform: `translate(${themeMag.position.x}px, ${themeMag.position.y}px)` }}
         onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')} 
-        className={`theme-toggle-aligned p-3.5 rounded-2xl border ${isDark ? 'bg-zinc-900/80 border-white/10 text-emerald-400' : 'bg-white/80 border-emerald-200 text-emerald-600 shadow-lg backdrop-blur-md'}`}
+        className={`fixed top-[4.2rem] right-[5.5rem] p-3 rounded-2xl border z-[10000] transition-all ${isDark ? 'bg-zinc-900/80 border-white/10 text-emerald-400' : 'bg-white/80 border-emerald-200 text-emerald-600 shadow-lg'}`}
       >
-        {isDark ? <Sun size={18}/> : <Moon size={18}/>}
+        {isDark ? <Sun size={16}/> : <Moon size={16}/>}
       </button>
 
       <Header isAdmin={isAdmin} username={username} email={user?.email} showEmail={showEmail} isDark={isDark} logoutMag={logoutMag} handleLogout={handleLogout} />
@@ -244,22 +205,34 @@ export default function App() {
         {activeTab === 'home' && <HomeTab isNearSpot={isNearSpot} totalPoints={totalPoints} foundCount={unlockedSpots.length} unlockedSpots={unlockedSpots} spots={spots} colors={colors} streak={visitData.streak} />}
         {activeTab === 'leaderboard' && <LeaderboardTab leaderboard={leaderboard} username={username} colors={colors} />}
         {activeTab === 'explore' && <ExploreTab mapCenter={mapCenter} isDark={isDark} spots={spots} colors={colors} />}
-        {activeTab === 'profile' && <ProfileTab tempUsername={tempUsername} setTempUsername={setTempUsername} saveUsername={saveUsername} showEmail={showEmail} toggleEmailVisibility={toggleEmailVisibility} colors={colors} isDark={isDark} lastChange={lastChange} />}
+        {activeTab === 'profile' && <ProfileTab tempUsername={tempUsername} setTempUsername={setTempUsername} saveUsername={async () => {
+          const cleaned = tempUsername.replace('@', '').trim();
+          const { error } = await supabase.from('profiles').update({ username: cleaned, last_username_change: new Date().toISOString() }).eq('id', user.id);
+          if (!error) { setUsername(cleaned); setLastChange(new Date().toISOString()); showToast("Identity updated!"); fetchLeaderboard(spots); }
+        }} showEmail={showEmail} toggleEmailVisibility={async () => {
+          const newValue = !showEmail;
+          const { error } = await supabase.from('profiles').update({ show_email: newValue }).eq('id', user.id);
+          if (!error) setShowEmail(newValue);
+        }} colors={colors} isDark={isDark} lastChange={lastChange} />}
+        
         {activeTab === 'dev' && isAdmin && (
           <AdminTab 
             spots={spots} unlockedSpots={unlockedSpots} claimSpot={claimSpot} 
             removeSpot={async (id) => {
               const newUnlocked = unlockedSpots.filter(x => x !== id);
-              const { error } = await supabase.from('profiles').update({ unlocked_spots: newUnlocked }).eq('id', user.id);
-              if (!error) { setUnlockedSpots(newUnlocked); fetchLeaderboard(spots); }
+              await supabase.from('profiles').update({ unlocked_spots: newUnlocked }).eq('id', user.id);
+              setUnlockedSpots(newUnlocked); fetchLeaderboard(spots);
             }} 
-            isDark={isDark} colors={colors} userLocation={userLocation} currentRadius={customRadius} updateRadius={updateRadius} resetTimer={resetTimer} addNewSpot={addNewSpot} deleteSpotFromDB={deleteSpotFromDB} 
+            isDark={isDark} colors={colors} userLocation={userLocation} currentRadius={customRadius} 
+            updateRadius={async (v) => { await supabase.from('profiles').update({ custom_radius: v }).eq('id', user.id); setCustomRadius(v); }} 
+            resetTimer={async () => { await supabase.from('profiles').update({ last_username_change: null }).eq('id', user.id); setLastChange(null); }} 
+            addNewSpot={async (s) => { const id = s.name.toLowerCase().replace(/\s+/g, '-'); await supabase.from('spots').insert([{ id, ...s }]); setSpots(p => ({ ...p, [id]: { id, ...s } })); }} 
+            deleteSpotFromDB={async (id) => { await supabase.from('spots').delete().eq('id', id); const n = {...spots}; delete n[id]; setSpots(n); }} 
           />
         )}
       </div>
 
-      {/* REACTIVE INSTANT NAVBAR */}
-      <div className={`fixed bottom-0 left-0 right-0 z-[50] ${isNavbarShrunk ? 'nav-shrink' : ''}`}>
+      <div className={`fixed bottom-0 left-0 right-0 z-[50] transition-all duration-300 ${isNavbarShrunk ? 'nav-shrink' : ''}`}>
         <Navbar activeTab={activeTab} setActiveTab={setActiveTab} isAdmin={isAdmin} colors={colors} />
       </div>
     </div>
