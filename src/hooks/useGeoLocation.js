@@ -4,10 +4,13 @@ import { getDistance } from '../utils/geoUtils';
 export function useGeoLocation(spots, customRadius) {
   const [userLocation, setUserLocation] = useState(null);
   const [proximity, setProximity] = useState({ isNear: false, canClaim: false, spotId: null });
-  // Map starts at a default, but ExploreTab usually flies to userLocation
-  const [mapCenter] = useState([40.730610, -73.935242]);
+  // Set a sensible default for map if location isn't available yet
+  const [mapCenter] = useState([50.0121, 22.6742]);
 
   useEffect(() => {
+    // Determine the detection range: Use database value or default to 250
+    const detectionRange = customRadius || 250;
+
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
         const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
@@ -16,18 +19,22 @@ export function useGeoLocation(spots, customRadius) {
         let foundNear = false;
         let foundClaimable = false;
         let foundId = null;
+        let closestDist = Infinity;
 
         Object.values(spots).forEach(spot => {
           const dist = getDistance(coords.lat, coords.lng, spot.lat, spot.lng);
           
-          // 1. Detection Range (250m) - Shows the spot in the UI
-          if (dist <= 250) {
-            foundNear = true;
-            foundId = spot.id;
+          // 1. DYNAMIC DETECTION: Use the radius from DB/Admin
+          if (dist <= detectionRange) {
+            // We want to track the ABSOLUTE closest spot if multiple are in range
+            if (dist < closestDist) {
+              closestDist = dist;
+              foundNear = true;
+              foundId = spot.id;
+            }
           }
           
-          // 2. Claim Range (10m or Custom Radius) - Enables the button
-          // Using 10m as the hard limit you requested
+          // 2. CLAIM RANGE: Hard limit of 10m for actual point collection
           if (dist <= 10) {
             foundClaimable = true;
           }
@@ -39,17 +46,21 @@ export function useGeoLocation(spots, customRadius) {
           spotId: foundId 
         });
       },
-      (err) => console.error("Geo Error:", err),
-      { enableHighAccuracy: true, maximumAge: 0 }
+      (err) => console.error("GPS Signal Lost:", err),
+      { 
+        enableHighAccuracy: true, 
+        maximumAge: 0,
+        timeout: 5000 
+      }
     );
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [spots, customRadius]);
+  }, [spots, customRadius]); // Re-runs logic if admin changes radius in DB
 
   return { 
     userLocation, 
     mapCenter, 
     isNearSpot: proximity.isNear, 
-    canClaim: proximity.canClaim, // New property
+    canClaim: proximity.canClaim, 
     activeSpotId: proximity.spotId 
   };
 }
