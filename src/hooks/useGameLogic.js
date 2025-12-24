@@ -12,15 +12,17 @@ export function useGameLogic(user, showToast) {
   const [customRadius, setCustomRadius] = useState(0.25);
   const [leaderboard, setLeaderboard] = useState([]);
 
-  // Load Initial Data
+  // --- INITIAL DATA FETCHING ---
   useEffect(() => {
     if (!user) return;
 
     const fetchData = async () => {
+      // Fetch Spots
       const { data: dbSpots } = await supabase.from('spots').select('*');
       const spotsObj = dbSpots ? dbSpots.reduce((acc, s) => ({ ...acc, [s.id]: s }), {}) : {};
       setSpots(spotsObj);
 
+      // Fetch User Profile
       const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
       if (profile) {
         setUnlockedSpots(profile.unlocked_spots || []);
@@ -36,6 +38,7 @@ export function useGameLogic(user, showToast) {
     fetchData();
   }, [user]);
 
+  // --- LEADERBOARD LOGIC ---
   const fetchLeaderboard = async (currentSpots) => {
     const { data: profiles } = await supabase.from('profiles').select('username, unlocked_spots, visit_data');
     if (profiles) {
@@ -52,6 +55,7 @@ export function useGameLogic(user, showToast) {
     }
   };
 
+  // --- GAMEPLAY ACTIONS ---
   const claimSpot = async (spotId) => {
     if (unlockedSpots.includes(spotId)) return showToast("Already logged", "error");
     
@@ -82,10 +86,78 @@ export function useGameLogic(user, showToast) {
     }
   };
 
+  // --- PROFILE ACTIONS ---
+  const saveUsername = async () => {
+    const cleaned = tempUsername.replace('@', '').trim();
+    const { error } = await supabase.from('profiles')
+      .update({ username: cleaned, last_username_change: new Date().toISOString() })
+      .eq('id', user.id);
+    
+    if (!error) { 
+      setUsername(cleaned); 
+      setLastChange(new Date().toISOString()); 
+      showToast("Identity updated!"); 
+      fetchLeaderboard(spots); 
+    }
+  };
+
+  const toggleEmailVisibility = async () => {
+    const newValue = !showEmail;
+    const { error } = await supabase.from('profiles').update({ show_email: newValue }).eq('id', user.id);
+    if (!error) setShowEmail(newValue);
+  };
+
+  // --- ADMIN ACTIONS ---
+  const removeSpot = async (id) => {
+    const newUnlocked = unlockedSpots.filter(x => x !== id);
+    await supabase.from('profiles').update({ unlocked_spots: newUnlocked }).eq('id', user.id);
+    setUnlockedSpots(newUnlocked); 
+    fetchLeaderboard(spots);
+  };
+
+  const updateRadius = async (v) => { 
+    await supabase.from('profiles').update({ custom_radius: v }).eq('id', user.id); 
+    setCustomRadius(v); 
+  };
+
+  const resetTimer = async () => { 
+    const { error } = await supabase.from('profiles')
+      .update({ last_username_change: null })
+      .eq('id', user.id); 
+  
+    if (!error) {
+      setLastChange(null);
+      showToast("Cooldown Reset! Identity change available.", "success");
+    } else {
+      showToast("Failed to reset timer", "error");
+    }
+  };
+
+  const addNewSpot = async (s) => { 
+    const id = s.name.toLowerCase().replace(/\s+/g, '-'); 
+    const { error } = await supabase.from('spots').insert([{ id, ...s }]); 
+  
+    if (!error) {
+      setSpots(prev => ({ ...prev, [id]: { id, ...s } })); 
+      showToast(`${s.name} added to the map!`);
+    } else {
+      showToast("Error adding spot", "error");
+    }
+  };
+
+  const deleteSpotFromDB = async (id) => { 
+    await supabase.from('spots').delete().eq('id', id); 
+    const n = {...spots}; 
+    delete n[id]; 
+    setSpots(n); 
+  };
+
   return { 
-    spots, setSpots, unlockedSpots, setUnlockedSpots, visitData, 
-    username, setUsername, tempUsername, setTempUsername, 
-    showEmail, setShowEmail, lastChange, setLastChange,
-    customRadius, setCustomRadius, leaderboard, claimSpot, fetchLeaderboard
+    spots, unlockedSpots, visitData, 
+    username, tempUsername, setTempUsername, 
+    showEmail, lastChange, customRadius, leaderboard, 
+    claimSpot, saveUsername, toggleEmailVisibility, 
+    removeSpot, updateRadius, resetTimer, addNewSpot, deleteSpotFromDB,
+    fetchLeaderboard 
   };
 }

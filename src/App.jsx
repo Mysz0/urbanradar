@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import 'leaflet/dist/leaflet.css';
 
 // MODULAR IMPORTS
-import { supabase } from './supabase';
 import { useMagnetic } from './hooks/useMagnetic';
 import { useAuth } from './hooks/useAuth';
 import { useTheme } from './hooks/useTheme';
@@ -24,29 +23,34 @@ import ThemeToggle from './components/UI/ThemeToggle';
 const ADMIN_UID = import.meta.env.VITE_ADMIN_UID;
 
 export default function App() {
-  // 1. STATE & HOOKS
+  // 1. SHARED UI STATE
   const [activeTab, setActiveTab] = useState('home');
   const [statusMsg, setStatusMsg] = useState({ text: '', type: '' });
   
+  // 2. LOGIC EXTRACTION (Hooks)
   const { user, loading } = useAuth();
   const { theme, setTheme, isDark, isAtTop, isNavbarShrunk } = useTheme();
-  const { userLocation, mapCenter } = useGeoLocation();
-  const themeMag = useMagnetic();
-  const logoutMag = useMagnetic();
-
+  
   const showToast = (text, type = 'success') => {
     setStatusMsg({ text, type });
     setTimeout(() => setStatusMsg({ text: '', type: '' }), 4000);
   };
 
   const {
-    spots, setSpots, unlockedSpots, setUnlockedSpots, visitData,
-    username, setUsername, tempUsername, setTempUsername,
-    showEmail, setShowEmail, lastChange, setLastChange,
-    customRadius, setCustomRadius, leaderboard, claimSpot, fetchLeaderboard
+    spots, unlockedSpots, visitData,
+    username, tempUsername, setTempUsername,
+    showEmail, lastChange, customRadius, leaderboard,
+    claimSpot, saveUsername, toggleEmailVisibility,
+    removeSpot, updateRadius, resetTimer, addNewSpot, deleteSpotFromDB
   } = useGameLogic(user, showToast);
 
-  // 2. DERIVED STATE & HANDLERS
+  // High-accuracy location + proximity check
+  const { userLocation, mapCenter, isNearSpot, activeSpotId } = useGeoLocation(spots, customRadius);
+
+  const themeMag = useMagnetic();
+  const logoutMag = useMagnetic();
+
+  // 3. UI HELPERS
   const isAdmin = user?.id === ADMIN_UID;
   const colors = {
     bg: isDark ? 'bg-[#09090b]' : 'bg-[#f0f4f2]',
@@ -56,12 +60,13 @@ export default function App() {
     glass: isDark ? 'bg-white/[0.02] backdrop-blur-xl border-white/[0.05]' : 'bg-white/40 backdrop-blur-xl border-white/20'
   };
 
-  const handleLogout = async () => { 
-    await supabase.auth.signOut(); 
-    window.location.href = '/'; 
+  const handleLogout = async () => {
+    const { supabase } = await import('./supabase');
+    await supabase.auth.signOut();
+    window.location.href = '/';
   };
 
-  // 3. RENDER LOGIC
+  // 4. AUTH & LOADING SCREENS
   if (loading) return (
     <div className={`min-h-screen ${colors.bg} flex items-center justify-center`}>
       <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
@@ -74,8 +79,10 @@ export default function App() {
 
   return (
     <div className={`min-h-screen ${colors.bg} ${colors.text} pb-36 transition-colors duration-500`}>
+      {/* Visual Feedback Layer */}
       <Toast statusMsg={statusMsg} />
 
+      {/* Floating Theme Switcher */}
       <ThemeToggle 
         themeMag={themeMag} 
         setTheme={setTheme} 
@@ -83,6 +90,7 @@ export default function App() {
         isAtTop={isAtTop} 
       />
 
+      {/* User Header */}
       <Header 
         isAdmin={isAdmin} 
         username={username} 
@@ -93,11 +101,17 @@ export default function App() {
         handleLogout={handleLogout} 
       />
 
+      {/* Main Content Sections */}
       <div className="max-w-md mx-auto px-6 -mt-16 relative z-30">
         {activeTab === 'home' && (
           <HomeTab 
-            isNearSpot={false} // You can add proximity logic to useGeoLocation later
-            totalPoints={unlockedSpots.reduce((sum, id) => sum + Math.round((spots[id]?.points || 0) * (visitData.streak > 1 ? 1.1 : 1.0)), 0)} 
+            isNearSpot={isNearSpot} 
+            activeSpotId={activeSpotId}
+            totalPoints={unlockedSpots.reduce((sum, id) => {
+              const basePoints = spots[id]?.points || 0;
+              const multiplier = visitData.streak > 1 ? 1.1 : 1.0;
+              return sum + Math.round(basePoints * multiplier);
+            }, 0)} 
             foundCount={unlockedSpots.length} 
             unlockedSpots={unlockedSpots} 
             spots={spots} 
@@ -106,25 +120,27 @@ export default function App() {
           />
         )}
         
-        {activeTab === 'leaderboard' && <LeaderboardTab leaderboard={leaderboard} username={username} colors={colors} />}
+        {activeTab === 'leaderboard' && (
+          <LeaderboardTab leaderboard={leaderboard} username={username} colors={colors} />
+        )}
         
-        {activeTab === 'explore' && <ExploreTab mapCenter={mapCenter} isDark={isDark} spots={spots} colors={colors} />}
+        {activeTab === 'explore' && (
+          <ExploreTab 
+            mapCenter={mapCenter} 
+            userLocation={userLocation} 
+            isDark={isDark} 
+            spots={spots} 
+            colors={colors} 
+          />
+        )}
         
         {activeTab === 'profile' && (
           <ProfileTab 
             tempUsername={tempUsername} 
             setTempUsername={setTempUsername} 
-            saveUsername={async () => {
-              const cleaned = tempUsername.replace('@', '').trim();
-              const { error } = await supabase.from('profiles').update({ username: cleaned, last_username_change: new Date().toISOString() }).eq('id', user.id);
-              if (!error) { setUsername(cleaned); setLastChange(new Date().toISOString()); showToast("Identity updated!"); fetchLeaderboard(spots); }
-            }} 
+            saveUsername={saveUsername} 
             showEmail={showEmail} 
-            toggleEmailVisibility={async () => {
-              const newValue = !showEmail;
-              const { error } = await supabase.from('profiles').update({ show_email: newValue }).eq('id', user.id);
-              if (!error) setShowEmail(newValue);
-            }} 
+            toggleEmailVisibility={toggleEmailVisibility} 
             colors={colors} 
             isDark={isDark} 
             lastChange={lastChange} 
@@ -133,21 +149,23 @@ export default function App() {
         
         {activeTab === 'dev' && isAdmin && (
           <AdminTab 
-            spots={spots} unlockedSpots={unlockedSpots} claimSpot={claimSpot} 
-            removeSpot={async (id) => {
-              const newUnlocked = unlockedSpots.filter(x => x !== id);
-              await supabase.from('profiles').update({ unlocked_spots: newUnlocked }).eq('id', user.id);
-              setUnlockedSpots(newUnlocked); fetchLeaderboard(spots);
-            }} 
-            isDark={isDark} colors={colors} userLocation={userLocation} currentRadius={customRadius} 
-            updateRadius={async (v) => { await supabase.from('profiles').update({ custom_radius: v }).eq('id', user.id); setCustomRadius(v); }} 
-            resetTimer={async () => { await supabase.from('profiles').update({ last_username_change: null }).eq('id', user.id); setLastChange(null); }} 
-            addNewSpot={async (s) => { const id = s.name.toLowerCase().replace(/\s+/g, '-'); await supabase.from('spots').insert([{ id, ...s }]); setSpots(p => ({ ...p, [id]: { id, ...s } })); }} 
-            deleteSpotFromDB={async (id) => { await supabase.from('spots').delete().eq('id', id); const n = {...spots}; delete n[id]; setSpots(n); }} 
+            spots={spots} 
+            unlockedSpots={unlockedSpots} 
+            claimSpot={claimSpot} 
+            removeSpot={removeSpot} 
+            isDark={isDark} 
+            colors={colors} 
+            userLocation={userLocation} 
+            currentRadius={customRadius} 
+            updateRadius={updateRadius} 
+            resetTimer={resetTimer} 
+            addNewSpot={addNewSpot} 
+            deleteSpotFromDB={deleteSpotFromDB} 
           />
         )}
       </div>
 
+      {/* Bottom Navigation */}
       <div className={`fixed bottom-0 left-0 right-0 z-[50] transition-all duration-700 cubic-bezier(0.16, 1, 0.3, 1) ${isNavbarShrunk ? 'nav-shrink' : ''}`}>
         <Navbar activeTab={activeTab} setActiveTab={setActiveTab} isAdmin={isAdmin} colors={colors} />
       </div>
