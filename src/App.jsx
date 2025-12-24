@@ -19,6 +19,7 @@ import AdminTab from './components/Tabs/AdminTab';
 const ADMIN_UID = import.meta.env.VITE_ADMIN_UID;
 
 export default function App() {
+  // --- STATE ---
   const [spots, setSpots] = useState({});
   const [unlockedSpots, setUnlockedSpots] = useState([]);
   const [visitData, setVisitData] = useState({ last_visit: null, streak: 0 });
@@ -44,6 +45,7 @@ export default function App() {
   const [isNavbarShrunk, setIsNavbarShrunk] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
 
+  // --- HELPERS ---
   const isAdmin = user?.id === ADMIN_UID;
   const isDark = theme === 'dark';
   const themeMag = useMagnetic();
@@ -62,6 +64,7 @@ export default function App() {
     setTimeout(() => setStatusMsg({ text: '', type: '' }), 4000);
   };
 
+  // --- SYSTEM EFFECTS ---
   useEffect(() => {
     const root = window.document.documentElement;
     isDark ? root.classList.add('dark') : root.classList.remove('dark');
@@ -72,14 +75,17 @@ export default function App() {
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      setIsAtTop(currentScrollY < 60);
+      
+      // 1. Instant Top detection
+      setIsAtTop(currentScrollY < 10);
 
-      // SHRINK LOGIC: Shrink on scroll down, Expand on scroll up or top
-      if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        setIsNavbarShrunk(true);
-      } else if (currentScrollY < lastScrollY || currentScrollY < 50) {
-        setIsNavbarShrunk(false);
+      // 2. Faster Shrink logic: Trigger immediately on direction change
+      if (currentScrollY > lastScrollY && currentScrollY > 20) {
+        setIsNavbarShrunk(true); // Scrolling down
+      } else if (currentScrollY < lastScrollY) {
+        setIsNavbarShrunk(false); // Scrolling up
       }
+
       setLastScrollY(currentScrollY);
     };
 
@@ -144,29 +150,22 @@ export default function App() {
     }
   };
 
+  // --- ACTIONS ---
   const handleLogout = async () => { await supabase.auth.signOut(); window.location.href = '/'; };
   const toggleEmailVisibility = async () => {
     const newValue = !showEmail;
     const { error } = await supabase.from('profiles').update({ show_email: newValue }).eq('id', user.id);
     if (!error) setShowEmail(newValue);
   };
-
   const saveUsername = async () => {
     const cleaned = tempUsername.replace('@', '').trim();
     if (cleaned === username) return showToast("No changes detected", "error");
     const { error } = await supabase.from('profiles').update({ username: cleaned, last_username_change: new Date().toISOString() }).eq('id', user.id);
-    if (!error) {
-      setUsername(cleaned);
-      setLastChange(new Date().toISOString());
-      showToast("Identity updated!");
-      fetchLeaderboard(spots);
-    }
+    if (!error) { setUsername(cleaned); setLastChange(new Date().toISOString()); showToast("Identity updated!"); fetchLeaderboard(spots); }
   };
-
   const claimSpot = async (spotId) => {
     if (unlockedSpots.includes(spotId)) return showToast("Already logged", "error");
-    const today = new Date();
-    today.setHours(0,0,0,0);
+    const today = new Date(); today.setHours(0,0,0,0);
     const lastVisit = visitData.last_visit ? new Date(visitData.last_visit) : null;
     if (lastVisit) lastVisit.setHours(0,0,0,0);
     let newStreak = 1;
@@ -178,14 +177,10 @@ export default function App() {
     const newUnlocked = [...unlockedSpots, spotId];
     const newVisitData = { last_visit: new Date().toISOString(), streak: newStreak };
     const { error } = await supabase.from('profiles').update({ unlocked_spots: newUnlocked, visit_data: newVisitData }).eq('id', user.id);
-    if (!error) {
-      setUnlockedSpots(newUnlocked);
-      setVisitData(newVisitData);
-      fetchLeaderboard(spots);
-      showToast(newStreak > 1 ? `Streak Bonus: ${newStreak} Days!` : "Spot Logged!");
-    }
+    if (!error) { setUnlockedSpots(newUnlocked); setVisitData(newVisitData); fetchLeaderboard(spots); showToast(newStreak > 1 ? `Streak Bonus: ${newStreak} Days!` : "Spot Logged!"); }
   };
 
+  // --- ADMIN / DEV ---
   const resetTimer = async () => {
     const { error } = await supabase.from('profiles').update({ last_username_change: null }).eq('id', user.id);
     if (!error) { setLastChange(null); showToast("Cooldown reset!"); }
@@ -201,12 +196,7 @@ export default function App() {
   };
   const deleteSpotFromDB = async (spotId) => {
     const { error } = await supabase.from('spots').delete().eq('id', spotId);
-    if (!error) {
-      const newSpots = { ...spots };
-      delete newSpots[spotId];
-      setSpots(newSpots);
-      showToast("Node deleted from DB");
-    }
+    if (!error) { const newSpots = { ...spots }; delete newSpots[spotId]; setSpots(newSpots); showToast("Node deleted from DB"); }
   };
 
   const currentMultiplier = visitData.streak > 1 ? 1.1 : 1.0;
@@ -214,22 +204,19 @@ export default function App() {
 
   if (loading) return <div className={`min-h-screen ${colors.bg} flex items-center justify-center`}><div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" /></div>;
 
+  // --- GUEST VIEW ---
   if (!user) return (
     <div className={`min-h-screen flex flex-col items-center justify-center ${colors.bg} p-6 relative transition-colors duration-500`}>
-      <button ref={themeMag.ref} onMouseMove={themeMag.handleMouseMove} onMouseLeave={themeMag.reset}
-        style={{ transform: `translate(${themeMag.position.x}px, ${themeMag.position.y}px)`, transition: themeMag.position.x === 0 ? 'transform 0.5s' : 'none' }}
-        onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')} 
-        className={`theme-toggle-fixed fixed p-3.5 rounded-2xl border transition-all z-[10000] ${isDark ? 'bg-zinc-900/80 border-white/10 text-emerald-400' : 'bg-white/80 border-emerald-200 text-emerald-600 shadow-lg backdrop-blur-md'}`}>
+      <button onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')} className={`theme-toggle-aligned p-3.5 rounded-2xl border ${isDark ? 'bg-zinc-900/80 border-white/10 text-emerald-400' : 'bg-white/80 border-emerald-200 text-emerald-600 shadow-lg backdrop-blur-md'}`}>
         {isDark ? <Sun size={18}/> : <Moon size={18}/>}
       </button>
-      <div className="w-16 h-16 bg-emerald-500 rounded-3xl flex items-center justify-center mb-6 shadow-xl rotate-3">
-        <MapPin size={32} className="text-white" />
-      </div>
+      <div className="w-16 h-16 bg-emerald-500 rounded-3xl flex items-center justify-center mb-6 shadow-xl rotate-3"><MapPin size={32} className="text-white" /></div>
       <h1 className={`text-3xl font-bold mb-8 ${colors.text}`}>SpotHunt</h1>
       <button onClick={() => supabase.auth.signInWithOAuth({ provider: 'github' })} className="bg-emerald-500 text-white px-10 py-4 rounded-2xl font-bold shadow-lg hover:bg-emerald-600 transition-all">Sign in with GitHub</button>
     </div>
   );
 
+  // --- MAIN APP ---
   return (
     <div className={`min-h-screen ${colors.bg} ${colors.text} pb-36 transition-colors duration-500`}>
       {statusMsg.text && (
@@ -239,14 +226,14 @@ export default function App() {
         </div>
       )}
 
-      {/* FIXED THEME ICON */}
-      <button ref={themeMag.ref} onMouseMove={themeMag.handleMouseMove} onMouseLeave={themeMag.reset}
-        style={{ 
-          transform: `translate(${themeMag.position.x + (isAtTop ? -58 : 0)}px, ${themeMag.position.y}px)`,
-          transition: themeMag.position.x === 0 ? 'transform 0.8s' : 'none'
-        }}
+      {/* HORIZONTALLY ALIGNED THEME BUTTON */}
+      <button 
+        ref={themeMag.ref} 
+        onMouseMove={themeMag.handleMouseMove} 
+        onMouseLeave={themeMag.reset}
+        style={{ transform: `translate(${themeMag.position.x}px, ${themeMag.position.y}px)` }}
         onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')} 
-        className={`theme-toggle-fixed fixed p-3.5 rounded-2xl border z-[10000] ${isDark ? 'bg-zinc-900/80 border-white/10 text-emerald-400' : 'bg-white/80 border-emerald-200 text-emerald-600 shadow-lg backdrop-blur-md'}`}
+        className={`theme-toggle-aligned p-3.5 rounded-2xl border ${isDark ? 'bg-zinc-900/80 border-white/10 text-emerald-400' : 'bg-white/80 border-emerald-200 text-emerald-600 shadow-lg backdrop-blur-md'}`}
       >
         {isDark ? <Sun size={18}/> : <Moon size={18}/>}
       </button>
@@ -271,11 +258,10 @@ export default function App() {
         )}
       </div>
 
-      {/* DYNAMIC SHRINKING NAVBAR */}
-      <div className={`fixed bottom-0 left-0 right-0 z-[50] transition-all duration-700 cubic-bezier(0.16, 1, 0.3, 1) ${isNavbarShrunk ? 'nav-shrink' : 'translate-y-0 opacity-100'}`}>
+      {/* REACTIVE INSTANT NAVBAR */}
+      <div className={`fixed bottom-0 left-0 right-0 z-[50] ${isNavbarShrunk ? 'nav-shrink' : ''}`}>
         <Navbar activeTab={activeTab} setActiveTab={setActiveTab} isAdmin={isAdmin} colors={colors} />
       </div>
-
     </div>
   );
 }
