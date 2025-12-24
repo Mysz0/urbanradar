@@ -7,7 +7,8 @@ export default function Header({ isAdmin, username, email, showEmail, isDark, lo
       <div className="absolute inset-0 mist-overlay z-0 rounded-b-[4.5rem] overflow-hidden" />
       <div className={`absolute inset-0 ${isDark ? 'bg-zinc-950/40' : 'bg-white/10'} backdrop-blur-3xl z-10 rounded-b-[4.5rem]`} />
       
-      <div className="max-w-md mx-auto flex justify-between items-start relative z-20">
+      {/* items-center ensures the Logout button stays on the same baseline as the text and the theme switcher */}
+      <div className="max-w-md mx-auto flex justify-between items-center relative z-20">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1.5">
              {isAdmin ? (
@@ -28,28 +29,26 @@ export default function Header({ isAdmin, username, email, showEmail, isDark, lo
           )}
         </div>
         
-        {/* Row for buttons to ensure vertical alignment is perfect */}
-        <div className="flex items-center">
-          <button 
-            ref={logoutMag.ref} 
-            onMouseMove={logoutMag.handleMouseMove} 
-            onMouseLeave={logoutMag.reset}
-            style={{ 
-              transform: `translate(${logoutMag.position.x}px, ${logoutMag.position.y}px)`,
-              transition: logoutMag.position.x === 0 
-                ? 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)' 
-                : 'none'
-            }}
-            onClick={handleLogout} 
-            className={`p-3.5 rounded-2xl border transition-all duration-300 ease-out active:scale-90 z-30 shrink-0 ${
-              isDark 
-              ? 'bg-zinc-900/80 border-white/10 text-zinc-500 hover:text-red-400 hover:border-red-400/30' 
-              : 'bg-white/80 border-emerald-100 text-emerald-600 shadow-sm'
-            }`}
-          >
-            <LogOut size={18}/>
-          </button>
-        </div>
+        {/* LOGOUT BUTTON - FIXED TO RIGHT-10 VIA THE PARENT PX-10 */}
+        <button 
+          ref={logoutMag.ref} 
+          onMouseMove={logoutMag.handleMouseMove} 
+          onMouseLeave={logoutMag.reset}
+          style={{ 
+            transform: `translate(${logoutMag.position.x}px, ${logoutMag.position.y}px)`,
+            transition: logoutMag.position.x === 0 
+              ? 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)' 
+              : 'none'
+          }}
+          onClick={handleLogout} 
+          className={`p-3.5 rounded-2xl border transition-all duration-300 ease-out active:scale-90 z-30 shrink-0 ${
+            isDark 
+            ? 'bg-zinc-900/80 border-white/10 text-zinc-500 hover:text-red-400 hover:border-red-400/30' 
+            : 'bg-white/80 border-emerald-100 text-emerald-600 shadow-sm'
+          }`}
+        >
+          <LogOut size={18}/>
+        </button>
       </div>
     </header>
   );
