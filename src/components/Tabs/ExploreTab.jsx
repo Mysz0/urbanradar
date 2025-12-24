@@ -20,8 +20,9 @@ function MapController({ coords }) {
   const [hasCentered, setHasCentered] = useState(false);
 
   useEffect(() => {
-    if (coords && !hasCentered) {
-      map.flyTo([coords.latitude, coords.longitude], 16, {
+    // FIXED: Changed .latitude/.longitude to .lat/.lng to match your hook
+    if (coords?.lat && coords?.lng && !hasCentered) {
+      map.flyTo([coords.lat, coords.lng], 16, {
         duration: 2,
         easeLinearity: 0.25
       });
@@ -32,7 +33,7 @@ function MapController({ coords }) {
   return null;
 }
 
-export default function ExploreTab({ spots, unlockedSpots, userLocation, radius }) {
+export default function ExploreTab({ spots = {}, unlockedSpots = [], userLocation, radius }) {
   
   // Custom Blue Pulse Marker for the User
   const userIcon = L.divIcon({
@@ -50,8 +51,8 @@ export default function ExploreTab({ spots, unlockedSpots, userLocation, radius 
   return (
     <div className="h-full w-full rounded-[2.5rem] overflow-hidden border border-white/5 shadow-2xl relative bg-zinc-950">
       <MapContainer 
-        center={[0, 0]} 
-        zoom={2} 
+        center={[50.0121, 22.6742]} // Default to your general area (Jarosław)
+        zoom={13} 
         style={{ height: '100%', width: '100%' }}
         zoomControl={false}
       >
@@ -64,10 +65,10 @@ export default function ExploreTab({ spots, unlockedSpots, userLocation, radius 
         <MapController coords={userLocation} />
 
         {/* USER LOCATION & RANGE CIRCLE */}
-        {userLocation && (
+        {userLocation?.lat && (
           <>
             <Marker 
-              position={[userLocation.latitude, userLocation.longitude]} 
+              position={[userLocation.lat, userLocation.lng]} 
               icon={userIcon}
             >
               <Popup>
@@ -76,8 +77,8 @@ export default function ExploreTab({ spots, unlockedSpots, userLocation, radius 
             </Marker>
             
             <Circle 
-              center={[userLocation.latitude, userLocation.longitude]}
-              radius={radius}
+              center={[userLocation.lat, userLocation.lng]}
+              radius={radius || 10} // The 10m claim zone
               pathOptions={{ 
                 color: '#10b981', 
                 fillColor: '#10b981', 
@@ -123,7 +124,7 @@ export default function ExploreTab({ spots, unlockedSpots, userLocation, radius 
             <div>
               <p className="text-[10px] font-black text-white uppercase tracking-widest leading-none">GPS ACTIVE</p>
               <p className="text-[8px] font-bold text-zinc-500 uppercase tracking-tighter mt-1">
-                {userLocation ? `${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}` : 'Scanning for satellites...'}
+                {userLocation ? `${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)}` : 'Scanning for satellites...'}
               </p>
             </div>
           </div>
