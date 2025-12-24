@@ -155,15 +155,28 @@ export function useGameLogic(user, showToast) {
   };
 
   const deleteSpotFromDB = async (id) => { 
-    // This will work now because you ran the SQL command in Step 1
-    const { error } = await supabase.from('spots').delete().eq('id', id); 
-    if (!error) {
-      setSpots(prev => { const n = {...prev}; delete n[id]; return n; });
-      showToast("Purged from DB");
-    } else {
-      showToast("Delete failed. Run the SQL script!", "error");
+    try {
+      // 1. First, tell Supabase to remove this ID from EVERY user's array in the profiles table
+      // We do this via a manual update call to clear the "blockers"
+      await supabase.rpc('remove_spot_from_all_profiles', { spot_id: id });
+
+      // 2. Now delete the actual spot from the spots table
+      const { error } = await supabase.from('spots').delete().eq('id', id); 
+      
+      if (!error) {
+        setSpots(prev => { const n = {...prev}; delete n[id]; return n; });
+        showToast("Purged from DB");
+      } else {
+        // If it still fails, it's the constraint issue
+        showToast("Delete blocked. Run the SQL script I gave you!", "error");
+      }
+    } catch (err) {
+      // If the RPC above doesn't exist yet, we fall back to a simple delete
+      const { error } = await supabase.from('spots').delete().eq('id', id);
+      if (error) showToast("Database still protected. Use SQL Editor.", "error");
     }
   };
+  
 
   const updateRadius = async (v) => { 
     const { error } = await supabase.from('profiles').update({ custom_radius: v }).eq('id', user.id); 
