@@ -5,6 +5,7 @@ export function useGameLogic(user, showToast) {
   const [spots, setSpots] = useState({});
   const [unlockedSpots, setUnlockedSpots] = useState([]);
   const [visitData, setVisitData] = useState({ last_visit: null, streak: 0 });
+  const [spotStreaks, setSpotStreaks] = useState({}); // Tracking streaks per individual spot
   const [username, setUsername] = useState('');
   const [tempUsername, setTempUsername] = useState('');
   const [showEmail, setShowEmail] = useState(false);
@@ -42,10 +43,12 @@ export function useGameLogic(user, showToast) {
     if (!user) return;
 
     const fetchData = async () => {
+      // 1. Fetch All World Spots
       const { data: dbSpots } = await supabase.from('spots').select('*');
       const spotsObj = dbSpots ? dbSpots.reduce((acc, s) => ({ ...acc, [s.id]: s }), {}) : {};
       setSpots(spotsObj);
 
+      // 2. Fetch User Profile
       let { data: profile } = await supabase
         .from('profiles')
         .select('*')
@@ -57,19 +60,19 @@ export function useGameLogic(user, showToast) {
                              user.user_metadata?.user_name || 
                              `Hunter_${user.id.substring(0, 4)}`;
 
-        const { data: created, error: insertError } = await supabase
+        const { data: created } = await supabase
           .from('profiles')
           .insert([{
             id: user.id,
             username: fallbackName,
             unlocked_spots: [],
             custom_radius: 50,
-            visit_data: { last_visit: null, streak: 0 }
+            visit_data: { last_visit: null, streak: 0 },
+            spot_streaks: {} // Initialize empty streaks
           }])
           .select()
           .single();
-        
-        if (!insertError) profile = created;
+        profile = created;
       }
 
       if (profile) {
@@ -79,6 +82,7 @@ export function useGameLogic(user, showToast) {
         setShowEmail(profile.show_email ?? false);
         setLastChange(profile.last_username_change);
         setVisitData(profile.visit_data || { last_visit: null, streak: 0 });
+        setSpotStreaks(profile.spot_streaks || {});
         setCustomRadius(profile.custom_radius || 50);
       }
       
@@ -90,53 +94,60 @@ export function useGameLogic(user, showToast) {
 
   // --- GAMEPLAY ACTIONS ---
   const claimSpot = async (spotId) => {
-    const today = new Date(); today.setHours(0,0,0,0);
-    const lastVisitDate = visitData.last_visit ? new Date(visitData.last_visit) : null;
-    if (lastVisitDate) lastVisitDate.setHours(0,0,0,0);
-
-    // 1. BLOCK IF CLAIMED TODAY
-    // We check the last_visit date. If it's today, we don't allow another claim.
-    if (lastVisitDate && today.getTime() === lastVisitDate.getTime() && unlockedSpots.includes(spotId)) {
-      return showToast("Signal already logged for today", "error");
-    }
+    const today = new Date();
+    const todayStr = today.toDateString();
     
-    let newStreak = 1;
-    if (lastVisitDate) {
-      const diffDays = Math.floor((today - lastVisitDate) / (1000 * 60 * 60 * 24));
-      
-      if (diffDays === 0) {
-        // Same day claim of a NEW spot: maintain current streak
-        newStreak = visitData.streak || 1;
-      } else if (diffDays === 1) {
-        // Consecutive day: Increment streak
-        newStreak = (visitData.streak || 0) + 1;
-      } else {
-        // Streak broken
-        newStreak = 1;
+    // 1. Check if this specific spot was already claimed TODAY
+    const spotInfo = spotStreaks[spotId] || { last_claim: null, streak: 0 };
+    const lastSpotClaimDate = spotInfo.last_claim ? new Date(spotInfo.last_claim).toDateString() : null;
+
+    if (lastSpotClaimDate === todayStr) {
+      return showToast("Already logged this spot today", "error");
+    }
+
+    // 2. Global Activity Streak Logic
+    const lastGlobalVisit = visitData.last_visit ? new Date(visitData.last_visit).toDateString() : null;
+    let newGlobalStreak = visitData.streak || 1;
+    
+    if (lastGlobalVisit) {
+      const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+      if (lastGlobalVisit === yesterday.toDateString()) {
+        newGlobalStreak += 1;
+      } else if (lastGlobalVisit !== todayStr) {
+        newGlobalStreak = 1;
       }
     }
 
-    // 2. UPDATE UNLOCKED SPOTS (Only add if it's the first time ever)
+    // 3. Individual Spot Streak Logic
+    let newSpotStreak = (spotInfo.streak || 0) + 1;
+    if (lastSpotClaimDate) {
+      const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+      if (lastSpotClaimDate !== yesterday.toDateString() && lastSpotClaimDate !== todayStr) {
+        newSpotStreak = 1; // Reset spot streak if a day was missed
+      }
+    }
+
+    // 4. Update Objects
     const isFirstDiscovery = !unlockedSpots.includes(spotId);
     const newUnlocked = isFirstDiscovery ? [...unlockedSpots, spotId] : unlockedSpots;
-    
-    const newVisitData = { 
-      last_visit: new Date().toISOString(), 
-      streak: newStreak 
+    const newVisitData = { last_visit: today.toISOString(), streak: newGlobalStreak };
+    const newSpotStreaks = { 
+      ...spotStreaks, 
+      [spotId]: { last_claim: today.toISOString(), streak: newSpotStreak } 
     };
 
     const { error } = await supabase.from('profiles').update({ 
       unlocked_spots: newUnlocked, 
-      visit_data: newVisitData 
+      visit_data: newVisitData,
+      spot_streaks: newSpotStreaks
     }).eq('id', user.id);
 
     if (!error) {
       setUnlockedSpots(newUnlocked);
       setVisitData(newVisitData);
+      setSpotStreaks(newSpotStreaks);
       fetchLeaderboard(spots);
-      
-      const multiplierText = newStreak > 1 ? " (1.1x Bonus!)" : "";
-      showToast(isFirstDiscovery ? `New Spot Logged!${multiplierText}` : `Daily Logged! Streak: ${newStreak}${multiplierText}`);
+      showToast(isFirstDiscovery ? "New Node Found!" : `Node Re-logged! (${newSpotStreak}x Streak)`);
     }
   };
 
@@ -144,9 +155,7 @@ export function useGameLogic(user, showToast) {
   const saveUsername = async () => {
     const cleaned = tempUsername.trim();
     if (cleaned.length < 3) return showToast("Name too short", "error");
-    if (cleaned.includes('@') && cleaned.includes('.')) {
-        return showToast("Emails not allowed as names", "error");
-    }
+    if (cleaned.includes('@') && cleaned.includes('.')) return showToast("Emails not allowed", "error");
 
     const { error } = await supabase.from('profiles')
       .update({ username: cleaned, last_username_change: new Date().toISOString() })
@@ -173,8 +182,16 @@ export function useGameLogic(user, showToast) {
   // --- ADMIN ACTIONS ---
   const removeSpot = async (id) => {
     const newUnlocked = unlockedSpots.filter(x => x !== id);
-    await supabase.from('profiles').update({ unlocked_spots: newUnlocked }).eq('id', user.id);
+    const newSpotStreaks = { ...spotStreaks };
+    delete newSpotStreaks[id];
+
+    await supabase.from('profiles').update({ 
+      unlocked_spots: newUnlocked,
+      spot_streaks: newSpotStreaks
+    }).eq('id', user.id);
+
     setUnlockedSpots(newUnlocked); 
+    setSpotStreaks(newSpotStreaks);
     fetchLeaderboard(spots);
   };
 
@@ -185,10 +202,7 @@ export function useGameLogic(user, showToast) {
 
   const resetTimer = async () => { 
     const { error } = await supabase.from('profiles').update({ last_username_change: null }).eq('id', user.id);  
-    if (!error) {
-      setLastChange(null);
-      showToast("Cooldown Reset!", "success");
-    }
+    if (!error) { setLastChange(null); showToast("Cooldown Reset!", "success"); }
   };
 
   const addNewSpot = async (s) => { 
@@ -202,13 +216,11 @@ export function useGameLogic(user, showToast) {
 
   const deleteSpotFromDB = async (id) => { 
     await supabase.from('spots').delete().eq('id', id); 
-    const n = {...spots}; 
-    delete n[id]; 
-    setSpots(n); 
+    const n = {...spots}; delete n[id]; setSpots(n); 
   };
 
   return { 
-    spots, unlockedSpots, visitData, 
+    spots, unlockedSpots, visitData, spotStreaks,
     username, tempUsername, setTempUsername, 
     showEmail, lastChange, customRadius, leaderboard, 
     claimSpot, saveUsername, toggleEmailVisibility, 
