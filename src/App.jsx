@@ -20,8 +20,6 @@ import Login from './components/Auth/Login';
 import Toast from './components/UI/Toast';
 import ThemeToggle from './components/UI/ThemeToggle';
 
-const ADMIN_UID = import.meta.env.VITE_ADMIN_UID;
-
 export default function App() {
   // 1. SHARED UI STATE
   const [activeTab, setActiveTab] = useState('home');
@@ -39,21 +37,22 @@ export default function App() {
   const {
     spots, unlockedSpots, visitData, spotStreaks,
     username, tempUsername, setTempUsername,
+    userRole, // <--- Pulled from updated useGameLogic
     showEmail, lastChange, customRadius, leaderboard,
     claimSpot, saveUsername, toggleEmailVisibility,
     removeSpot, updateRadius, resetTimer, addNewSpot, deleteSpotFromDB
   } = useGameLogic(user, showToast);
 
   // High-accuracy location + proximity check
-  // ADDED: canClaim (for the 10m check)
   const { userLocation, mapCenter, isNearSpot, canClaim, activeSpotId } = useGeoLocation(spots, customRadius);
 
   // Magnetic refs for the interactive buttons
   const themeMag = useMagnetic();
   const logoutMag = useMagnetic();
 
-  // 3. UI HELPERS
-  const isAdmin = user?.id === ADMIN_UID;
+  // 3. UI HELPERS - ROLE BASED
+  const isAdmin = userRole === 'admin'; 
+  
   const colors = {
     bg: isDark ? 'bg-[#09090b]' : 'bg-[#f0f4f2]',
     card: isDark ? 'bg-zinc-900/40 border-white/[0.03] shadow-2xl' : 'bg-white/70 border-emerald-200/50 shadow-md shadow-emerald-900/5',
@@ -82,10 +81,8 @@ export default function App() {
   return (
     <div className={`min-h-screen relative ${colors.bg} ${colors.text} pb-36 transition-colors duration-500`}>
       
-      {/* Visual Feedback Layer */}
       <Toast statusMsg={statusMsg} />
 
-      {/* THEME TOGGLE */}
       <ThemeToggle 
         themeMag={themeMag} 
         setTheme={setTheme} 
@@ -93,7 +90,6 @@ export default function App() {
         isAtTop={isAtTop} 
       />
 
-      {/* USER HEADER */}
       <Header 
         isAdmin={isAdmin} 
         username={username} 
@@ -104,13 +100,12 @@ export default function App() {
         handleLogout={handleLogout} 
       />
 
-      {/* Main Content Sections */}
       <div className="max-w-md mx-auto px-6 -mt-16 relative z-30">
         {activeTab === 'home' && (
           <HomeTab 
             isNearSpot={isNearSpot} 
-            canClaim={canClaim}       // ADDED: For the 10m logic
-            userLocation={userLocation} // ADDED: For distance display
+            canClaim={canClaim}
+            userLocation={userLocation}
             activeSpotId={activeSpotId}
             claimSpot={claimSpot}
             totalPoints={unlockedSpots.reduce((sum, id) => {
@@ -175,7 +170,6 @@ export default function App() {
         )}
       </div>
 
-      {/* DYNAMIC BOTTOM NAVIGATION WRAPPER */}
       <div className={`
         fixed bottom-8 left-0 right-0 z-[5000] px-8
         transition-all duration-700 cubic-bezier(0.16, 1, 0.3, 1)

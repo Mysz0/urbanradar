@@ -8,9 +8,10 @@ export function useGameLogic(user, showToast) {
   const [spotStreaks, setSpotStreaks] = useState({}); 
   const [username, setUsername] = useState('');
   const [tempUsername, setTempUsername] = useState('');
+  const [userRole, setUserRole] = useState('player'); // NEW: Database-driven role
   const [showEmail, setShowEmail] = useState(false);
   const [lastChange, setLastChange] = useState(null);
-  const [customRadius, setCustomRadius] = useState(50);
+  const [customRadius, setCustomRadius] = useState(250); // Default to 250m
   const [leaderboard, setLeaderboard] = useState([]);
 
   // --- LEADERBOARD LOGIC ---
@@ -60,6 +61,7 @@ export function useGameLogic(user, showToast) {
           .eq('id', user.id)
           .maybeSingle();
 
+        // 3. Create Profile if it doesn't exist
         if (!profile) {
           const fallbackName = user.user_metadata?.full_name || 
                                user.user_metadata?.user_name || 
@@ -70,8 +72,9 @@ export function useGameLogic(user, showToast) {
             .insert([{
               id: user.id,
               username: fallbackName,
+              role: 'player', // Default role for new signups
               unlocked_spots: [],
-              custom_radius: 50,
+              custom_radius: 250,
               visit_data: { last_visit: null, streak: 0 },
               spot_streaks: {} 
             }])
@@ -84,11 +87,12 @@ export function useGameLogic(user, showToast) {
           setUnlockedSpots(profile.unlocked_spots || []);
           setUsername(profile.username || '');
           setTempUsername(profile.username || '');
+          setUserRole(profile.role || 'player'); // NEW: Set role from DB
           setShowEmail(profile.show_email ?? false);
           setLastChange(profile.last_username_change);
           setVisitData(profile.visit_data || { last_visit: null, streak: 0 });
-          setSpotStreaks(profile.spot_streaks || {}); // Safety: default to empty object
-          setCustomRadius(profile.custom_radius || 50);
+          setSpotStreaks(profile.spot_streaks || {});
+          setCustomRadius(profile.custom_radius || 250);
         }
         
         fetchLeaderboard(spotsObj);
@@ -107,7 +111,6 @@ export function useGameLogic(user, showToast) {
     const today = new Date();
     const todayStr = today.toDateString();
     
-    // Safety check: ensure spotStreaks exists
     const currentStreaks = spotStreaks || {};
     const spotInfo = currentStreaks[spotId] || { last_claim: null, streak: 0 };
     const lastSpotClaimDate = spotInfo.last_claim ? new Date(spotInfo.last_claim).toDateString() : null;
@@ -198,6 +201,7 @@ export function useGameLogic(user, showToast) {
   return { 
     spots, unlockedSpots, visitData, spotStreaks,
     username, tempUsername, setTempUsername, 
+    userRole, // EXPOSED: Now used in App.jsx for isAdmin check
     showEmail, lastChange, customRadius, leaderboard, 
     claimSpot, saveUsername, removeSpot, updateRadius, addNewSpot, deleteSpotFromDB,
     fetchLeaderboard 
