@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sun, Moon, MapPin } from 'lucide-react';
+import { Sun, Moon, MapPin, CheckCircle2, AlertCircle } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
 // MODULAR IMPORTS
@@ -33,11 +33,13 @@ export default function App() {
   const [isNearSpot, setIsNearSpot] = useState(false);
   const [mapCenter] = useState([40.730610, -73.935242]);
   const [leaderboard, setLeaderboard] = useState([]);
-  
-  // Refined Scroll state
   const [isAtTop, setIsAtTop] = useState(true);
 
-  // --- HELPERS & HOOKS ---
+  // NEW: Cooldown and Custom Notification State
+  const [lastChange, setLastChange] = useState(null);
+  const [statusMsg, setStatusMsg] = useState({ text: '', type: '' }); 
+
+  // --- HELPERS ---
   const isAdmin = user?.id === ADMIN_UID;
   const isDark = theme === 'dark';
   const themeMag = useMagnetic();
@@ -51,26 +53,21 @@ export default function App() {
     glass: isDark ? 'bg-white/[0.02] backdrop-blur-xl border-white/[0.05]' : 'bg-white/40 backdrop-blur-xl border-white/20'
   };
 
+  const showToast = (text, type = 'success') => {
+    setStatusMsg({ text, type });
+    setTimeout(() => setStatusMsg({ text: '', type: '' }), 4000);
+  };
+
   // --- SYSTEM EFFECTS ---
   useEffect(() => {
     const root = window.document.documentElement;
     isDark ? root.classList.add('dark') : root.classList.remove('dark');
     root.style.colorScheme = theme;
-
-    let metaThemeColor = document.querySelector('meta[name="theme-color"]');
-    const themeHex = isDark ? '#09090b' : '#f0f4f2';
-    if (!metaThemeColor) {
-      metaThemeColor = document.createElement('meta');
-      metaThemeColor.name = 'theme-color';
-      document.getElementsByTagName('head')[0].appendChild(metaThemeColor);
-    }
-    metaThemeColor.setAttribute('content', themeHex);
     localStorage.setItem('theme', theme);
   }, [theme, isDark]);
 
   useEffect(() => {
     const handleScroll = () => {
-      // Threshold 100: Once header starts leaving, we begin the transition
       setIsAtTop(window.scrollY < 100);
     };
     window.addEventListener('scroll', handleScroll);
@@ -94,6 +91,7 @@ export default function App() {
           setUsername(data.username || '');
           setTempUsername(data.username || '');
           setShowEmail(data.show_email ?? false);
+          setLastChange(data.last_username_change); // Load the timestamp
         }
       }
       setLoading(false);
@@ -136,8 +134,39 @@ export default function App() {
 
   const saveUsername = async () => {
     const cleaned = tempUsername.replace('@', '').trim();
-    const { error } = await supabase.from('profiles').upsert({ id: user.id, username: cleaned, show_email: showEmail });
-    if (!error) { setUsername(cleaned); alert("Profile secured."); fetchLeaderboard(spots); }
+    
+    // Check if name actually changed
+    if (cleaned === username) {
+      return showToast("Name is already set to this", "error");
+    }
+
+    // Check Cooldown (7 days)
+    if (lastChange) {
+      const last = new Date(lastChange).getTime();
+      const now = new Date().getTime();
+      const daysPassed = (now - last) / (1000 * 60 * 60 * 24);
+      
+      if (daysPassed < 7) {
+        const remaining = Math.ceil(7 - daysPassed);
+        return showToast(`Cooldown: ${remaining} days left`, "error");
+      }
+    }
+
+    const { error } = await supabase.from('profiles').upsert({ 
+      id: user.id, 
+      username: cleaned, 
+      show_email: showEmail,
+      last_username_change: new Date().toISOString() // Save update time
+    });
+
+    if (!error) { 
+      setUsername(cleaned); 
+      setLastChange(new Date().toISOString());
+      showToast("Identity updated successfully!"); 
+      fetchLeaderboard(spots); 
+    } else {
+      showToast("Something went wrong", "error");
+    }
   };
 
   const claimSpot = async (spotId) => {
@@ -190,15 +219,21 @@ export default function App() {
   return (
     <div className={`min-h-screen ${colors.bg} ${colors.text} pb-36 transition-colors duration-500 selection:bg-emerald-500/30`}>
       
-      {/* DYNAMIC THEME TOGGLE: 
-          1. Moves -58px (Left) when Header is visible.
-          2. Stays pinned to top-16 right-10.
-          3. When scrolling down, it stays fixed so it effectively "leaves" the header.
-      */}
+      {/* CUSTOM TOAST NOTIFICATION */}
+      {statusMsg.text && (
+        <div className={`fixed top-24 left-1/2 -translate-x-1/2 z-[10001] flex items-center gap-2 px-6 py-3 rounded-2xl border backdrop-blur-xl shadow-2xl transition-all animate-in fade-in slide-in-from-top-4 duration-300 ${
+          statusMsg.type === 'error' 
+            ? 'bg-red-500/10 border-red-500/20 text-red-400' 
+            : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+        }`}>
+          {statusMsg.type === 'error' ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
+          <span className="text-sm font-bold tracking-tight">{statusMsg.text}</span>
+        </div>
+      )}
+
       <button ref={themeMag.ref} onMouseMove={themeMag.handleMouseMove} onMouseLeave={themeMag.reset}
         style={{ 
           transform: `translate(${themeMag.position.x + (isAtTop ? -58 : 0)}px, ${themeMag.position.y}px)`,
-          /* Transitioning the transform ensures it slides back to the corner smoothly */
           transition: themeMag.position.x === 0 
             ? 'transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)' 
             : 'none'
@@ -227,7 +262,7 @@ export default function App() {
         {activeTab === 'home' && <HomeTab isNearSpot={isNearSpot} totalPoints={totalPoints} foundCount={unlockedSpots.length} unlockedSpots={unlockedSpots} spots={spots} colors={colors} />}
         {activeTab === 'leaderboard' && <LeaderboardTab leaderboard={leaderboard} username={username} colors={colors} />}
         {activeTab === 'explore' && <ExploreTab mapCenter={mapCenter} isDark={isDark} spots={spots} colors={colors} />}
-        {activeTab === 'profile' && <ProfileTab tempUsername={tempUsername} setTempUsername={setTempUsername} saveUsername={saveUsername} showEmail={showEmail} toggleEmailVisibility={toggleEmailVisibility} colors={colors} isDark={isDark} />}
+        {activeTab === 'profile' && <ProfileTab tempUsername={tempUsername} setTempUsername={setTempUsername} saveUsername={saveUsername} showEmail={showEmail} toggleEmailVisibility={toggleEmailVisibility} colors={colors} isDark={isDark} lastChange={lastChange} />}
         {activeTab === 'dev' && isAdmin && <AdminTab spots={spots} unlockedSpots={unlockedSpots} claimSpot={claimSpot} removeSpot={removeSpot} isDark={isDark} colors={colors} />}
       </div>
 

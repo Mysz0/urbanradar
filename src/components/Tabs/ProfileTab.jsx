@@ -1,4 +1,5 @@
 import React from 'react';
+import { Calendar } from 'lucide-react';
 
 export default function ProfileTab({ 
   tempUsername, 
@@ -7,20 +8,38 @@ export default function ProfileTab({
   showEmail, 
   toggleEmailVisibility, 
   colors, 
-  isDark 
+  isDark,
+  lastChange // Added this
 }) {
+  // Logic to show remaining days
+  const getCooldownInfo = () => {
+    if (!lastChange) return null;
+    const last = new Date(lastChange).getTime();
+    const daysPassed = (new Date().getTime() - last) / (1000 * 60 * 60 * 24);
+    if (daysPassed >= 7) return null;
+    return Math.ceil(7 - daysPassed);
+  };
+
+  const daysLeft = getCooldownInfo();
+
   return (
     <div className={`${colors.glass} p-10 rounded-[3rem] border space-y-8 animate-in fade-in zoom-in-95 duration-300`}>
       <div className="space-y-3">
-        <label className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest ml-1">Identity</label>
+        <div className="flex justify-between items-end ml-1">
+          <label className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Identity</label>
+          {daysLeft && (
+            <span className="text-[9px] font-bold text-zinc-500 uppercase flex items-center gap-1">
+              <Calendar size={10} /> Lock: {daysLeft}d
+            </span>
+          )}
+        </div>
         <input 
           type="text" value={tempUsername} onChange={(e) => setTempUsername(e.target.value)}
-          className={`w-full ${isDark ? 'bg-black/20 border-white/10' : 'bg-white/40 border-emerald-200/50'} border rounded-2xl py-5 px-6 font-bold outline-none focus:border-emerald-500 transition-all text-sm`}
+          className={`w-full ${isDark ? 'bg-black/20 border-white/10 text-white' : 'bg-white/40 border-emerald-200/50 text-zinc-900'} border rounded-2xl py-5 px-6 font-bold outline-none focus:border-emerald-500 transition-all text-sm`}
           placeholder="Your callsign..."
         />
       </div>
 
-      {/* Email Visibility Toggle */}
       <div className="flex items-center justify-between px-1">
         <div className="space-y-0.5">
           <p className="text-xs font-bold uppercase tracking-tight">Display Email</p>
@@ -34,8 +53,16 @@ export default function ProfileTab({
         </button>
       </div>
 
-      <button onClick={saveUsername} className="w-full bg-emerald-500 text-white py-5 rounded-2xl font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all text-sm">
-        Apply Changes
+      <button 
+        onClick={saveUsername} 
+        disabled={daysLeft !== null}
+        className={`w-full py-5 rounded-2xl font-bold shadow-lg transition-all text-sm ${
+          daysLeft 
+          ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed opacity-50' 
+          : 'bg-emerald-500 text-white shadow-emerald-500/20 hover:bg-emerald-600'
+        }`}
+      >
+        {daysLeft ? 'Changes Locked' : 'Apply Changes'}
       </button>
     </div>
   );
