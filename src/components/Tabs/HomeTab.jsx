@@ -7,7 +7,7 @@ export default function HomeTab({
   totalPoints, 
   foundCount, 
   unlockedSpots, 
-  visitData, // Received from updated App.jsx
+  visitData, 
   spots, 
   colors 
 }) {
@@ -15,7 +15,7 @@ export default function HomeTab({
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-6 duration-700">
-      {/* 1. PROXIMITY ALERT */}
+      {/* PROXIMITY ALERT */}
       {isNearSpot && (
         <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-3xl animate-in zoom-in-95 duration-500">
           <div className="bg-emerald-500 p-2 rounded-xl text-white animate-pulse">
@@ -27,29 +27,31 @@ export default function HomeTab({
         </div>
       )}
 
-      {/* 2. OVERALL STATS */}
+      {/* OVERALL STATS */}
       <StatCard mainVal={totalPoints} subVal={foundCount} colors={colors} />
 
-      {/* 3. ACTIVE STREAKS / COLLECTIONS */}
+      {/* COLLECTIONS */}
       <div className="space-y-4">
         <h2 className="text-[9px] font-black uppercase tracking-[0.3em] text-emerald-500/50 px-4">
           Active Nodes & Streaks
         </h2>
         
-        {unlockedSpots.length === 0 ? (
+        {(!unlockedSpots || unlockedSpots.length === 0) ? (
           <div className={`${colors.card} p-10 rounded-[2.5rem] text-center border border-dashed border-zinc-500/20`}>
             <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">No active nodes detected</p>
           </div>
         ) : (
           unlockedSpots.map(id => {
-            const spot = spots[id];
-            const data = visitData[id] || { streak: 0, lastVisit: null };
+            const spot = spots?.[id];
+            if (!spot) return null; // Defensive check
+
+            const data = visitData?.[id] || { streak: 0, lastVisit: null };
             const canCheckIn = data.lastVisit !== today;
-            const multiplier = (1 + (data.streak * 0.1)).toFixed(1);
+            const streakVal = data.streak || 0;
+            const multiplier = (1 + (streakVal * 0.1)).toFixed(1);
 
             return (
               <div key={id} className={`group relative ${colors.card} p-5 rounded-[2.2rem] border transition-all duration-300 hover:scale-[1.02] backdrop-blur-md overflow-hidden`}>
-                {/* Background Multiplier Glow */}
                 <div className="absolute -right-4 -top-4 opacity-[0.03] group-hover:opacity-10 transition-opacity">
                   <TrendingUp size={100} />
                 </div>
@@ -63,7 +65,7 @@ export default function HomeTab({
                       <p className="font-bold text-sm tracking-tight">{spot?.name}</p>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[9px] font-black bg-orange-500/10 text-orange-500 px-1.5 py-0.5 rounded-md uppercase tracking-wider">
-                          {data.streak} Day Streak
+                          {streakVal} Day Streak
                         </span>
                         <span className="text-[9px] font-black bg-emerald-500/10 text-emerald-500 px-1.5 py-0.5 rounded-md uppercase tracking-wider">
                           {multiplier}x Multiplier
@@ -82,7 +84,6 @@ export default function HomeTab({
                   </div>
                 </div>
 
-                {/* Status Bar */}
                 <div className="mt-4 pt-4 border-t border-white/[0.05]">
                   <div className="flex justify-between items-center mb-1.5">
                     <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest">
@@ -94,7 +95,7 @@ export default function HomeTab({
                   </div>
                   <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full transition-all duration-1000 ${canCheckIn ? 'w-full bg-emerald-500' : 'w-1/2 bg-zinc-700'}`}
+                      className={`h-full transition-all duration-500 ${canCheckIn ? 'w-full bg-emerald-500' : 'w-1/2 bg-zinc-700'}`}
                     />
                   </div>
                 </div>

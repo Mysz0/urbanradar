@@ -22,7 +22,7 @@ export default function App() {
   // --- STATE ---
   const [spots, setSpots] = useState({});
   const [unlockedSpots, setUnlockedSpots] = useState([]);
-  const [visitData, setVisitData] = useState({}); // New: { spotId: { streak: 1, lastVisit: '2023-10-01', totalEarned: 50 } }
+  const [visitData, setVisitData] = useState({}); 
   const [user, setUser] = useState(null);
   const [username, setUsername] = useState('');
   const [tempUsername, setTempUsername] = useState('');
@@ -88,7 +88,7 @@ export default function App() {
     }
   };
 
-  // --- CORE LOGIC: CLAIM / CHECK-IN ---
+  // --- CHECK-IN LOGIC ---
   const claimSpot = async (spotId) => {
     const now = new Date();
     const today = now.toISOString().split('T')[0];
@@ -97,22 +97,20 @@ export default function App() {
     const yesterdayStr = yesterday.toISOString().split('T')[0];
 
     const spot = spots[spotId];
-    const currentData = visitData[spotId] || { streak: 0, lastVisit: null, totalEarned: 0 };
+    if (!spot) return;
 
-    // 1. Prevent multiple check-ins on the same day
+    const currentData = visitData?.[spotId] || { streak: 0, lastVisit: null, totalEarned: 0 };
+
     if (currentData.lastVisit === today) {
       showToast("Already checked in today!", "error");
       return;
     }
 
-    // 2. Calculate New Streak
     let newStreak = 1;
     if (currentData.lastVisit === yesterdayStr) {
-      newStreak = currentData.streak + 1;
+      newStreak = (currentData.streak || 0) + 1;
     }
 
-    // 3. Calculate Points (Multiplier: 1.0 + (streak * 0.1))
-    // Day 1 = 1.1x, Day 2 = 1.2x... or Day 0 (base) = 1.0x
     const multiplier = 1 + (newStreak * 0.1);
     const earnedThisTime = Math.round(spot.points * multiplier);
     const newTotalEarned = (currentData.totalEarned || 0) + earnedThisTime;
@@ -126,7 +124,6 @@ export default function App() {
       }
     };
 
-    // Update Profile
     const { error } = await supabase.from('profiles').update({ 
       visit_data: updatedVisitData,
       unlocked_spots: Array.from(new Set([...unlockedSpots, spotId]))
@@ -135,10 +132,8 @@ export default function App() {
     if (!error) {
       setVisitData(updatedVisitData);
       setUnlockedSpots(Object.keys(updatedVisitData));
-      showToast(`Checked in! ${newStreak} day streak (+${earnedThisTime} pts)`);
+      showToast(`Checked in! Streak: ${newStreak} (+${earnedThisTime} pts)`);
       fetchLeaderboard(spots);
-    } else {
-      showToast("Sync Error", "error");
     }
   };
 
@@ -158,21 +153,18 @@ export default function App() {
     }
   };
 
-  // --- SYSTEM EFFECTS ---
+  // --- EFFECTS ---
   useEffect(() => {
     const root = window.document.documentElement;
     isDark ? root.classList.add('dark') : root.classList.remove('dark');
-    root.style.colorScheme = theme;
     localStorage.setItem('theme', theme);
   }, [theme, isDark]);
 
   useEffect(() => {
     const initApp = async () => {
       const { data: dbSpots } = await supabase.from('spots').select('*');
-      if (dbSpots) {
-        const spotsObj = dbSpots.reduce((acc, s) => ({ ...acc, [s.id]: s }), {});
-        setSpots(spotsObj);
-      }
+      const spotsObj = dbSpots ? dbSpots.reduce((acc, s) => ({ ...acc, [s.id]: s }), {}) : {};
+      setSpots(spotsObj);
       
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
@@ -186,6 +178,7 @@ export default function App() {
           setShowEmail(data.show_email ?? false);
           setLastChange(data.last_username_change);
           setDetectionRadius(data.custom_radius || 0.25);
+          fetchLeaderboard(spotsObj);
         }
       }
       setLoading(false);
@@ -210,7 +203,7 @@ export default function App() {
     if (profiles) {
       const ranked = profiles.map(p => {
         const vData = p.visit_data || {};
-        const score = Object.values(vData).reduce((sum, item) => sum + (item.totalEarned || 0), 0);
+        const score = Object.values(vData).reduce((sum, item) => sum + (item?.totalEarned || 0), 0);
         return {
           username: p.username || 'Anonymous',
           score: score,
@@ -221,16 +214,24 @@ export default function App() {
     }
   };
 
-  // Calculate total from totalEarned in each spot
-  const totalPoints = Object.values(visitData).reduce((sum, item) => sum + (item.totalEarned || 0), 0);
+  const saveUsername = async () => {
+    const cleaned = tempUsername.replace('@', '').trim();
+    const { error } = await supabase.from('profiles').upsert({ 
+      id: user.id, username: cleaned, last_username_change: new Date().toISOString() 
+    });
+    if (!error) { setUsername(cleaned); showToast("Name updated!"); fetchLeaderboard(spots); }
+  };
+
+  const handleLogout = async () => { await supabase.auth.signOut(); window.location.href = '/'; };
+
+  const totalPoints = visitData ? Object.values(visitData).reduce((sum, item) => sum + (item?.totalEarned || 0), 0) : 0;
 
   if (loading) return <div className={`min-h-screen ${colors.bg} flex items-center justify-center`}><div className="w-6 h-6 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" /></div>;
 
   if (!user) return (
-    <div className={`min-h-screen flex flex-col items-center justify-center ${colors.bg} p-6 transition-colors duration-500`}>
-      <div className="w-16 h-16 bg-emerald-500 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-emerald-500/20 rotate-3"><MapPin size={32} className="text-white" /></div>
-      <h1 className={`text-3xl font-bold mb-8 tracking-tight ${colors.text}`}>SpotHunt</h1>
-      <button onClick={() => supabase.auth.signInWithOAuth({ provider: 'github' })} className="bg-emerald-500 text-white px-10 py-4 rounded-2xl font-bold">Sign in with GitHub</button>
+    <div className={`min-h-screen flex flex-col items-center justify-center ${colors.bg} p-6`}>
+       <h1 className={`text-3xl font-bold mb-8 ${colors.text}`}>SpotHunt</h1>
+       <button onClick={() => supabase.auth.signInWithOAuth({ provider: 'github' })} className="bg-emerald-500 text-white px-10 py-4 rounded-2xl font-bold">Sign in with GitHub</button>
     </div>
   );
 
@@ -238,27 +239,17 @@ export default function App() {
     <div className={`min-h-screen ${colors.bg} ${colors.text} pb-36 transition-colors duration-500`}>
       {statusMsg.text && (
         <div className={`fixed top-24 left-1/2 -translate-x-1/2 z-[10001] flex items-center gap-2 px-6 py-3 rounded-2xl border backdrop-blur-xl shadow-2xl ${statusMsg.type === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'}`}>
-          {statusMsg.type === 'error' ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
-          <span className="text-sm font-bold">{statusMsg.text}</span>
+          <CheckCircle2 size={18} /> <span className="text-sm font-bold">{statusMsg.text}</span>
         </div>
       )}
-
       <Header isAdmin={isAdmin} username={username} email={user?.email} isDark={isDark} handleLogout={handleLogout} />
-
       <div className="max-w-md mx-auto px-6 -mt-16 relative z-30">
         {activeTab === 'home' && <HomeTab isNearSpot={isNearSpot} totalPoints={totalPoints} foundCount={unlockedSpots.length} unlockedSpots={unlockedSpots} visitData={visitData} spots={spots} colors={colors} />}
         {activeTab === 'leaderboard' && <LeaderboardTab leaderboard={leaderboard} username={username} colors={colors} />}
         {activeTab === 'explore' && <ExploreTab mapCenter={mapCenter} isDark={isDark} spots={spots} colors={colors} />}
         {activeTab === 'profile' && <ProfileTab tempUsername={tempUsername} setTempUsername={setTempUsername} saveUsername={saveUsername} colors={colors} isDark={isDark} />}
         {activeTab === 'dev' && isAdmin && (
-          <AdminTab 
-            spots={spots} unlockedSpots={unlockedSpots} 
-            claimSpot={claimSpot} removeSpot={removeSpot} 
-            isDark={isDark} colors={colors}
-            resetTimer={resetMyTimer} currentRadius={detectionRadius} updateRadius={updateRadius}
-            addNewSpot={addNewSpot} deleteSpotFromDB={deleteSpotFromDB}
-            userLocation={userLocation}
-          />
+          <AdminTab spots={spots} unlockedSpots={unlockedSpots} claimSpot={claimSpot} removeSpot={removeSpot} isDark={isDark} colors={colors} resetTimer={resetMyTimer} currentRadius={detectionRadius} updateRadius={updateRadius} addNewSpot={addNewSpot} deleteSpotFromDB={deleteSpotFromDB} userLocation={userLocation} />
         )}
       </div>
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} isAdmin={isAdmin} colors={colors} />
