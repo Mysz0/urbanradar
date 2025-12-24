@@ -19,7 +19,6 @@ import AdminTab from './components/Tabs/AdminTab';
 const ADMIN_UID = import.meta.env.VITE_ADMIN_UID;
 
 export default function App() {
-  // --- ALL STATES PRESERVED ---
   const [spots, setSpots] = useState({});
   const [unlockedSpots, setUnlockedSpots] = useState([]);
   const [visitData, setVisitData] = useState({ last_visit: null, streak: 0 });
@@ -43,7 +42,6 @@ export default function App() {
   const [isNavbarShrunk, setIsNavbarShrunk] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
 
-  // --- HELPERS ---
   const isAdmin = user?.id === ADMIN_UID;
   const isDark = theme === 'dark';
   const themeMag = useMagnetic();
@@ -62,7 +60,6 @@ export default function App() {
     setTimeout(() => setStatusMsg({ text: '', type: '' }), 4000);
   };
 
-  // --- SYSTEM EFFECTS ---
   useEffect(() => {
     const root = window.document.documentElement;
     isDark ? root.classList.add('dark') : root.classList.remove('dark');
@@ -73,19 +70,16 @@ export default function App() {
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      
-      // Update Top Status
-      setIsAtTop(currentScrollY < 15);
+      setIsAtTop(currentScrollY < 60);
 
-      // Instant Shrink Trigger (iOS 26 Safari Style)
-      if (currentScrollY > lastScrollY && currentScrollY > 5) {
+      // Instant Shrink Logic
+      if (currentScrollY > lastScrollY && currentScrollY > 20) {
         setIsNavbarShrunk(true);
       } else if (currentScrollY < lastScrollY) {
         setIsNavbarShrunk(false);
       }
       setLastScrollY(currentScrollY);
     };
-
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
@@ -122,15 +116,6 @@ export default function App() {
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
-  useEffect(() => {
-    if (userLocation && Object.values(spots).length > 0) {
-      const nearby = Object.values(spots).some(spot => 
-        getDistance(userLocation.lat, userLocation.lng, spot.lat, spot.lng) < customRadius
-      );
-      setIsNearSpot(nearby);
-    }
-  }, [userLocation, spots, customRadius]);
-
   const fetchLeaderboard = async (currentSpots) => {
     const { data: profiles } = await supabase.from('profiles').select('username, unlocked_spots, visit_data');
     if (profiles) {
@@ -166,13 +151,10 @@ export default function App() {
     if (!error) { setUnlockedSpots(newUnlocked); setVisitData(newVisitData); fetchLeaderboard(spots); showToast(newStreak > 1 ? `Streak Bonus: ${newStreak} Days!` : "Spot Logged!"); }
   };
 
-  const currentMultiplier = visitData.streak > 1 ? 1.1 : 1.0;
-  const totalPoints = unlockedSpots.reduce((sum, id) => sum + Math.round((spots[id]?.points || 0) * currentMultiplier), 0);
-
   if (loading) return <div className={`min-h-screen ${colors.bg} flex items-center justify-center`}><div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" /></div>;
 
   if (!user) return (
-    <div className={`min-h-screen flex flex-col items-center justify-center ${colors.bg} p-6 relative transition-colors duration-500`}>
+    <div className={`min-h-screen flex flex-col items-center justify-center ${colors.bg} p-6 relative`}>
       <button onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')} className={`fixed top-12 right-6 p-3.5 rounded-2xl border transition-all z-[10000] ${isDark ? 'bg-zinc-900/80 border-white/10 text-emerald-400' : 'bg-white/80 border-emerald-200 text-emerald-600 shadow-lg'}`}>
         {isDark ? <Sun size={18}/> : <Moon size={18}/>}
       </button>
@@ -191,19 +173,18 @@ export default function App() {
         </div>
       )}
 
-      {/* THEME TOGGLE: Always visible. When isAtTop, it aligns exactly left of Logout button */}
+      {/* THEME TOGGLE: Slides from corner into Header alignment */}
       <button 
-        ref={themeMag.ref} 
-        onMouseMove={themeMag.handleMouseMove} 
-        onMouseLeave={themeMag.reset}
-        style={{ 
-          transform: `translate(${themeMag.position.x}px, ${themeMag.position.y}px)`,
-          transition: themeMag.position.x === 0 ? 'transform 0.5s cubic-bezier(0.2, 0, 0.2, 1)' : 'none'
-        }}
+        ref={themeMag.ref} onMouseMove={themeMag.handleMouseMove} onMouseLeave={themeMag.reset}
         onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')} 
-        className={`fixed p-3 rounded-2xl border z-[10000] transition-all duration-300 ${
-          isAtTop ? 'top-[3.05rem] right-[5.5rem]' : 'top-6 right-6'
-        } ${isDark ? 'bg-zinc-900/80 border-white/10 text-emerald-400' : 'bg-white/80 border-emerald-200 text-emerald-600 shadow-sm'}`}
+        className={`fixed z-[10000] p-3.5 rounded-2xl border transition-all duration-700 cubic-bezier(0.16, 1, 0.3, 1) ${
+          isDark ? 'bg-zinc-900/80 border-white/10 text-emerald-400' : 'bg-white/80 border-emerald-200 text-emerald-600 shadow-lg'
+        }`}
+        style={{ 
+          top: isAtTop ? '3.05rem' : '1.5rem', 
+          right: isAtTop ? '5.6rem' : '1.5rem',
+          transform: `translate(${themeMag.position.x}px, ${themeMag.position.y}px)`
+        }}
       >
         {isDark ? <Sun size={18}/> : <Moon size={18}/>}
       </button>
@@ -211,7 +192,7 @@ export default function App() {
       <Header isAdmin={isAdmin} username={username} email={user?.email} showEmail={showEmail} isDark={isDark} logoutMag={logoutMag} handleLogout={handleLogout} />
 
       <div className="max-w-md mx-auto px-6 -mt-16 relative z-30">
-        {activeTab === 'home' && <HomeTab isNearSpot={isNearSpot} totalPoints={totalPoints} foundCount={unlockedSpots.length} unlockedSpots={unlockedSpots} spots={spots} colors={colors} streak={visitData.streak} />}
+        {activeTab === 'home' && <HomeTab isNearSpot={isNearSpot} totalPoints={unlockedSpots.reduce((sum, id) => sum + Math.round((spots[id]?.points || 0) * (visitData.streak > 1 ? 1.1 : 1.0)), 0)} foundCount={unlockedSpots.length} unlockedSpots={unlockedSpots} spots={spots} colors={colors} streak={visitData.streak} />}
         {activeTab === 'leaderboard' && <LeaderboardTab leaderboard={leaderboard} username={username} colors={colors} />}
         {activeTab === 'explore' && <ExploreTab mapCenter={mapCenter} isDark={isDark} spots={spots} colors={colors} />}
         {activeTab === 'profile' && <ProfileTab tempUsername={tempUsername} setTempUsername={setTempUsername} saveUsername={async () => {
@@ -241,7 +222,7 @@ export default function App() {
         )}
       </div>
 
-      <div className={`fixed bottom-0 left-0 right-0 z-[50] transition-all duration-300 ${isNavbarShrunk ? 'nav-shrink' : ''}`}>
+      <div className={`fixed bottom-0 left-0 right-0 z-[50] transition-all duration-700 cubic-bezier(0.16, 1, 0.3, 1) ${isNavbarShrunk ? 'nav-shrink' : ''}`}>
         <Navbar activeTab={activeTab} setActiveTab={setActiveTab} isAdmin={isAdmin} colors={colors} />
       </div>
     </div>
