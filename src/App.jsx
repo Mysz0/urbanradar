@@ -19,7 +19,6 @@ import AdminTab from './components/Tabs/AdminTab';
 const ADMIN_UID = import.meta.env.VITE_ADMIN_UID;
 
 export default function App() {
-  // --- STATE ---
   const [spots, setSpots] = useState({});
   const [unlockedSpots, setUnlockedSpots] = useState([]);
   const [visitData, setVisitData] = useState({ last_visit: null, streak: 0 });
@@ -42,10 +41,9 @@ export default function App() {
   const [statusMsg, setStatusMsg] = useState({ text: '', type: '' }); 
 
   // DYNAMIC NAVBAR STATES
-  const [isNavbarVisible, setIsNavbarVisible] = useState(true);
+  const [isNavbarShrunk, setIsNavbarShrunk] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
 
-  // --- HELPERS ---
   const isAdmin = user?.id === ADMIN_UID;
   const isDark = theme === 'dark';
   const themeMag = useMagnetic();
@@ -64,7 +62,6 @@ export default function App() {
     setTimeout(() => setStatusMsg({ text: '', type: '' }), 4000);
   };
 
-  // --- SYSTEM EFFECTS ---
   useEffect(() => {
     const root = window.document.documentElement;
     isDark ? root.classList.add('dark') : root.classList.remove('dark');
@@ -75,25 +72,13 @@ export default function App() {
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      const isMobile = window.innerWidth < 768; // Only run hide-logic on mobile
-      
-      // 1. Top detection (always run)
-      setIsAtTop(currentScrollY < 100);
+      setIsAtTop(currentScrollY < 60);
 
-      // 2. Optimized Navbar logic
-      if (!isMobile) {
-        setIsNavbarVisible(true);
-        return;
-      }
-
-      // Add a buffer (10px) so it doesn't flicker on tiny movements
-      const scrollDiff = Math.abs(currentScrollY - lastScrollY);
-      if (scrollDiff < 10) return; 
-
-      if (currentScrollY < lastScrollY || currentScrollY < 50) {
-        setIsNavbarVisible(true);
-      } else if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        setIsNavbarVisible(false);
+      // SHRINK LOGIC: Shrink on scroll down, Expand on scroll up or top
+      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        setIsNavbarShrunk(true);
+      } else if (currentScrollY < lastScrollY || currentScrollY < 50) {
+        setIsNavbarShrunk(false);
       }
       setLastScrollY(currentScrollY);
     };
@@ -110,7 +95,6 @@ export default function App() {
         spotsObj = dbSpots.reduce((acc, s) => ({ ...acc, [s.id]: s }), {});
         setSpots(spotsObj);
       }
-
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         setUser(session.user);
@@ -129,7 +113,6 @@ export default function App() {
       setLoading(false);
     };
     initApp();
-
     const watchId = navigator.geolocation.watchPosition((pos) => {
       setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
     }, null, { enableHighAccuracy: true });
@@ -161,9 +144,7 @@ export default function App() {
     }
   };
 
-  // --- STANDARD ACTIONS ---
   const handleLogout = async () => { await supabase.auth.signOut(); window.location.href = '/'; };
-
   const toggleEmailVisibility = async () => {
     const newValue = !showEmail;
     const { error } = await supabase.from('profiles').update({ show_email: newValue }).eq('id', user.id);
@@ -172,7 +153,7 @@ export default function App() {
 
   const saveUsername = async () => {
     const cleaned = tempUsername.replace('@', '').trim();
-    if (cleaned === username) return showToast("Name is already set", "error");
+    if (cleaned === username) return showToast("No changes detected", "error");
     const { error } = await supabase.from('profiles').update({ username: cleaned, last_username_change: new Date().toISOString() }).eq('id', user.id);
     if (!error) {
       setUsername(cleaned);
@@ -205,7 +186,6 @@ export default function App() {
     }
   };
 
-  // --- ADMIN / DEV ACTIONS ---
   const resetTimer = async () => {
     const { error } = await supabase.from('profiles').update({ last_username_change: null }).eq('id', user.id);
     if (!error) { setLastChange(null); showToast("Cooldown reset!"); }
@@ -239,7 +219,7 @@ export default function App() {
       <button ref={themeMag.ref} onMouseMove={themeMag.handleMouseMove} onMouseLeave={themeMag.reset}
         style={{ transform: `translate(${themeMag.position.x}px, ${themeMag.position.y}px)`, transition: themeMag.position.x === 0 ? 'transform 0.5s' : 'none' }}
         onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')} 
-        className={`fixed top-6 right-6 p-3.5 rounded-2xl border transition-all z-[10000] ${isDark ? 'bg-zinc-900/80 border-white/10 text-emerald-400' : 'bg-white/80 border-emerald-200 text-emerald-600 shadow-lg backdrop-blur-md'}`}>
+        className={`theme-toggle-fixed fixed p-3.5 rounded-2xl border transition-all z-[10000] ${isDark ? 'bg-zinc-900/80 border-white/10 text-emerald-400' : 'bg-white/80 border-emerald-200 text-emerald-600 shadow-lg backdrop-blur-md'}`}>
         {isDark ? <Sun size={18}/> : <Moon size={18}/>}
       </button>
       <div className="w-16 h-16 bg-emerald-500 rounded-3xl flex items-center justify-center mb-6 shadow-xl rotate-3">
@@ -259,10 +239,14 @@ export default function App() {
         </div>
       )}
 
+      {/* FIXED THEME ICON */}
       <button ref={themeMag.ref} onMouseMove={themeMag.handleMouseMove} onMouseLeave={themeMag.reset}
-        style={{ transform: `translate(${themeMag.position.x + (isAtTop ? -58 : 0)}px, ${themeMag.position.y}px)`, transition: themeMag.position.x === 0 ? 'transform 0.8s' : 'none' }}
+        style={{ 
+          transform: `translate(${themeMag.position.x + (isAtTop ? -58 : 0)}px, ${themeMag.position.y}px)`,
+          transition: themeMag.position.x === 0 ? 'transform 0.8s' : 'none'
+        }}
         onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')} 
-        className={`fixed top-16 right-10 p-3.5 rounded-2xl border z-[10000] ${isDark ? 'bg-zinc-900/80 border-white/10 text-emerald-400' : 'bg-white/80 border-emerald-200 text-emerald-600 shadow-lg backdrop-blur-md'}`}
+        className={`theme-toggle-fixed fixed p-3.5 rounded-2xl border z-[10000] ${isDark ? 'bg-zinc-900/80 border-white/10 text-emerald-400' : 'bg-white/80 border-emerald-200 text-emerald-600 shadow-lg backdrop-blur-md'}`}
       >
         {isDark ? <Sun size={18}/> : <Moon size={18}/>}
       </button>
@@ -287,9 +271,11 @@ export default function App() {
         )}
       </div>
 
-      <div className={`fixed bottom-0 left-0 right-0 z-[50] transition-all duration-500 ease-in-out ${isNavbarVisible ? 'translate-y-0 opacity-100' : 'translate-y-[120%] opacity-0'}`}>
+      {/* DYNAMIC SHRINKING NAVBAR */}
+      <div className={`fixed bottom-0 left-0 right-0 z-[50] transition-all duration-700 cubic-bezier(0.16, 1, 0.3, 1) ${isNavbarShrunk ? 'nav-shrink' : 'translate-y-0 opacity-100'}`}>
         <Navbar activeTab={activeTab} setActiveTab={setActiveTab} isAdmin={isAdmin} colors={colors} />
       </div>
+
     </div>
   );
 }
