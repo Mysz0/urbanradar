@@ -35,10 +35,10 @@ export default function AdminTab({
   const [newSpot, setNewSpot] = useState({ name: '', lat: '', lng: '', points: 50 });
 
   const radiusOptions = [
-    { label: '250m', val: 0.25 },
-    { label: '500m', val: 0.5 },
-    { label: '1km', val: 1.0 },
-    { label: '5km', val: 5.0 },
+    { label: '250m', val: 250 },
+    { label: '500m', val: 500 },
+    { label: '1km', val: 1000 },
+    { label: '5km', val: 5000 },
   ];
 
   const handleUseMyLocation = () => {

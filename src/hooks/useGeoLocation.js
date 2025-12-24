@@ -18,7 +18,7 @@ export function useGeoLocation(spots, customRadius) {
 
         Object.values(spots).forEach(spot => {
           const dist = getDistance(coords.lat, coords.lng, spot.lat, spot.lng);
-          if (dist <= (customRadius || 0.25)) {
+          if (dist <= (customRadius || 250)) {
             foundNear = true;
             foundId = spot.id;
           }

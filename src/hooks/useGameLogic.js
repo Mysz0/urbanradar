@@ -9,7 +9,7 @@ export function useGameLogic(user, showToast) {
   const [tempUsername, setTempUsername] = useState('');
   const [showEmail, setShowEmail] = useState(false);
   const [lastChange, setLastChange] = useState(null);
-  const [customRadius, setCustomRadius] = useState(0.25);
+  const [customRadius, setCustomRadius] = useState(250);
   const [leaderboard, setLeaderboard] = useState([]);
 
   // --- INITIAL DATA FETCHING ---
