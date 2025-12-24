@@ -35,11 +35,14 @@ export default function App() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [isAtTop, setIsAtTop] = useState(true);
 
-  // NEW: Cooldown and Custom Notification State
+  // COOLDOWN & NOTIFICATION STATE
   const [lastChange, setLastChange] = useState(null);
   const [statusMsg, setStatusMsg] = useState({ text: '', type: '' }); 
 
-  // --- HELPERS ---
+  // ADMIN OVERRIDE STATE
+  const [detectionRadius, setDetectionRadius] = useState(0.25); 
+
+  // --- HELPERS & HOOKS ---
   const isAdmin = user?.id === ADMIN_UID;
   const isDark = theme === 'dark';
   const themeMag = useMagnetic();
@@ -56,6 +59,23 @@ export default function App() {
   const showToast = (text, type = 'success') => {
     setStatusMsg({ text, type });
     setTimeout(() => setStatusMsg({ text: '', type: '' }), 4000);
+  };
+
+  // --- ADMIN ACTIONS ---
+  const resetMyTimer = async () => {
+    const { error } = await supabase.from('profiles').update({ last_username_change: null }).eq('id', user.id);
+    if (!error) {
+      setLastChange(null);
+      showToast("Cooldown nuked. You can change now.");
+    }
+  };
+
+  const updateRadius = async (newRadius) => {
+    const { error } = await supabase.from('profiles').update({ custom_radius: newRadius }).eq('id', user.id);
+    if (!error) {
+      setDetectionRadius(newRadius);
+      showToast(`Radius set to ${newRadius * 1000}m`);
+    }
   };
 
   // --- SYSTEM EFFECTS ---
@@ -91,7 +111,8 @@ export default function App() {
           setUsername(data.username || '');
           setTempUsername(data.username || '');
           setShowEmail(data.show_email ?? false);
-          setLastChange(data.last_username_change); // Load the timestamp
+          setLastChange(data.last_username_change);
+          setDetectionRadius(data.custom_radius || 0.25);
         }
       }
       setLoading(false);
@@ -106,11 +127,11 @@ export default function App() {
   useEffect(() => {
     if (userLocation && Object.values(spots).length > 0) {
       const nearby = Object.values(spots).some(spot => 
-        getDistance(userLocation.lat, userLocation.lng, spot.lat, spot.lng) < 0.25
+        getDistance(userLocation.lat, userLocation.lng, spot.lat, spot.lng) < detectionRadius
       );
       setIsNearSpot(nearby);
     }
-  }, [userLocation, spots]);
+  }, [userLocation, spots, detectionRadius]);
 
   const fetchLeaderboard = async (currentSpots) => {
     const { data: profiles } = await supabase.from('profiles').select('username, unlocked_spots');
@@ -134,18 +155,12 @@ export default function App() {
 
   const saveUsername = async () => {
     const cleaned = tempUsername.replace('@', '').trim();
-    
-    // Check if name actually changed
-    if (cleaned === username) {
-      return showToast("Name is already set to this", "error");
-    }
+    if (cleaned === username) return showToast("Name is already set to this", "error");
 
-    // Check Cooldown (7 days)
     if (lastChange) {
       const last = new Date(lastChange).getTime();
       const now = new Date().getTime();
       const daysPassed = (now - last) / (1000 * 60 * 60 * 24);
-      
       if (daysPassed < 7) {
         const remaining = Math.ceil(7 - daysPassed);
         return showToast(`Cooldown: ${remaining} days left`, "error");
@@ -156,7 +171,7 @@ export default function App() {
       id: user.id, 
       username: cleaned, 
       show_email: showEmail,
-      last_username_change: new Date().toISOString() // Save update time
+      last_username_change: new Date().toISOString() 
     });
 
     if (!error) { 
@@ -219,12 +234,9 @@ export default function App() {
   return (
     <div className={`min-h-screen ${colors.bg} ${colors.text} pb-36 transition-colors duration-500 selection:bg-emerald-500/30`}>
       
-      {/* CUSTOM TOAST NOTIFICATION */}
       {statusMsg.text && (
         <div className={`fixed top-24 left-1/2 -translate-x-1/2 z-[10001] flex items-center gap-2 px-6 py-3 rounded-2xl border backdrop-blur-xl shadow-2xl transition-all animate-in fade-in slide-in-from-top-4 duration-300 ${
-          statusMsg.type === 'error' 
-            ? 'bg-red-500/10 border-red-500/20 text-red-400' 
-            : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+          statusMsg.type === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
         }`}>
           {statusMsg.type === 'error' ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
           <span className="text-sm font-bold tracking-tight">{statusMsg.text}</span>
@@ -234,36 +246,36 @@ export default function App() {
       <button ref={themeMag.ref} onMouseMove={themeMag.handleMouseMove} onMouseLeave={themeMag.reset}
         style={{ 
           transform: `translate(${themeMag.position.x + (isAtTop ? -58 : 0)}px, ${themeMag.position.y}px)`,
-          transition: themeMag.position.x === 0 
-            ? 'transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)' 
-            : 'none'
+          transition: themeMag.position.x === 0 ? 'transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none'
         }}
         onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')} 
         className={`fixed top-16 right-10 p-3.5 rounded-2xl border active:scale-90 z-[10000] ${
-          isDark 
-          ? 'bg-zinc-900/80 border-white/10 text-emerald-400' 
-          : 'bg-white/80 border-emerald-200 text-emerald-600 shadow-lg backdrop-blur-md'
+          isDark ? 'bg-zinc-900/80 border-white/10 text-emerald-400' : 'bg-white/80 border-emerald-200 text-emerald-600 shadow-lg backdrop-blur-md'
         }`}
       >
         {isDark ? <Sun size={18}/> : <Moon size={18}/>}
       </button>
 
-      <Header 
-        isAdmin={isAdmin} 
-        username={username} 
-        email={user?.email}
-        showEmail={showEmail}
-        isDark={isDark} 
-        logoutMag={logoutMag} 
-        handleLogout={handleLogout} 
-      />
+      <Header isAdmin={isAdmin} username={username} email={user?.email} showEmail={showEmail} isDark={isDark} logoutMag={logoutMag} handleLogout={handleLogout} />
 
       <div className="max-w-md mx-auto px-6 -mt-16 relative z-30">
         {activeTab === 'home' && <HomeTab isNearSpot={isNearSpot} totalPoints={totalPoints} foundCount={unlockedSpots.length} unlockedSpots={unlockedSpots} spots={spots} colors={colors} />}
         {activeTab === 'leaderboard' && <LeaderboardTab leaderboard={leaderboard} username={username} colors={colors} />}
         {activeTab === 'explore' && <ExploreTab mapCenter={mapCenter} isDark={isDark} spots={spots} colors={colors} />}
         {activeTab === 'profile' && <ProfileTab tempUsername={tempUsername} setTempUsername={setTempUsername} saveUsername={saveUsername} showEmail={showEmail} toggleEmailVisibility={toggleEmailVisibility} colors={colors} isDark={isDark} lastChange={lastChange} />}
-        {activeTab === 'dev' && isAdmin && <AdminTab spots={spots} unlockedSpots={unlockedSpots} claimSpot={claimSpot} removeSpot={removeSpot} isDark={isDark} colors={colors} />}
+        {activeTab === 'dev' && isAdmin && (
+          <AdminTab 
+            spots={spots} 
+            unlockedSpots={unlockedSpots} 
+            claimSpot={claimSpot} 
+            removeSpot={removeSpot} 
+            isDark={isDark} 
+            colors={colors}
+            resetTimer={resetMyTimer}
+            currentRadius={detectionRadius}
+            updateRadius={updateRadius}
+          />
+        )}
       </div>
 
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} isAdmin={isAdmin} colors={colors} />
