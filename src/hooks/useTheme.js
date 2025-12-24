@@ -18,14 +18,27 @@ export function useTheme() {
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      setIsAtTop(currentScrollY < 60);
+
+      // INCREASED THRESHOLD: 
+      // Your header is tall (pt-16 pb-32). 
+      // 120px is a better sweet spot for mobile so the button only 
+      // detaches when the header is actually moving off-screen.
+      if (currentScrollY < 120) {
+        setIsAtTop(true);
+      } else if (currentScrollY > 140) {
+        setIsAtTop(false);
+      }
+
+      // Navbar Shrin Logic
       if (currentScrollY > lastScrollY && currentScrollY > 100) {
         setIsNavbarShrunk(true);
       } else if (lastScrollY - currentScrollY > 15 || currentScrollY < 10) {
         setIsNavbarShrunk(false);
       }
+      
       setLastScrollY(currentScrollY);
     };
+
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);

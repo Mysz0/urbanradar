@@ -79,12 +79,14 @@ export default function App() {
   );
 
   return (
-    <div className={`min-h-screen ${colors.bg} ${colors.text} pb-36 transition-colors duration-500`}>
+    /* ADDED 'relative' HERE: Crucial for the ThemeToggle to scroll WITH the header */
+    <div className={`min-h-screen relative ${colors.bg} ${colors.text} pb-36 transition-colors duration-500`}>
+      
       {/* Visual Feedback Layer */}
       <Toast statusMsg={statusMsg} />
 
-      {/* FLOATING THEME SWITCHER 
-          Handles its own position (Header vs Corner) based on isAtTop 
+      {/* THEME TOGGLE 
+          Switches from 'absolute' (scrolling with header) to 'fixed' (floating in corner)
       */}
       <ThemeToggle 
         themeMag={themeMag} 
@@ -93,7 +95,7 @@ export default function App() {
         isAtTop={isAtTop} 
       />
 
-      {/* USER HEADER - Logout button stays here, Theme button "lands" next to it */}
+      {/* USER HEADER */}
       <Header 
         isAdmin={isAdmin} 
         username={username} 
