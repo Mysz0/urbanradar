@@ -4,7 +4,7 @@ import { Target } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// 1. STABILIZED DISTANCE CALC (Uses 4 decimals to ignore micro-centimeter noise)
+// 1. STABILIZED DISTANCE CALC
 function getDistance(lat1, lon1, lat2, lon2) {
   const R = 6371e3;
   const φ1 = lat1 * Math.PI/180;
@@ -24,11 +24,11 @@ function MapController({ coords }) {
   useEffect(() => {
     if (!coords?.lat || !coords?.lng) return;
 
-    // Only move camera if user has moved more than 10 meters 
-    // This prevents the "vibrating" feeling during slow walks
     const moveDist = lastPos.current ? getDistance(coords.lat, coords.lng, lastPos.current.lat, lastPos.current.lng) : 999;
 
-    if (moveDist > 10) {
+    // SHAKE-PROOF: Only pan if user moved > 3 meters
+    // This matches your 3m update preference
+    if (moveDist > 3) {
       map.panTo([coords.lat, coords.lng], { animate: true, duration: 1 });
       lastPos.current = coords;
     }
@@ -36,22 +36,23 @@ function MapController({ coords }) {
   return null;
 }
 
-export default function ExploreTab({ spots = {}, unlockedSpots = [], userLocation, radius, isDark }) {
+export default function ExploreTab({ spots = {}, unlockedSpots = [], userLocation, isDark }) {
   const [map, setMap] = useState(null);
+  
+  // FIXED RANGE: Hardcoded to match useGeoLocation security
+  const CLAIM_RANGE = 20;
 
-  // 2. AGGRESSIVE COORDINATE ROUNDING
-  // 5 decimal places is roughly 1.1 meters. Anything smaller is GPS noise.
+  // 2. COORDINATE ROUNDING
   const stableUserLoc = useMemo(() => {
     if (!userLocation?.lat) return null;
     return {
-      lat: Math.round(userLocation.lat * 100000) / 100000,
-      lng: Math.round(userLocation.lng * 100000) / 100000
+      lat: Math.round(userLocation.lat * 1000000) / 1000000,
+      lng: Math.round(userLocation.lng * 1000000) / 1000000
     };
   }, [userLocation?.lat, userLocation?.lng]);
 
   const initialCenter = useMemo(() => stableUserLoc ? [stableUserLoc.lat, stableUserLoc.lng] : [40.7306, -73.9352], []);
 
-  // 3. ICON PERSISTENCE (Prevents icon flashing on every render)
   const userIcon = useMemo(() => L.divIcon({
     className: 'leaflet-user-icon',
     html: `<div class="user-marker-container"><div class="user-pulse-ring"></div><div class="user-marker-core"></div></div>`,
@@ -86,11 +87,10 @@ export default function ExploreTab({ spots = {}, unlockedSpots = [], userLocatio
         scrollWheelZoom={true}
         ref={setMap}
         preferCanvas={true}
-        markerZoomAnimation={true} // Smoother transition when zooming
+        markerZoomAnimation={true}
       >
-        {/* 4. THEME SYNC WITHOUT RE-MOUNTING */}
         <TileLayer
-          key={isDark ? 'dark-tiles' : 'light-tiles'} // Key ensures tile swap doesn't jitter
+          key={isDark ? 'dark-tiles' : 'light-tiles'}
           url={isDark 
             ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" 
             : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
@@ -105,7 +105,7 @@ export default function ExploreTab({ spots = {}, unlockedSpots = [], userLocatio
             <Marker position={[stableUserLoc.lat, stableUserLoc.lng]} icon={userIcon} />
             <Circle 
               center={[stableUserLoc.lat, stableUserLoc.lng]}
-              radius={radius || 10} 
+              radius={CLAIM_RANGE} 
               pathOptions={{ 
                 color: 'rgb(var(--theme-primary))', 
                 fillColor: 'rgb(var(--theme-primary))', 
@@ -123,7 +123,14 @@ export default function ExploreTab({ spots = {}, unlockedSpots = [], userLocatio
             position={[spot.lat, spot.lng]} 
             icon={spotIcon} 
             opacity={unlockedSpots.includes(spot.id) ? 1 : 0.4}
-          />
+          >
+             <Popup closeButton={false} offset={[0, -10]}>
+              <div className="custom-popup-box">
+                <p className="text-[10px] font-black uppercase opacity-40 mb-1">Localized Node</p>
+                <p className="text-xs font-bold uppercase tracking-tight">{spot.name}</p>
+              </div>
+            </Popup>
+          </Marker>
         ))}
       </MapContainer>
 
@@ -140,7 +147,7 @@ export default function ExploreTab({ spots = {}, unlockedSpots = [], userLocatio
           </div>
           <div className="text-[rgb(var(--theme-primary))] font-black text-[10px] italic uppercase tracking-tighter flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full bg-[rgb(var(--theme-primary))] animate-pulse" />
-            {radius}M RANGE
+            {CLAIM_RANGE}M RANGE
           </div>
         </div>
       </div>
