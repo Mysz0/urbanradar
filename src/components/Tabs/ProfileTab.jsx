@@ -2,18 +2,18 @@ import React from 'react';
 import { Calendar, Leaf, Snowflake } from 'lucide-react';
 
 export default function ProfileTab({ 
-  tempUsername, 
-  setTempUsername, 
-  saveUsername, 
-  showEmail, 
-  toggleEmailVisibility, 
-  colors, 
-  isDark,
-  lastChange,
-  user,
-  // New Props added here
-  appStyle,
-  setAppStyle
+  tempUsername = "", 
+  setTempUsername = () => {}, 
+  saveUsername = () => {}, 
+  showEmail = false, 
+  toggleEmailVisibility = () => {}, 
+  colors = {}, 
+  isDark = false,
+  lastChange = null,
+  user = null,
+  // Added default values here to prevent crashes if props are missing
+  appStyle = 'emerald',
+  setAppStyle = () => {}
 }) {
   const provider = user?.app_metadata?.provider || 'account';
   const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
@@ -29,7 +29,7 @@ export default function ProfileTab({
   const daysLeft = getCooldownInfo();
 
   return (
-    <div className={`smart-glass p-10 rounded-[3rem] border space-y-8 animate-in fade-in zoom-in-95 duration-300`}>
+    <div className="smart-glass p-10 rounded-[3rem] border space-y-8 animate-in fade-in zoom-in-95 duration-300">
       
       {/* IDENTITY SECTION */}
       <div className="space-y-3">

@@ -59,18 +59,25 @@ body {
   color: #ffffff;
 }
 
-/* Hoarfrost Specific: Adds a crystalline noise texture */
 [data-theme='winter'] .smart-glass {
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
 }
 
 /* --- LEAFLET & MAP UI --- */
+/* Hide Branding and Attribution */
+.leaflet-control-attribution, 
+.leaflet-control-zoom { 
+  display: none !important; 
+}
+
 .leaflet-container {
-  width: 100%;
+  width: 100% !important;
   height: 100% !important;
   z-index: 1;
   outline: none;
   background-color: var(--theme-map-bg-dark) !important;
+  /* Disable transitions on container to prevent shaking during tab/theme swaps */
+  transition: none !important; 
 }
 
 :not(.dark) .leaflet-container {
@@ -97,6 +104,28 @@ body {
 }
 
 /* --- MARKERS (Themed Cores) --- */
+/* Fix: Leaflet Icons need absolute centering to stop the ping from being off-center */
+.leaflet-marker-icon {
+  background: none !important;
+  border: none !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  margin: 0 !important;
+}
+
+.marker-container, .user-marker-container { 
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  width: 24px; 
+  height: 24px; 
+}
+
 .marker-core {
   width: 10px; height: 10px;
   background: rgb(var(--theme-primary));
@@ -189,10 +218,4 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: rgba(var(--theme-primary), 0.2);
   border-radius: 10px;
-}
-
-/* Cleaning up Leaflet Icon default styling */
-.leaflet-marker-icon, .leaflet-user-icon, .leaflet-spot-icon {
-  border: none !important;
-  background: none !important;
 }

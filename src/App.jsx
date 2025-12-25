@@ -28,13 +28,15 @@ export default function App() {
   // 2. LOGIC EXTRACTION (Hooks)
   const { user, loading } = useAuth();
   
-  // Destructured the updated theme hook
+  // FIXED: Added appStyle and setAppStyle to the destructuring here
   const { 
     theme, 
     setTheme, 
     isDark, 
     isAtTop, 
-    isNavbarShrunk 
+    isNavbarShrunk,
+    appStyle,     // <--- Added this
+    setAppStyle   // <--- Added this
   } = useTheme();
   
   const showToast = (text, type = 'success') => {
@@ -94,7 +96,6 @@ export default function App() {
       
       <Toast statusMsg={statusMsg} />
 
-      {/* Theme Toggle remains untouched as per request */}
       <ThemeToggle 
         themeMag={themeMag} 
         setTheme={setTheme} 
@@ -157,8 +158,8 @@ export default function App() {
             isDark={isDark} 
             lastChange={lastChange}
             user={user}
-            appStyle={appStyle}
-            setAppStyle={setAppStyle}
+            appStyle={appStyle}     // <--- Correctly passed
+            setAppStyle={setAppStyle} // <--- Correctly passed
           />
         )}
         
