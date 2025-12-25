@@ -69,7 +69,6 @@ export default function HomeTab({
     if (s >= 10) return { color: 'text-yellow-400', bg: 'bg-yellow-400/10' };
     if (s >= 5) return { color: 'text-slate-300', bg: 'bg-slate-300/10' };
     if (s >= 2) return { color: 'text-orange-400', bg: 'bg-orange-400/10' };
-    // Theme variable integration
     return { color: 'text-[rgb(var(--theme-primary))]', bg: 'bg-[rgb(var(--theme-primary))]/10' };
   };
 
@@ -80,7 +79,7 @@ export default function HomeTab({
       <div className="flex flex-col gap-3">
         {(isNearSpot && activeSpotId) ? (
           <div className="flex flex-col gap-3 animate-in zoom-in-95 duration-500">
-            <div className={`flex items-center gap-3 smart-glass p-5 rounded-[2.5rem] border relative overflow-hidden`}>
+            <div className={`flex items-center gap-3 smart-glass p-5 rounded-[2.5rem] border relative overflow-hidden ${isDark ? 'border-white/5' : 'border-[rgb(var(--theme-primary))]/10'}`}>
               <div className={`${
                 isLoggedToday 
                 ? 'bg-zinc-800' 
@@ -94,7 +93,8 @@ export default function HomeTab({
                 <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-1 ${isLoggedToday ? 'text-zinc-600' : 'text-[rgb(var(--theme-primary))]'}`}>
                   {isLoggedToday ? "Offline" : "Live Signal"}
                 </p>
-                <p className={`text-xs truncate font-bold uppercase tracking-tight ${isDark ? 'text-zinc-400' : 'text-zinc-700'}`}>{currentSpot?.name}</p>
+                {/* Fixed: text-zinc-200 in dark mode for better contrast */}
+                <p className={`text-xs truncate font-bold uppercase tracking-tight ${isDark ? 'text-zinc-200' : 'text-zinc-700'}`}>{currentSpot?.name}</p>
               </div>
               
               {distance !== null && !isLoggedToday && (
@@ -130,8 +130,7 @@ export default function HomeTab({
             </button>
           </div>
         ) : (
-          /* SCANNING AREA */
-          <div className={`smart-glass p-10 rounded-[3rem] border relative overflow-hidden group`}>
+          <div className={`smart-glass p-10 rounded-[3rem] border relative overflow-hidden group ${isDark ? 'border-white/5' : 'border-[rgb(var(--theme-primary))]/10'}`}>
              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(var(--theme-primary),0.05)_0%,transparent_70%)] animate-pulse" />
              <div className="relative flex flex-col items-center justify-center">
                 <div className="relative mb-4">
@@ -160,10 +159,10 @@ export default function HomeTab({
             <Search className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? 'text-zinc-600' : 'text-[rgb(var(--theme-primary))]/50'}`} size={14} />
             <input 
               type="text"
-              placeholder="FILTER LOGS..."
+              placeholder="FILTER NODES..." // Fixed Label
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full smart-glass border rounded-2xl py-4 pl-11 pr-4 text-[10px] font-black focus:outline-none focus:border-[rgb(var(--theme-primary))]/50 transition-all"
+              className="w-full smart-glass border rounded-2xl py-4 pl-11 pr-4 text-[10px] font-black focus:outline-none focus:border-[rgb(var(--theme-primary))]/50 transition-all uppercase placeholder:opacity-30"
             />
           </div>
 
@@ -182,7 +181,7 @@ export default function HomeTab({
                   <button
                     key={opt.id}
                     onClick={() => { setSortBy(opt.id); setIsSelectOpen(false); }}
-                    className={`w-full flex items-center justify-between px-4 py-3 transition-colors ${isDark ? 'hover:bg-white/5 text-white' : 'hover:bg-emerald-50 text-emerald-900'}`}
+                    className={`w-full flex items-center justify-between px-4 py-3 transition-colors ${isDark ? 'hover:bg-white/5 text-zinc-100' : 'hover:bg-emerald-50 text-emerald-900'}`}
                   >
                     <div className="flex items-center gap-3">
                       <opt.icon size={14} className={sortBy === opt.id ? 'text-[rgb(var(--theme-primary))]' : 'opacity-40'} />
@@ -202,7 +201,7 @@ export default function HomeTab({
         <div className="grid gap-3 pb-24 pt-2">
           {filteredAndSortedNodes.length === 0 ? (
             <div className={`p-10 text-center text-[10px] uppercase font-bold opacity-20 tracking-[0.2em] ${isDark ? 'text-white' : 'text-[rgb(var(--theme-primary))]'}`}>
-              No encrypted logs found
+              No localized signals found
             </div>
           ) : (
             filteredAndSortedNodes.map(node => {
@@ -212,18 +211,19 @@ export default function HomeTab({
                   {node.isReady && (
                     <div className="absolute -left-1 top-4 bottom-4 w-1 bg-[rgb(var(--theme-primary))] rounded-full z-10 shadow-[0_0_10px_var(--theme-primary-glow)]" />
                   )}
-                  <div className={`smart-glass border p-5 rounded-[2.2rem] flex items-center justify-between`}>
+                  <div className={`smart-glass border p-5 rounded-[2.2rem] flex items-center justify-between transition-all ${isDark ? 'border-white/5 hover:border-white/10' : 'border-zinc-100 hover:border-[rgb(var(--theme-primary))]/20'}`}>
                     <div className="flex items-center gap-4">
                       <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${rank.bg} ${rank.color}`}>
                         {node.streakCount >= 10 ? <Trophy size={18} /> : node.streakCount > 1 ? <Flame size={18} fill="currentColor" /> : <CheckCircle2 size={18} />}
                       </div>
                       <div>
-                        <p className={`font-bold text-sm ${isDark ? 'text-zinc-200' : 'text-zinc-800'}`}>{node.name}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
+                        {/* High contrast node title for dark mode */}
+                        <p className={`font-bold text-sm leading-none ${isDark ? 'text-zinc-100' : 'text-zinc-800'}`}>{node.name}</p>
+                        <div className="flex items-center gap-2 mt-1.5">
                           <span className={`text-[9px] font-black uppercase tracking-tighter ${node.isReady ? 'text-[rgb(var(--theme-primary))]' : (isDark ? 'text-zinc-600' : 'text-[rgb(var(--theme-primary))]/30')}`}>
                             {node.isReady ? 'Sync Required' : 'Secured'}
                           </span>
-                          {node.streakCount > 1 && <span className={`text-[9px] font-bold ${isDark ? 'text-zinc-500' : 'text-[rgb(var(--theme-primary))]/40'}`}>• STREAK {node.streakCount}x</span>}
+                          {node.streakCount > 1 && <span className={`text-[9px] font-bold ${isDark ? 'text-zinc-500' : 'text-[rgb(var(--theme-primary))]/40'}`}>• {node.streakCount}x Streak</span>}
                         </div>
                       </div>
                     </div>
