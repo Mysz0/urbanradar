@@ -4,6 +4,7 @@ import { LogOut } from 'lucide-react';
 export default function Header({ isAdmin, username, email, showEmail, isDark, logoutMag, handleLogout }) {
   return (
     <header className="relative pt-16 pb-32 px-10 rounded-b-[4.5rem] border-b border-white/[0.05]">
+      {/* Background Overlays */}
       <div className="absolute inset-0 mist-overlay z-0 rounded-b-[4.5rem] overflow-hidden" />
       <div className={`absolute inset-0 ${isDark ? 'bg-zinc-950/40' : 'bg-white/10'} backdrop-blur-3xl z-10 rounded-b-[4.5rem]`} />
       
@@ -12,14 +13,18 @@ export default function Header({ isAdmin, username, email, showEmail, isDark, lo
         <div className="flex-1 min-w-0 pr-4">
           <div className="flex items-center gap-2 mb-0.5">
              {isAdmin ? (
-               <span className="text-[7px] font-black tracking-[0.2em] text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 uppercase">Admin Access</span>
+               <span className="text-[7px] font-black tracking-[0.2em] text-[rgb(var(--theme-primary))] bg-[rgb(var(--theme-primary))]/10 px-2 py-0.5 rounded-full border border-[rgb(var(--theme-primary))]/20 uppercase">
+                 Admin Access
+               </span>
              ) : (
-               <span className="text-[7px] font-black tracking-[0.2em] text-zinc-500 uppercase">Explorer Mode</span>
+               <span className="text-[7px] font-black tracking-[0.2em] text-zinc-500 uppercase">
+                 Explorer Mode
+               </span>
              )}
           </div>
           
           <h1 className="text-3xl font-bold tracking-tighter italic uppercase leading-none truncate">
-            {username || 'Hunter'}<span className="text-emerald-500 font-normal">.</span>
+            {username || 'Hunter'}<span className="text-[rgb(var(--theme-primary))] font-normal">.</span>
           </h1>
 
           <div className="relative h-0">
@@ -31,9 +36,9 @@ export default function Header({ isAdmin, username, email, showEmail, isDark, lo
           </div>
         </div>
         
-        {/* RIGHT: Button Group container - Now with a fixed height to lock alignment */}
+        {/* RIGHT: Button Group */}
         <div className="flex items-center gap-3 shrink-0 h-[46px] relative">
-          {/* Invisible placeholder to keep the Logout button pushed to the right */}
+          {/* Placeholder to maintain layout */}
           <div className="w-[46px]" /> 
 
           <button 
@@ -48,7 +53,7 @@ export default function Header({ isAdmin, username, email, showEmail, isDark, lo
             className={`p-3.5 rounded-2xl border transition-all duration-300 z-30 shrink-0 ${
               isDark 
               ? 'bg-zinc-900/80 border-white/10 text-zinc-500 hover:text-red-400' 
-              : 'bg-white/80 border-emerald-100 text-emerald-600 shadow-sm'
+              : 'bg-white/80 border-[rgb(var(--theme-primary))]/20 text-[rgb(var(--theme-primary))] shadow-sm'
             }`}
           >
             <LogOut size={18}/>
