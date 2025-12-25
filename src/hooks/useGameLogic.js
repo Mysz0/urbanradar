@@ -55,7 +55,6 @@ export function useGameLogic(user, showToast) {
           setSpotStreaks(profile.spot_streaks || {});
           setCustomRadius(profile.custom_radius || 250);
 
-          // --- GLOBAL STREAK UPDATE LOGIC ---
           const now = new Date();
           const todayStr = now.toDateString();
           const dbVisitData = profile.visit_data || { last_visit: null, streak: 0 };
@@ -67,33 +66,25 @@ export function useGameLogic(user, showToast) {
             newStreak = 1;
           } else {
             const lastVisitStr = lastVisitDate.toDateString();
-            
             if (lastVisitStr !== todayStr) {
               const yesterday = new Date();
               yesterday.setDate(yesterday.getDate() - 1);
-              
               if (lastVisitStr === yesterday.toDateString()) {
                 newStreak += 1;
               } else {
-                newStreak = 1; // Reset if they missed a day
+                newStreak = 1;
               }
             }
           }
 
-          // If it's a new day, update Supabase
           if (!lastVisitDate || lastVisitDate.toDateString() !== todayStr) {
             const updatedVisit = { last_visit: now.toISOString(), streak: newStreak };
             setVisitData(updatedVisit);
-            
-            await supabase.from('profiles')
-              .update({ visit_data: updatedVisit })
-              .eq('id', user.id);
-            
+            await supabase.from('profiles').update({ visit_data: updatedVisit }).eq('id', user.id);
             showToast(`${newStreak} Day Streak Active!`);
           } else {
             setVisitData(dbVisitData);
           }
-          // -----------------------------------
         }
         fetchLeaderboard();
       } catch (err) { console.error(err); }
@@ -101,16 +92,20 @@ export function useGameLogic(user, showToast) {
     fetchData();
   }, [user]);
 
+  // --- HELPER: Get Multiplier Based on Day Count ---
+  const getMultiplier = (days) => {
+    if (days >= 10) return 1.5;
+    if (days >= 7) return 1.3;
+    if (days >= 3) return 1.1;
+    return 1.0;
+  };
+
   const updateNodeStreak = async (spotId, newStreakValue) => {
     if (!user) return;
     const safeVal = parseInt(newStreakValue, 10);
     const finalVal = isNaN(safeVal) ? 0 : Math.max(0, safeVal);
     
-    let multiplier = 1.0;
-    if (finalVal === 2) multiplier = 1.1;
-    else if (finalVal === 3) multiplier = 1.3;
-    else if (finalVal >= 4) multiplier = 1.5;
-
+    const multiplier = getMultiplier(finalVal);
     const basePoints = spots[spotId]?.points || 0;
     const currentStreak = spotStreaks?.[spotId]?.streak || 0;
     
@@ -129,55 +124,77 @@ export function useGameLogic(user, showToast) {
     };
     
     const newTotalPoints = totalPoints + addedPoints;
-
     setSpotStreaks(updatedStreaks);
     setTotalPoints(newTotalPoints);
 
     const { error } = await supabase.from('profiles')
-      .update({ 
-        spot_streaks: updatedStreaks,
-        total_points: newTotalPoints 
-      })
+      .update({ spot_streaks: updatedStreaks, total_points: newTotalPoints })
       .eq('id', user.id);
 
     if (error) {
       showToast("Sync Failed", "error");
     } else {
-        showToast(`Streak: ${multiplier}x Multiplier`);
+        showToast(`Streak Set: ${multiplier}x applied`);
         fetchLeaderboard();
     }
   };
 
-  const claimSpot = async (spotId) => {
-    if (!user || !spots[spotId]) return;
-    const today = new Date();
-    const todayStr = today.toDateString();
-    const currentStreaks = spotStreaks || {};
-    const spotInfo = currentStreaks[spotId] || { last_claim: null, streak: 0 };
+  const claimSpot = async (userLocation) => {
+    if (!user || !userLocation?.lat) return;
 
-    if (spotInfo.last_claim && new Date(spotInfo.last_claim).toDateString() === todayStr) {
-      return showToast("Already logged today", "error");
+    // 1. Find all spots within the customRadius range
+    const nearbySpots = Object.values(spots).filter(spot => {
+      const distance = getDistance(
+        userLocation.lat, 
+        userLocation.lng, 
+        spot.lat, 
+        spot.lng
+      );
+      return distance <= (customRadius || 10);
+    });
+
+    if (nearbySpots.length === 0) {
+      return showToast("No nodes in range", "error");
     }
 
-    const basePoints = spots[spotId].points || 0;
-    const nextStreak = (Number(spotInfo.streak) || 0) + 1;
-
-    let multiplier = 1.0;
-    if (nextStreak === 2) multiplier = 1.1;
-    else if (nextStreak === 3) multiplier = 1.3;
-    else if (nextStreak >= 4) multiplier = 1.5;
-
-    const earnedPoints = Math.floor(basePoints * multiplier);
-    const newTotalPoints = (totalPoints || 0) + earnedPoints;
-    const newUnlocked = unlockedSpots.includes(spotId) ? unlockedSpots : [...unlockedSpots, spotId];
+    const today = new Date();
+    const todayStr = today.toDateString();
+    let totalEarned = 0;
+    let claimCount = 0;
     
-    const newSpotStreaks = { 
-      ...currentStreaks, 
-      [spotId]: { 
-        last_claim: today.toISOString(), 
-        streak: nextStreak 
-      } 
-    };
+    const newUnlocked = [...unlockedSpots];
+    const newSpotStreaks = { ...spotStreaks };
+
+    // 2. Process each nearby spot
+    nearbySpots.forEach(spot => {
+      const spotInfo = newSpotStreaks[spot.id] || { last_claim: null, streak: 0 };
+      
+      // Skip if already claimed today
+      if (spotInfo.last_claim && new Date(spotInfo.last_claim).toDateString() === todayStr) {
+        return; 
+      }
+
+      const nextStreak = (Number(spotInfo.streak) || 0) + 1;
+      const multiplier = getMultiplier(nextStreak);
+      const earned = Math.floor((spot.points || 0) * multiplier);
+
+      totalEarned += earned;
+      claimCount++;
+
+      // Update local tracking objects
+      if (!newUnlocked.includes(spot.id)) newUnlocked.push(spot.id);
+      newSpotStreaks[spot.id] = {
+        last_claim: today.toISOString(),
+        streak: nextStreak
+      };
+    });
+
+    if (claimCount === 0) {
+      return showToast("All nearby nodes already secured today", "error");
+    }
+
+    // 3. Sync everything to Supabase in one go
+    const newTotalPoints = (totalPoints || 0) + totalEarned;
 
     const { error } = await supabase.from('profiles').update({ 
       unlocked_spots: newUnlocked, 
@@ -190,11 +207,25 @@ export function useGameLogic(user, showToast) {
       setSpotStreaks(newSpotStreaks);
       setTotalPoints(newTotalPoints);
       
-      const multiplierText = multiplier > 1 ? ` (${multiplier}x streak!)` : "";
-      showToast(`+${earnedPoints} pts${multiplierText}`);
+      showToast(`Secured ${claimCount} nodes: +${totalEarned} XP!`);
       fetchLeaderboard();
     }
   };
+
+  // Helper function for distance calculation (Haversine formula)
+  function getDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371e3; // metres
+    const φ1 = lat1 * Math.PI/180;
+    const φ2 = lat2 * Math.PI/180;
+    const Δφ = (lat2-lat1) * Math.PI/180;
+    const Δλ = (lon2-lon1) * Math.PI/180;
+
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }
 
   const removeSpot = async (id) => {
     if (!user) return;
