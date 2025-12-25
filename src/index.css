@@ -5,26 +5,36 @@
 /* --- THEME VARIABLE ENGINE --- */
 :root {
   /* Default: Emerald Style */
-  --theme-primary: 16, 185, 129;    /* Emerald 500 */
+  --theme-primary: 16, 185, 129;
   --theme-primary-glow: rgba(16, 185, 129, 0.8);
   --theme-bg-glass-light: rgba(255, 255, 255, 0.6);
   --theme-bg-glass-dark: rgba(24, 24, 27, 0.75);
   --theme-border-light: rgba(16, 185, 129, 0.15);
+  
+  /* --- THE FIX: Title Colors --- */
+  --theme-text-title-light: #18181b; /* zinc-900 */
+  --theme-text-title-dark: #fafafa;  /* zinc-50 */
+  --theme-text-sub-dark: #71717a;    /* zinc-500 */
+  
   --theme-text-light: #064e3b;
   --theme-map-bg-light: #f0fdf4;
   --theme-map-bg-dark: #09090b;
 }
 
 [data-theme='winter'] {
-  /* Hoarfrost Style */
-  --theme-primary: 125, 211, 252;   /* Sky 300 (Icy Blue) */
+  --theme-primary: 125, 211, 252;
   --theme-primary-glow: rgba(186, 230, 253, 0.9);
   --theme-bg-glass-light: rgba(240, 249, 255, 0.5);
-  --theme-bg-glass-dark: rgba(15, 23, 42, 0.8);    /* Slate 950 */
+  --theme-bg-glass-dark: rgba(15, 23, 42, 0.8);
   --theme-border-light: rgba(186, 230, 253, 0.4);
-  --theme-text-light: #0c4a6e;      /* Arctic Blue */
+  
+  /* --- THE FIX: Winter Title Colors --- */
+  --theme-text-title-light: #0c4a6e;
+  --theme-text-title-dark: #f0f9ff;  /* Arctic white */
+  
+  --theme-text-light: #0c4a6e;
   --theme-map-bg-light: #f0f9ff;
-  --theme-map-bg-dark: #020617;     /* Deep Arctic Night */
+  --theme-map-bg-dark: #020617;
 }
 
 /* --- BASE STYLES --- */
@@ -49,14 +59,20 @@ body {
   -webkit-backdrop-filter: blur(12px);
   background: var(--theme-bg-glass-light);
   border: 1px solid var(--theme-border-light);
-  color: var(--theme-text-light);
+  color: var(--theme-text-title-light); /* Default titles to dark zinc */
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* --- THE FIX: Force high-contrast white in Dark Mode --- */
 .dark .smart-glass {
   background: var(--theme-bg-glass-dark);
   border-color: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
+  color: var(--theme-text-title-dark) !important; 
+}
+
+/* Ensure secondary text stays readable but dim */
+.dark .smart-glass p:not(.font-bold) {
+  color: var(--theme-text-sub-dark);
 }
 
 [data-theme='winter'] .smart-glass {
@@ -64,7 +80,6 @@ body {
 }
 
 /* --- LEAFLET & MAP UI --- */
-/* Hide Branding and Attribution */
 .leaflet-control-attribution, 
 .leaflet-control-zoom { 
   display: none !important; 
@@ -76,7 +91,6 @@ body {
   z-index: 1;
   outline: none;
   background-color: var(--theme-map-bg-dark) !important;
-  /* Disable transitions on container to prevent shaking during tab/theme swaps */
   transition: none !important; 
 }
 
@@ -103,8 +117,7 @@ body {
   to { transform: translateY(0); opacity: 1; }
 }
 
-/* --- MARKERS (Themed Cores) --- */
-/* Fix: Leaflet Icons need absolute centering to stop the ping from being off-center */
+/* --- MARKERS --- */
 .leaflet-marker-icon {
   background: none !important;
   border: none !important;
