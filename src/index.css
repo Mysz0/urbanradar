@@ -161,3 +161,42 @@ button, a {
   -webkit-tap-highlight-color: transparent;
   outline: none;
 }
+
+/* --- SMART GLASS UTILITY --- */
+/* This matches the Profile Identity box transparency exactly */
+.smart-glass {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Light Mode: Soft Frosted Emerald White */
+.smart-glass {
+  background: rgba(255, 255, 255, 0.6);
+  border-color: rgba(16, 185, 129, 0.15);
+  color: #064e3b; /* Deep Emerald */
+}
+
+/* Dark Mode: Deep Frosted Zinc */
+.dark .smart-glass {
+  background: rgba(24, 24, 27, 0.7); /* Zinc 900 at 70% opacity */
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+/* Input Specific Adjustments */
+.smart-glass::placeholder {
+  transition: color 0.3s ease;
+}
+
+.smart-glass:focus {
+  border-color: #10b981 !important;
+}
+
+.dark .smart-glass::placeholder {
+  color: rgba(161, 161, 170, 0.4); /* Zinc 400 */
+}
+
+.smart-glass::placeholder {
+  color: rgba(5, 150, 105, 0.4); /* Emerald placeholder for light mode */
+}

@@ -15,14 +15,12 @@ import {
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 
-// Component to handle map panning when coordinates change
 function ChangeView({ center }) {
   const map = useMap();
   map.setView(center, 15);
   return null;
 }
 
-// Custom Marker Icon for the preview
 const previewIcon = L.divIcon({
   className: 'custom-div-icon',
   html: `<div style="background-color: #10b981; width: 15px; height: 15px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);"></div>`,
@@ -71,14 +69,12 @@ export default function AdminTab({
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!newSpot.name || !newSpot.lat || !newSpot.lng) return;
-    
     addNewSpot({
       name: newSpot.name,
       lat: parseFloat(newSpot.lat),
       lng: parseFloat(newSpot.lng),
       points: parseInt(newSpot.points) || 0
     });
-
     setNewSpot({ name: '', lat: '', lng: '', points: 50 });
   };
 
@@ -94,14 +90,14 @@ export default function AdminTab({
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300 pb-20">
       
       {/* 1. DEVELOPER OVERRIDES */}
-      <div className={`${colors.glass} p-8 rounded-[2.5rem] border border-red-500/20 space-y-6`}>
+      <div className={`smart-glass p-8 rounded-[2.5rem] border border-red-500/20 space-y-6`}>
         <div className="flex items-center gap-2 text-red-500 ml-1">
           <ShieldAlert size={16} />
           <h2 className="font-black uppercase text-[10px] tracking-[0.2em]">Developer Override</h2>
         </div>
         
         <div className="space-y-3">
-          <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1 flex items-center gap-2">
+          <label className={`text-[10px] font-bold uppercase tracking-widest ml-1 flex items-center gap-2 ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
             <Radio size={12}/> Detection Radius
           </label>
           <div className="grid grid-cols-4 gap-2">
@@ -112,7 +108,7 @@ export default function AdminTab({
                 className={`py-2 rounded-xl text-[10px] font-bold transition-all border ${
                   currentRadius === opt.val 
                   ? 'bg-red-500 border-red-500 text-white shadow-lg shadow-red-500/20' 
-                  : 'bg-black/20 border-white/5 text-zinc-500 hover:border-white/10'
+                  : `smart-glass ${isDark ? 'border-white/5 text-zinc-500' : 'border-emerald-100 text-emerald-800/40'} hover:border-red-500/50`
                 }`}
               >
                 {opt.label}
@@ -121,13 +117,13 @@ export default function AdminTab({
           </div>
         </div>
 
-        <button onClick={resetTimer} className={`w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-bold text-[11px] uppercase tracking-widest transition-all border ${isDark ? 'bg-white/5 border-white/10 text-zinc-400 hover:text-red-500' : 'bg-white border-zinc-200 text-zinc-500 hover:text-red-500'}`}>
+        <button onClick={resetTimer} className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-bold text-[11px] uppercase tracking-widest transition-all border smart-glass border-white/5 text-zinc-400 hover:text-red-500 active:scale-95">
           <TimerReset size={16}/> Reset Cooldown Timer
         </button>
       </div>
 
       {/* 2. DEPLOYMENT FORM */}
-      <div className={`${colors.glass} p-8 rounded-[3rem] border border-emerald-500/20 space-y-6`}>
+      <div className={`smart-glass p-8 rounded-[3rem] border border-emerald-500/20 space-y-6`}>
         <h2 className="font-bold uppercase flex items-center gap-2 text-[10px] tracking-widest text-emerald-500 ml-1">
           <Plus size={14}/> Deploy New Node
         </h2>
@@ -165,24 +161,24 @@ export default function AdminTab({
           <input 
             type="text" placeholder="Location Name" 
             value={newSpot.name} onChange={e => setNewSpot({...newSpot, name: e.target.value})}
-            className={`w-full p-4 rounded-2xl text-xs font-bold outline-none border ${isDark ? 'bg-black/20 border-white/5 text-white' : 'bg-white border-zinc-200'}`}
+            className="w-full smart-glass p-4 rounded-2xl text-xs font-bold outline-none border"
           />
           <div className="grid grid-cols-2 gap-3">
             <input 
               type="number" step="any" placeholder="Lat" 
               value={newSpot.lat} onChange={e => setNewSpot({...newSpot, lat: e.target.value})}
-              className={`w-full p-4 rounded-2xl text-xs font-bold outline-none border ${isDark ? 'bg-black/20 border-white/5 text-white' : 'bg-white border-zinc-200'}`}
+              className="w-full smart-glass p-4 rounded-2xl text-xs font-bold outline-none border"
             />
             <input 
               type="number" step="any" placeholder="Lng" 
               value={newSpot.lng} onChange={e => setNewSpot({...newSpot, lng: e.target.value})}
-              className={`w-full p-4 rounded-2xl text-xs font-bold outline-none border ${isDark ? 'bg-black/20 border-white/5 text-white' : 'bg-white border-zinc-200'}`}
+              className="w-full smart-glass p-4 rounded-2xl text-xs font-bold outline-none border"
             />
           </div>
           <input 
             type="number" placeholder="Points Value" 
             value={newSpot.points} onChange={e => setNewSpot({...newSpot, points: e.target.value})}
-            className={`w-full p-4 rounded-2xl text-xs font-bold outline-none border ${isDark ? 'bg-black/20 border-white/5 text-white' : 'bg-white border-zinc-200'}`}
+            className="w-full smart-glass p-4 rounded-2xl text-xs font-bold outline-none border"
           />
           <button type="submit" className="w-full bg-emerald-500 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:scale-[1.02] active:scale-95 transition-all">
             Deploy to Database
@@ -190,20 +186,20 @@ export default function AdminTab({
         </form>
       </div>
 
-      {/* 3. NODE REGISTRY & STREAK EDITOR */}
-      <div className={`${colors.glass} p-8 rounded-[3rem] border border-white/5 space-y-6`}>
+      {/* 3. NODE REGISTRY */}
+      <div className={`smart-glass p-8 rounded-[3rem] border border-white/5 space-y-6`}>
         <div className="flex items-center justify-between ml-1">
           <h2 className="font-bold uppercase flex items-center gap-2 text-[10px] tracking-widest text-emerald-500">
             <Terminal size={14}/> Registry ({Object.keys(spots).length})
           </h2>
           <div className="relative">
-            <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+            <Search size={12} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-zinc-500' : 'text-emerald-800/30'}`} />
             <input 
               type="text" 
               placeholder="Filter..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-black/20 border border-white/5 rounded-full py-1 pl-8 pr-4 text-[10px] font-bold outline-none focus:border-emerald-500/50 text-white w-32"
+              className="smart-glass border rounded-full py-1.5 pl-8 pr-4 text-[10px] font-bold outline-none focus:border-emerald-500/50 w-32"
             />
           </div>
         </div>
@@ -214,10 +210,10 @@ export default function AdminTab({
             const isUnlocked = unlockedSpots.includes(spot.id);
 
             return (
-              <div key={spot.id} className={`${isDark ? 'bg-white/5' : 'bg-white/30'} p-5 rounded-[2rem] border border-white/5 hover:border-emerald-500/20 transition-all space-y-4`}>
+              <div key={spot.id} className={`smart-glass p-5 rounded-[2rem] border hover:border-emerald-500/20 transition-all space-y-4`}>
                 <div className="flex justify-between items-start">
                   <div className="flex-1 min-w-0 pr-4">
-                    <p className="text-xs font-bold tracking-tight truncate text-white">{spot.name}</p>
+                    <p className={`text-xs font-bold tracking-tight truncate ${isDark ? 'text-white' : 'text-zinc-800'}`}>{spot.name}</p>
                     <div className="flex items-center gap-2 mt-0.5">
                        <MapPin size={8} className="text-zinc-500" />
                        <p className="text-[7px] font-mono text-zinc-500 uppercase truncate">{spot.id}</p>
@@ -228,21 +224,16 @@ export default function AdminTab({
                   </span>
                 </div>
 
-                {/* STREAK EDITOR ROW */}
-                <div className="flex items-center gap-4 bg-black/40 p-3 rounded-2xl border border-white/5">
+                <div className={`flex items-center gap-4 ${isDark ? 'bg-black/40' : 'bg-white/40'} p-3 rounded-2xl border border-white/5`}>
                   <div className="flex items-center gap-2 flex-1">
                     <Flame size={12} className={currentStreak > 0 ? "text-orange-500" : "text-zinc-600"} />
-                    <span className="text-[9px] font-black uppercase text-zinc-500 tracking-tighter">Node Streak</span>
+                    <span className="text-[9px] font-black uppercase text-zinc-500 tracking-tighter">Streak</span>
                     <input 
                       type="number"
                       min="0"
                       value={currentStreak}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        // Passing the raw string is fine because updateNodeStreak handles parseInt
-                        updateNodeStreak(spot.id, e.target.value);
-                      }}
-                      className="w-12 bg-transparent text-xs font-black text-orange-500 outline-none focus:ring-0 border-b border-orange-500/20"
+                      onChange={(e) => updateNodeStreak(spot.id, e.target.value)}
+                      className={`w-12 bg-transparent text-xs font-black outline-none border-b ${isDark ? 'text-orange-500 border-orange-500/20' : 'text-orange-600 border-orange-500/40'}`}
                     />
                   </div>
                   
@@ -250,15 +241,13 @@ export default function AdminTab({
                     <button 
                       onClick={() => isUnlocked ? removeSpot(spot.id) : claimSpot(spot.id)} 
                       className={`p-2 rounded-xl transition-all ${isUnlocked ? 'text-red-500 bg-red-500/10 shadow-lg shadow-red-500/10' : 'text-emerald-500 bg-emerald-500/10'}`}
-                      title={isUnlocked ? "Remove from inventory (Minus Points)" : "Claim manually (Plus Points)"}
                     >
                       {isUnlocked ? <Trash2 size={14}/> : <Zap size={14}/>}
                     </button>
                     
                     <button 
-                      onClick={() => { if(confirm(`Purge ${spot.name} from Global Database?`)) deleteSpotFromDB(spot.id) }} 
-                      className="p-2 text-zinc-600 hover:text-red-600 transition-colors"
-                      title="Delete from Database"
+                      onClick={() => { if(confirm(`Purge ${spot.name}?`)) deleteSpotFromDB(spot.id) }} 
+                      className={`p-2 transition-colors ${isDark ? 'text-zinc-600 hover:text-red-600' : 'text-zinc-400 hover:text-red-600'}`}
                     >
                       <ShieldAlert size={14} />
                     </button>
@@ -267,11 +256,6 @@ export default function AdminTab({
               </div>
             );
           })}
-          {filteredSpots.length === 0 && (
-            <div className="text-center py-10 text-[10px] font-bold text-zinc-600 uppercase tracking-widest">
-              No matching nodes found
-            </div>
-          )}
         </div>
       </div>
     </div>

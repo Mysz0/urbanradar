@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Radar, Flame, CheckCircle2, MapPin, Zap, Lock, Search, Trophy, ChevronDown, Check } from 'lucide-react';
+import { Radar, Flame, CheckCircle2, Trophy, Zap, Lock, Search, ChevronDown, Check } from 'lucide-react';
 import StatCard from '../Shared/StatCard';
 import { getDistance } from '../../utils/geoUtils';
 
@@ -15,7 +15,8 @@ export default function HomeTab({
   spots = {}, 
   colors, 
   streak,
-  spotStreaks = {}
+  spotStreaks = {},
+  isDark 
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('ready'); 
@@ -78,22 +79,20 @@ export default function HomeTab({
       <div className="flex flex-col gap-3">
         {(isNearSpot && activeSpotId) ? (
           <div className="flex flex-col gap-3 animate-in zoom-in-95 duration-500">
-            {/* LIVE SIGNAL BOX */}
-            <div className={`flex items-center gap-3 ${colors?.card || 'bg-zinc-900'} border border-white/5 p-4 rounded-3xl relative overflow-hidden`}>
-              <div className={`${isLoggedToday ? 'bg-zinc-800' : canClaim ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'bg-orange-500'} p-2 rounded-xl text-white transition-colors`}>
-                <Radar size={16} className={isLoggedToday ? "" : "animate-pulse"} />
+            <div className={`flex items-center gap-3 smart-glass p-5 rounded-[2.5rem] border relative overflow-hidden`}>
+              <div className={`${isLoggedToday ? 'bg-zinc-800' : canClaim ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'bg-orange-500'} p-2.5 rounded-xl text-white transition-colors`}>
+                <Radar size={18} className={isLoggedToday ? "" : "animate-pulse"} />
               </div>
               <div className="flex-1 min-w-0">
                 <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-1 ${isLoggedToday ? 'text-zinc-600' : 'text-emerald-500'}`}>
                   {isLoggedToday ? "Offline" : "Live Signal"}
                 </p>
-                <p className="text-xs text-zinc-400 truncate font-bold uppercase tracking-tight">{currentSpot?.name}</p>
+                <p className={`text-xs truncate font-bold uppercase tracking-tight ${isDark ? 'text-zinc-400' : 'text-zinc-700'}`}>{currentSpot?.name}</p>
               </div>
               
-              {/* DISTANCE ON THE RIGHT */}
               {distance !== null && !isLoggedToday && (
                 <div className="text-right">
-                   <p className={`text-[10px] font-black uppercase tracking-tighter ${canClaim ? 'text-emerald-500 animate-pulse' : 'text-orange-500'}`}>
+                   <p className={`text-[11px] font-black uppercase tracking-tighter ${canClaim ? 'text-emerald-500 animate-pulse' : 'text-orange-500'}`}>
                     {distance}m
                    </p>
                    <p className="text-[7px] font-bold text-zinc-600 uppercase">Range</p>
@@ -101,11 +100,10 @@ export default function HomeTab({
               )}
             </div>
 
-            {/* ACTION BUTTON */}
             <button 
               disabled={isLoggedToday || !canClaim}
               onClick={() => claimSpot(activeSpotId)}
-              className={`w-full py-4 rounded-[2rem] font-black text-sm uppercase transition-all active:scale-95 border ${
+              className={`w-full py-5 rounded-[2rem] font-black text-sm uppercase transition-all active:scale-95 border ${
                 isLoggedToday 
                   ? 'bg-zinc-900/40 border-white/5 text-zinc-700' 
                   : canClaim 
@@ -125,18 +123,22 @@ export default function HomeTab({
             </button>
           </div>
         ) : (
-          /* SCANNING AREA ANIMATION RESTORED */
-          <div className={`flex flex-col items-center justify-center p-10 rounded-[2.5rem] border border-white/5 ${colors?.card || 'bg-zinc-900'} relative overflow-hidden group`}>
+          /* SCANNING AREA - EXACT MATCH TO PROFILE IDENTITY BOX */
+          <div className={`smart-glass p-10 rounded-[3rem] border relative overflow-hidden group`}>
              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.05)_0%,transparent_70%)] animate-pulse" />
-             <div className="relative mb-4">
-                <Radar className="text-zinc-500 animate-spin-slow" size={32} />
-                <div className="absolute inset-0 border-2 border-emerald-500/20 rounded-full animate-ping scale-150 opacity-0 group-hover:opacity-100" />
-             </div>
-             <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.4em] animate-pulse">Scanning Environment</p>
-             <div className="flex gap-1 mt-2">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className={`w-1 h-1 rounded-full bg-zinc-800 animate-bounce`} style={{ animationDelay: `${i * 0.2}s` }} />
-                ))}
+             <div className="relative flex flex-col items-center justify-center">
+                <div className="relative mb-4">
+                  <Radar className={`${isDark ? 'text-zinc-500' : 'text-emerald-600/50'} animate-spin-slow`} size={32} />
+                  <div className="absolute inset-0 border-2 border-emerald-500/20 rounded-full animate-ping scale-150 opacity-0 group-hover:opacity-100" />
+                </div>
+                <p className={`text-[10px] font-black uppercase tracking-[0.4em] animate-pulse ${isDark ? 'text-zinc-500' : 'text-emerald-800/40'}`}>
+                  Scanning Environment
+                </p>
+                <div className="flex gap-1 mt-4">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className={`w-1.5 h-1.5 rounded-full ${isDark ? 'bg-zinc-800' : 'bg-emerald-200'} animate-bounce`} style={{ animationDelay: `${i * 0.2}s` }} />
+                  ))}
+                </div>
              </div>
           </div>
         )}
@@ -144,40 +146,40 @@ export default function HomeTab({
 
       <StatCard mainVal={totalPoints} subVal={foundCount} colors={colors} />
 
-      {/* SEARCH AND CUSTOM SELECT */}
+      {/* SEARCH AND CUSTOM SELECT - USING SMART GLASS */}
       <div className="space-y-3 px-1">
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={14} />
+            <Search className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? 'text-zinc-600' : 'text-emerald-600/50'}`} size={14} />
             <input 
               type="text"
               placeholder="FILTER LOGS..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-zinc-900/80 border border-white/5 rounded-2xl py-3.5 pl-11 pr-4 text-[10px] font-black text-white placeholder:text-zinc-700 focus:outline-none focus:border-emerald-500/50 transition-all"
+              className="w-full smart-glass border rounded-2xl py-4 pl-11 pr-4 text-[10px] font-black focus:outline-none focus:border-emerald-500/50 transition-all"
             />
           </div>
 
           <div className="relative" ref={selectRef}>
             <button 
               onClick={() => setIsSelectOpen(!isSelectOpen)}
-              className="h-full px-4 bg-zinc-900/80 border border-white/5 rounded-2xl flex items-center gap-2 text-[10px] font-black uppercase text-zinc-400 active:bg-zinc-800 transition-all"
+              className="h-full px-4 smart-glass border rounded-2xl flex items-center gap-2 text-[10px] font-black uppercase active:scale-95 transition-all"
             >
-              <span>{sortBy.toUpperCase()}</span>
-              <ChevronDown size={14} className={`transition-transform duration-300 ${isSelectOpen ? 'rotate-180' : ''}`} />
+              <span className={isDark ? 'text-zinc-400' : 'text-emerald-800/60'}>{sortBy.toUpperCase()}</span>
+              <ChevronDown size={14} className={`transition-transform duration-300 ${isSelectOpen ? 'rotate-180' : ''} ${isDark ? 'text-zinc-600' : 'text-emerald-600/50'}`} />
             </button>
 
             {isSelectOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl z-[100] py-2 animate-in fade-in zoom-in-95 duration-200">
+              <div className={`absolute right-0 mt-2 w-48 border rounded-2xl shadow-2xl z-[100] py-2 animate-in fade-in zoom-in-95 duration-200 ${isDark ? 'bg-zinc-950 border-white/10' : 'bg-white border-emerald-100'}`}>
                 {sortOptions.map((opt) => (
                   <button
                     key={opt.id}
                     onClick={() => { setSortBy(opt.id); setIsSelectOpen(false); }}
-                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
+                    className={`w-full flex items-center justify-between px-4 py-3 transition-colors ${isDark ? 'hover:bg-white/5 text-white' : 'hover:bg-emerald-50 text-emerald-900'}`}
                   >
                     <div className="flex items-center gap-3">
-                      <opt.icon size={14} className={sortBy === opt.id ? 'text-emerald-500' : 'text-zinc-600'} />
-                      <span className={`text-[10px] font-black uppercase ${sortBy === opt.id ? 'text-white' : 'text-zinc-500'}`}>
+                      <opt.icon size={14} className={sortBy === opt.id ? 'text-emerald-500' : 'opacity-40'} />
+                      <span className="text-[10px] font-black uppercase">
                         {opt.label}
                       </span>
                     </div>
@@ -189,10 +191,12 @@ export default function HomeTab({
           </div>
         </div>
 
-        {/* NODES LIST */}
+        {/* NODES LIST - USING SMART GLASS */}
         <div className="grid gap-3 pb-24 pt-2">
           {filteredAndSortedNodes.length === 0 ? (
-            <div className="p-10 text-center text-[10px] uppercase font-bold opacity-20 tracking-[0.2em]">No encrypted logs found</div>
+            <div className={`p-10 text-center text-[10px] uppercase font-bold opacity-20 tracking-[0.2em] ${isDark ? 'text-white' : 'text-emerald-900'}`}>
+              No encrypted logs found
+            </div>
           ) : (
             filteredAndSortedNodes.map(node => {
               const rank = getNodeRank(node.streakCount);
@@ -201,23 +205,23 @@ export default function HomeTab({
                   {node.isReady && (
                     <div className="absolute -left-1 top-4 bottom-4 w-1 bg-emerald-500 rounded-full z-10 shadow-[0_0_10px_#10b981]" />
                   )}
-                  <div className="bg-zinc-900/80 border border-white/5 p-5 rounded-[2.2rem] flex items-center justify-between">
+                  <div className={`smart-glass border p-5 rounded-[2.2rem] flex items-center justify-between`}>
                     <div className="flex items-center gap-4">
                       <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${rank.bg} ${rank.color}`}>
                         {node.streakCount >= 10 ? <Trophy size={18} /> : node.streakCount > 1 ? <Flame size={18} fill="currentColor" /> : <CheckCircle2 size={18} />}
                       </div>
                       <div>
-                        <p className="font-bold text-sm text-zinc-200">{node.name}</p>
+                        <p className={`font-bold text-sm ${isDark ? 'text-zinc-200' : 'text-zinc-800'}`}>{node.name}</p>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className={`text-[9px] font-black uppercase tracking-tighter ${node.isReady ? 'text-emerald-500' : 'text-zinc-600'}`}>
+                          <span className={`text-[9px] font-black uppercase tracking-tighter ${node.isReady ? 'text-emerald-500' : (isDark ? 'text-zinc-600' : 'text-emerald-800/30')}`}>
                             {node.isReady ? 'Sync Required' : 'Secured'}
                           </span>
-                          {node.streakCount > 1 && <span className="text-[9px] text-zinc-500 font-bold">• STREAK {node.streakCount}x</span>}
+                          {node.streakCount > 1 && <span className={`text-[9px] font-bold ${isDark ? 'text-zinc-500' : 'text-emerald-800/40'}`}>• STREAK {node.streakCount}x</span>}
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-[11px] font-black text-zinc-400">+{node.points}XP</p>
+                      <p className={`text-[11px] font-black ${isDark ? 'text-zinc-400' : 'text-emerald-700'}`}>+{node.points}XP</p>
                     </div>
                   </div>
                 </div>

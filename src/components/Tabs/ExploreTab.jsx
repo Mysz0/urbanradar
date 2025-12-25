@@ -13,7 +13,7 @@ function MapController({ coords }) {
   return null;
 }
 
-export default function ExploreTab({ spots = {}, unlockedSpots = [], userLocation, radius }) {
+export default function ExploreTab({ spots = {}, unlockedSpots = [], userLocation, radius, isDark }) {
   
   // 1. BLUE DOT (User)
   const userIcon = L.divIcon({
@@ -32,15 +32,24 @@ export default function ExploreTab({ spots = {}, unlockedSpots = [], userLocatio
   });
 
   return (
-    <div style={{ height: '70vh', width: '100%', position: 'relative' }} className="rounded-[2.5rem] overflow-hidden border border-white/5 shadow-2xl bg-zinc-950">
+    <div 
+      style={{ height: '70vh', width: '100%', position: 'relative' }} 
+      className={`rounded-[2.5rem] overflow-hidden border shadow-2xl transition-colors duration-500 ${
+        isDark ? 'border-white/5 bg-zinc-950' : 'border-emerald-500/10 bg-emerald-50'
+      }`}
+    >
       <MapContainer 
-        center={[0, 0]} 
+        center={[userLocation?.lat || 0, userLocation?.lng || 0]} 
         zoom={13} 
         style={{ height: '100%', width: '100%' }}
         zoomControl={false}
       >
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          // SWITCHES TILESET BASED ON THEME
+          url={isDark 
+            ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" 
+            : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          }
           attribution='&copy; CARTO'
         />
 
@@ -50,12 +59,19 @@ export default function ExploreTab({ spots = {}, unlockedSpots = [], userLocatio
         {userLocation?.lat && (
           <>
             <Marker position={[userLocation.lat, userLocation.lng]} icon={userIcon}>
-              <Popup>Current Position</Popup>
+              <Popup>
+                <div className="font-bold">Current Position</div>
+              </Popup>
             </Marker>
             <Circle 
               center={[userLocation.lat, userLocation.lng]}
               radius={radius || 10} 
-              pathOptions={{ color: '#10b981', fillColor: '#10b981', fillOpacity: 0.1 }}
+              pathOptions={{ 
+                color: '#10b981', 
+                fillColor: '#10b981', 
+                fillOpacity: isDark ? 0.1 : 0.15,
+                weight: 1 
+              }}
             />
           </>
         )}
@@ -65,12 +81,12 @@ export default function ExploreTab({ spots = {}, unlockedSpots = [], userLocatio
           <Marker 
             key={spot.id} 
             position={[spot.lat, spot.lng]} 
-            icon={spotIcon} // FIXED: Using spotIcon instead of DefaultIcon
+            icon={spotIcon} 
             opacity={unlockedSpots.includes(spot.id) ? 1 : 0.4}
           >
             <Popup>
-               <div className="font-bold text-zinc-900">{spot.name}</div>
-               <div className="text-[10px] text-zinc-500 uppercase font-bold">
+               <div className="font-bold">{spot.name}</div>
+               <div className="text-[10px] uppercase font-bold opacity-60">
                  {unlockedSpots.includes(spot.id) ? 'Secured' : 'Locked'}
                </div>
             </Popup>
@@ -78,13 +94,20 @@ export default function ExploreTab({ spots = {}, unlockedSpots = [], userLocatio
         ))}
       </MapContainer>
 
-      {/* OVERLAY PANEL */}
+      {/* OVERLAY PANEL - NOW USING SMART GLASS */}
       <div className="absolute bottom-6 left-6 right-6 z-[1000] pointer-events-none">
-        <div className="bg-zinc-950/90 backdrop-blur-xl border border-white/10 p-4 rounded-2xl flex justify-between items-center shadow-2xl">
-          <div className="text-white text-[10px] font-bold tracking-widest uppercase">
-            {userLocation ? `LAT: ${userLocation.lat.toFixed(4)} LNG: ${userLocation.lng.toFixed(4)}` : 'SCANNING GPS...'}
+        <div className="smart-glass border p-4 rounded-2xl flex justify-between items-center shadow-2xl">
+          <div className={`text-[10px] font-bold tracking-widest uppercase ${isDark ? 'text-white' : 'text-zinc-800'}`}>
+            {userLocation ? (
+              <span className="flex gap-3">
+                <span>LAT: {userLocation.lat.toFixed(4)}</span>
+                <span>LNG: {userLocation.lng.toFixed(4)}</span>
+              </span>
+            ) : 'SCANNING GPS...'}
           </div>
-          <div className="text-emerald-500 font-black text-[10px] italic uppercase">{radius}M RANGE</div>
+          <div className="text-emerald-500 font-black text-[10px] italic uppercase tracking-tighter">
+            {radius}M RANGE
+          </div>
         </div>
       </div>
     </div>
