@@ -62,11 +62,8 @@ export function useGameLogic(user, showToast) {
     fetchData();
   }, [user]);
 
-  // --- FIXED: Don't update last_claim when manually editing streak ---
   const updateNodeStreak = async (spotId, newStreakValue) => {
     if (!user) return;
-    
-    // Ensure we have a clean number
     const safeVal = parseInt(newStreakValue, 10);
     const finalVal = isNaN(safeVal) ? 0 : Math.max(0, safeVal);
 
@@ -75,15 +72,11 @@ export function useGameLogic(user, showToast) {
       [spotId]: {
         ...(spotStreaks?.[spotId] || {}),
         streak: finalVal,
-        // ⭐ FIXED: Keep the existing last_claim, don't update it!
-        // This way manually changing streak won't block real claims
         last_claim: spotStreaks?.[spotId]?.last_claim || null
       }
     };
     
-    // Optimistic Update
     setSpotStreaks(updatedStreaks);
-
     const { error } = await supabase.from('profiles')
       .update({ spot_streaks: updatedStreaks })
       .eq('id', user.id);
@@ -98,8 +91,6 @@ export function useGameLogic(user, showToast) {
     if (!user || !spots[spotId]) return;
     const today = new Date();
     const todayStr = today.toDateString();
-    
-    // Ensure spotStreaks exists as an object
     const currentStreaks = spotStreaks || {};
     const spotInfo = currentStreaks[spotId] || { last_claim: null, streak: 0 };
 
@@ -111,7 +102,6 @@ export function useGameLogic(user, showToast) {
     const newTotalPoints = (totalPoints || 0) + earnedPoints;
     const newUnlocked = unlockedSpots.includes(spotId) ? unlockedSpots : [...unlockedSpots, spotId];
     
-    // Explicitly use Number() to prevent doubling or string issues
     const newSpotStreaks = { 
       ...currentStreaks, 
       [spotId]: { 
@@ -166,7 +156,6 @@ export function useGameLogic(user, showToast) {
 
   const deleteSpotFromDB = async (id) => { 
     const { error } = await supabase.rpc('force_delete_spot', { target_id: id });
-    
     if (!error) {
       setSpots(prev => {
         const n = {...prev};
@@ -175,7 +164,6 @@ export function useGameLogic(user, showToast) {
       });
       showToast("Global Purge Success");
     } else {
-      console.error("RPC Error:", error);
       showToast("Delete blocked by database rules", "error");
     }
   };
@@ -185,16 +173,70 @@ export function useGameLogic(user, showToast) {
     if (!error) { setCustomRadius(v); showToast(`Radius: ${v}m`); }
   };
 
+  // --- UPDATED: Save Username with Reserved Check & Toast Engine ---
   const saveUsername = async () => {
     const cleaned = tempUsername.trim();
-    const { error } = await supabase.from('profiles').update({ username: cleaned }).eq('id', user.id);
-    if (!error) { setUsername(cleaned); showToast("Updated!"); fetchLeaderboard(); }
+    if (!cleaned || cleaned === username) return;
+
+    // 1. Check if name is taken by anyone else
+    const { data: reserved } = await supabase
+      .from('profiles')
+      .select('username')
+      .eq('username', cleaned)
+      .not('id', 'eq', user.id) // Crucial: don't check against yourself
+      .maybeSingle();
+
+    if (reserved) {
+      // Triggers red Error Toast
+      return showToast("Identity already reserved by another operative", "error");
+    }
+
+    // 2. Perform Update with 7-day timestamp
+    const now = new Date().toISOString();
+    const { error } = await supabase
+      .from('profiles')
+      .update({ 
+        username: cleaned, 
+        last_username_change: now 
+      })
+      .eq('id', user.id);
+
+    if (!error) {
+      setUsername(cleaned);
+      setLastChange(now);
+      showToast("Identity Synchronized"); // Triggers green Success Toast
+      fetchLeaderboard();
+    } else {
+      showToast("Update failed", "error");
+    }
+  };
+
+  // --- UPDATED: Functional Admin Reset ---
+  const resetTimer = async () => {
+    if (!user) return;
+    const { error } = await supabase
+      .from('profiles')
+      .update({ last_username_change: null })
+      .eq('id', user.id);
+
+    if (!error) {
+      setLastChange(null);
+      showToast("Cooldown Bypassed: Instant Change Ready");
+    } else {
+      showToast("Override failed", "error");
+    }
+  };
+
+  const toggleEmailVisibility = async () => {
+    const newVal = !showEmail;
+    const { error } = await supabase.from('profiles').update({ show_email: newVal }).eq('id', user.id);
+    if (!error) { setShowEmail(newVal); showToast(newVal ? "Email Visible" : "Email Hidden"); }
   };
 
   return { 
     spots, unlockedSpots, visitData, spotStreaks, username, tempUsername, setTempUsername, 
     userRole, totalPoints, showEmail, lastChange, customRadius, leaderboard, 
     claimSpot, saveUsername, removeSpot, updateRadius, addNewSpot, deleteSpotFromDB,
-    updateNodeStreak, fetchLeaderboard, resetTimer: () => showToast("Cooldown Bypassed")
+    updateNodeStreak, fetchLeaderboard, resetTimer, toggleEmailVisibility
   };
 }
