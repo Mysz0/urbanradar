@@ -62,7 +62,7 @@ export function useGameLogic(user, showToast) {
     fetchData();
   }, [user]);
 
-  // --- STREAK EDITOR: FIXED TO HANDLE INPUTS PROPERLY ---
+  // --- FIXED: Don't update last_claim when manually editing streak ---
   const updateNodeStreak = async (spotId, newStreakValue) => {
     if (!user) return;
     
@@ -75,7 +75,9 @@ export function useGameLogic(user, showToast) {
       [spotId]: {
         ...(spotStreaks?.[spotId] || {}),
         streak: finalVal,
-        last_claim: spotStreaks?.[spotId]?.last_claim || new Date().toISOString()
+        // ⭐ FIXED: Keep the existing last_claim, don't update it!
+        // This way manually changing streak won't block real claims
+        last_claim: spotStreaks?.[spotId]?.last_claim || null
       }
     };
     
