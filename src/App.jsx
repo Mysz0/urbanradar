@@ -37,11 +37,11 @@ export default function App() {
   const {
     spots, unlockedSpots, visitData, spotStreaks,
     username, tempUsername, setTempUsername,
-    userRole, // <--- Pulled from updated useGameLogic
+    userRole, totalPoints,
     showEmail, lastChange, customRadius, leaderboard,
     claimSpot, saveUsername, toggleEmailVisibility,
     removeSpot, updateRadius, resetTimer, addNewSpot, deleteSpotFromDB,
-    updateNodeStreak // ⭐ ADD THIS - it was missing!
+    updateNodeStreak
   } = useGameLogic(user, showToast);
 
   // High-accuracy location + proximity check
@@ -109,11 +109,7 @@ export default function App() {
             userLocation={userLocation}
             activeSpotId={activeSpotId}
             claimSpot={claimSpot}
-            totalPoints={unlockedSpots.reduce((sum, id) => {
-              const basePoints = spots[id]?.points || 0;
-              const multiplier = (visitData?.streak || 0) > 1 ? 1.1 : 1.0;
-              return sum + Math.round(basePoints * multiplier);
-            }, 0)} 
+            totalPoints={totalPoints}
             foundCount={unlockedSpots.length} 
             unlockedSpots={unlockedSpots} 
             spots={spots} 
