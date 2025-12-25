@@ -62,13 +62,11 @@ export function useGameLogic(user, showToast) {
     fetchData();
   }, [user]);
 
-  // --- FIXED: Multiplier Logic for Manual Streak Updates ---
   const updateNodeStreak = async (spotId, newStreakValue) => {
     if (!user) return;
     const safeVal = parseInt(newStreakValue, 10);
     const finalVal = isNaN(safeVal) ? 0 : Math.max(0, safeVal);
     
-    // Calculate Multiplier for the current/new streak
     let multiplier = 1.0;
     if (finalVal === 2) multiplier = 1.1;
     else if (finalVal === 3) multiplier = 1.3;
@@ -77,7 +75,6 @@ export function useGameLogic(user, showToast) {
     const basePoints = spots[spotId]?.points || 0;
     const currentStreak = spotStreaks?.[spotId]?.streak || 0;
     
-    // Calculate point difference if increasing
     let addedPoints = 0;
     if (finalVal > currentStreak) {
         addedPoints = Math.floor(basePoints * multiplier);
@@ -94,7 +91,6 @@ export function useGameLogic(user, showToast) {
     
     const newTotalPoints = totalPoints + addedPoints;
 
-    // Optimistic UI Update
     setSpotStreaks(updatedStreaks);
     setTotalPoints(newTotalPoints);
 
@@ -106,7 +102,6 @@ export function useGameLogic(user, showToast) {
       .eq('id', user.id);
 
     if (error) {
-      console.error("Streak save error:", error);
       showToast("Sync Failed", "error");
     } else {
         showToast(`Streak updated: ${multiplier}x active`);
@@ -162,26 +157,27 @@ export function useGameLogic(user, showToast) {
     }
   };
 
+  // --- UPDATED: XP Stays Permanent on Removal ---
   const removeSpot = async (id) => {
     if (!user) return;
-    const spotValue = spots[id]?.points || 0;
-    const newTotalPoints = Math.max(0, totalPoints - spotValue);
+    
+    // 1. Keep points as they are (Experience Points logic)
     const newUnlocked = (unlockedSpots || []).filter(x => x !== id);
     const newSpotStreaks = { ...(spotStreaks || {}) };
     delete newSpotStreaks[id];
 
+    // 2. Update Supabase without subtracting total_points
     const { error } = await supabase.from('profiles').update({ 
       unlocked_spots: newUnlocked, 
-      spot_streaks: newSpotStreaks,
-      total_points: newTotalPoints 
+      spot_streaks: newSpotStreaks
     }).eq('id', user.id);
 
     if (!error) {
       setUnlockedSpots(newUnlocked);
       setSpotStreaks(newSpotStreaks);
-      setTotalPoints(newTotalPoints);
+      // setTotalPoints remains unchanged
       fetchLeaderboard();
-      showToast("Removed from Inventory");
+      showToast("Inventory Cleared (XP Retained)");
     }
   };
 
