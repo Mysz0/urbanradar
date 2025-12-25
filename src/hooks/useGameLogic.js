@@ -120,15 +120,12 @@ export function useGameLogic(user, showToast) {
     const todayStr = new Date().toDateString();
     let spotsToClaim = [];
 
-    // Check if input is a Location Object (lat/lng) or a Spot ID (string)
     if (typeof input === 'object' && input.lat && input.lng) {
-      // Multi-Claim Logic
       spotsToClaim = Object.values(spots).filter(spot => {
         const dist = getDistance(input.lat, input.lng, spot.lat, spot.lng);
         return dist <= (customRadius || 250);
       });
     } else if (typeof input === 'string') {
-      // Single-Claim Logic
       if (spots[input]) spotsToClaim = [spots[input]];
     }
 
@@ -244,13 +241,36 @@ export function useGameLogic(user, showToast) {
 
   const saveUsername = async () => {
     const cleaned = tempUsername.trim();
-    if (!cleaned || cleaned === username) return;
-    const { data: reserved } = await supabase.from('profiles').select('username').eq('username', cleaned).not('id', 'eq', user.id).maybeSingle();
-    if (reserved) return showToast("Identity already reserved", "error");
+    
+    // 1. Minimum Length Validation
+    if (cleaned.length < 3) {
+      return showToast("Identity too short (min 3 chars)", "error");
+    }
+
+    if (cleaned === username) return;
+
+    // 2. Case-Insensitive Reservation Check (using .ilike)
+    const { data: reserved } = await supabase
+      .from('profiles')
+      .select('username')
+      .ilike('username', cleaned)
+      .not('id', 'eq', user.id)
+      .maybeSingle();
+
+    if (reserved) {
+      return showToast("Identity already reserved", "error");
+    }
 
     const now = new Date().toISOString();
     const { error } = await supabase.from('profiles').update({ username: cleaned, last_username_change: now }).eq('id', user.id);
-    if (!error) { setUsername(cleaned); setLastChange(now); showToast("Identity Synchronized"); fetchLeaderboard(); }
+    if (!error) { 
+        setUsername(cleaned); 
+        setLastChange(now); 
+        showToast("Identity Synchronized"); 
+        fetchLeaderboard(); 
+    } else {
+        showToast("Synchronization failed", "error");
+    }
   };
 
   const resetTimer = async () => {
