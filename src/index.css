@@ -70,26 +70,49 @@ body {
   color: var(--theme-text-title-dark) !important; 
 }
 
-/* --- WINTER THEME: FROSTED ICE --- */
+/* --- WINTER THEME: FROSTED ICE (GLITCH-FREE) --- */
 [data-theme='winter'] .smart-glass {
-  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(240, 249, 255, 0.2) 50%, rgba(186, 230, 253, 0.1) 100%) !important;
+  background-image: linear-gradient(
+    135deg, 
+    rgba(255, 255, 255, 0.4) 0%, 
+    rgba(240, 249, 255, 0.2) 50%, 
+    rgba(186, 230, 253, 0.1) 100%
+  ) !important;
+  
   backdrop-filter: blur(20px) saturate(125%);
   -webkit-backdrop-filter: blur(20px) saturate(125%);
+  
   border: 1px solid rgba(255, 255, 255, 0.6) !important;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.4), inset 0 0 15px rgba(125, 211, 252, 0.1);
+  
+  box-shadow: 
+    inset 0 1px 1px rgba(255, 255, 255, 0.4),
+    inset 0 0 15px rgba(125, 211, 252, 0.1);
 }
 
 .dark[data-theme='winter'] .smart-glass {
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.75) 100%) !important;
+  background: linear-gradient(
+    135deg, 
+    rgba(15, 23, 42, 0.85) 0%, 
+    rgba(30, 41, 59, 0.75) 100%
+  ) !important;
   border-color: rgba(255, 255, 255, 0.15) !important;
 }
 
 /* --- LEAFLET & MAP UI --- */
 .leaflet-control-attribution, .leaflet-control-zoom { display: none !important; }
-.leaflet-container { width: 100% !important; height: 100% !important; z-index: 1; }
-.leaflet-popup-content-wrapper { background: transparent !important; box-shadow: none !important; padding: 0 !important; }
+.leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 1;
+}
 
-/* --- CENTERED RADAR ICONS --- */
+.leaflet-popup-content-wrapper {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* --- CENTERED RADAR ICONS & MARKERS --- */
 .custom-div-icon { 
   background: none !important; 
   border: none !important; 
@@ -98,36 +121,66 @@ body {
   justify-content: center !important; 
 }
 
-/* User Marker Styles */
+/* User Marker: Small Dot + Breathing Pulse */
 .marker-pin-user { position: relative; display: flex; align-items: center; justify-content: center; }
 .marker-pin-user .dot { 
-  width: 12px; height: 12px; 
+  width: 8px; height: 8px; 
   background: rgb(var(--theme-primary)); 
-  border: 2px solid white; 
+  border: 1.5px solid white; 
   border-radius: 50%; 
   z-index: 10; 
-  box-shadow: 0 0 15px rgb(var(--theme-primary)); 
+  box-shadow: 0 0 10px rgb(var(--theme-primary)); 
 }
 .marker-pin-user .pulse { 
   position: absolute; 
-  width: 30px; height: 30px; 
+  width: 20px; height: 20px; 
   border-radius: 50%; 
-  background: rgba(var(--theme-primary), 0.3); 
+  background: rgba(var(--theme-primary), 0.25); 
   animation: user-pulse 2s infinite; 
 }
 
-@keyframes user-pulse {
-  0% { transform: scale(0.5); opacity: 0.8; }
-  100% { transform: scale(2); opacity: 0; }
+/* Node Markers: Theme Color for Unlocked, Gray for Locked */
+.marker-pin-spot .dot { 
+  width: 8px; height: 8px; 
+  background: #71717a; /* Default Gray */
+  border: 1.5px solid white; 
+  border-radius: 50%; 
+  transition: all 0.4s ease;
 }
 
-/* Radar Animation for Circles */
+.marker-pin-spot.unlocked .dot { 
+  background: rgb(var(--theme-primary)) !important; /* Dynamic Theme Color */
+  box-shadow: 0 0 8px rgb(var(--theme-primary)); 
+}
+
+@keyframes user-pulse {
+  0% { transform: scale(0.8); opacity: 0.6; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* Radar Animation for Scanning Ring */
 .radar-ping { animation: radarPing 4s ease-in-out infinite; }
 @keyframes radarPing { 
   0%, 100% { stroke-opacity: 0.7; stroke-width: 1px; } 
   50% { stroke-opacity: 0.2; stroke-width: 2.5px; } 
 }
 
-/* Scrollbar */
+/* --- UI EFFECTS --- */
+.mist-overlay {
+  background: radial-gradient(circle at top, rgba(var(--theme-primary), 0.15) 0%, transparent 60%);
+}
+
+.nav-shrink {
+  transform: scale(0.9) translateY(12px) !important;
+  opacity: 0.85;
+  filter: blur(0.5px) saturate(1.2);
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s ease;
+}
+
+/* --- SCROLLBAR --- */
 .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(var(--theme-primary), 0.2); border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(var(--theme-primary), 0.2);
+  border-radius: 10px;
+}
