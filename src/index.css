@@ -121,8 +121,14 @@ body {
   justify-content: center !important; 
 }
 
-/* User Marker: Small Dot + Breathing Pulse */
-.marker-pin-user { position: relative; display: flex; align-items: center; justify-content: center; }
+/* THE ALIGNMENT FIX: Use absolute positioning inside the icon to force true center */
+.marker-pin-user { 
+  position: absolute; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+}
+
 .marker-pin-user .dot { 
   width: 8px; height: 8px; 
   background: rgb(var(--theme-primary)); 
@@ -140,6 +146,13 @@ body {
 }
 
 /* Node Markers: Theme Color for Unlocked, Gray for Locked */
+.marker-pin-spot {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .marker-pin-spot .dot { 
   width: 8px; height: 8px; 
   background: #71717a; /* Default Gray */

@@ -76,8 +76,8 @@ export default function ExploreTab({
   unlockedSpots = [], 
   userLocation, 
   isDark, 
-  claimRadius, // Dynamic from DB
-  scanRadius   // Dynamic from DB
+  claimRadius, 
+  scanRadius 
 }) {
   const [mapRef, setMapRef] = useState(null);
 
@@ -91,19 +91,19 @@ export default function ExploreTab({
 
   const initialCenter = useMemo(() => stableUserLoc ? [stableUserLoc.lat, stableUserLoc.lng] : [40.7306, -73.9352], []);
 
-  // PERFECT CENTER ANCHORING
+  // FIXED: Leaflet needs [0,0] size if the CSS uses translate(-50%, -50%) for perfect centering
   const userIcon = useMemo(() => L.divIcon({
     className: 'custom-div-icon',
     html: `<div class="marker-pin-user"><div class="dot"></div><div class="pulse"></div></div>`,
-    iconSize: [20, 20], 
-    iconAnchor: [10, 10] 
+    iconSize: [0, 0], 
+    iconAnchor: [0, 0] 
   }), []);
 
   const spotIcon = (isUnlocked) => L.divIcon({
     className: 'custom-div-icon',
     html: `<div class="marker-pin-spot ${isUnlocked ? 'unlocked' : ''}"><div class="dot"></div></div>`,
-    iconSize: [16, 16],
-    iconAnchor: [8, 8]
+    iconSize: [0, 0],
+    iconAnchor: [0, 0]
   });
 
   return (
@@ -114,7 +114,9 @@ export default function ExploreTab({
         .leaflet-container { height: 100% !important; width: 100% !important; background: transparent !important; }
         .custom-div-icon { background: none !important; border: none !important; display: flex !important; align-items: center !important; justify-content: center !important; }
         
-        .marker-pin-user { position: relative; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; }
+        /* The Center-Lock Trick */
+        .marker-pin-user, .marker-pin-spot { position: absolute; display: flex; align-items: center; justify-content: center; transform: translate(-50%, -50%); }
+
         .marker-pin-user .dot { width: 8px; height: 8px; background: rgb(var(--theme-primary)); border: 1.5px solid white; border-radius: 50%; z-index: 10; box-shadow: 0 0 10px rgb(var(--theme-primary)); }
         .marker-pin-user .pulse { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: rgba(var(--theme-primary), 0.3); animation: user-pulse 2s infinite; }
         
