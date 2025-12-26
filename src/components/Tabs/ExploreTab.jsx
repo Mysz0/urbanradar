@@ -4,16 +4,14 @@ import { Target } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// --- HELPER COMPONENTS ---
-
-// THE FIX: This component forces the map to recalculate its size when it loads
-// preventing the "gray screen" bug when switching tabs.
+// 1. FIXES THE GRAY SCREEN
 function MapInvalidator() {
   const map = useMap();
   useEffect(() => {
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       map.invalidateSize();
-    }, 100); // Small delay to ensure the DOM has rendered the container
+    }, 250);
+    return () => clearTimeout(timer);
   }, [map]);
   return null;
 }
@@ -85,43 +83,39 @@ function MapInterface({ coords, stableUserLoc, isDark, claimRadius, scanRadius }
   );
 }
 
-// --- MAIN COMPONENT ---
-
 export default function ExploreTab({ 
   spots = {}, 
   unlockedSpots = [], 
   userLocation, 
   isDark, 
-  claimRadius = 20, 
-  scanRadius = 50 
+  claimRadius, 
+  scanRadius 
 }) {
   const [mapRef, setMapRef] = useState(null);
 
   const stableUserLoc = useMemo(() => {
     if (!userLocation?.lat) return null;
-    return {
-      lat: userLocation.lat,
-      lng: userLocation.lng
-    };
-  }, [userLocation]);
+    return { lat: userLocation.lat, lng: userLocation.lng };
+  }, [userLocation?.lat, userLocation?.lng]);
 
   const initialCenter = useMemo(() => {
     if (stableUserLoc) return [stableUserLoc.lat, stableUserLoc.lng];
-    return [40.7306, -73.9352]; // Default New York fallback
+    return [40.7306, -73.9352];
   }, []);
 
+  // 2. FIXES MISALIGNMENT: Fixed anchor [15, 15] for a [30, 30] icon
   const userIcon = useMemo(() => L.divIcon({
     className: 'custom-div-icon',
-    html: `<div class="user-diamond-core"></div>`,
-    iconSize: [0, 0],
-    iconAnchor: [0, 0]
+    html: `<div class="icon-wrapper"><div class="user-diamond-core"></div></div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15]
   }), []);
 
   const spotIcon = (isUnlocked) => L.divIcon({
     className: 'custom-div-icon',
-    html: `<div class="marker-core ${isUnlocked ? 'core-unlocked' : ''}"></div>`,
-    iconSize: [0, 0],
-    iconAnchor: [0, 0]
+    html: `<div class="icon-wrapper"><div class="marker-core ${isUnlocked ? 'core-unlocked' : ''}"></div></div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15]
   });
 
   return (
@@ -130,19 +124,19 @@ export default function ExploreTab({
     }`}>
       <style>{`
         .leaflet-container { height: 100% !important; width: 100% !important; background: #18181b !important; }
-        .custom-div-icon { background: none !important; border: none !important; display: flex !important; align-items: center !important; justify-content: center !important; }
+        .custom-div-icon { background: none !important; border: none !important; }
         
+        .icon-wrapper { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; }
+
         .user-diamond-core { 
-            position: absolute; width: 12px; height: 12px; 
-            background: rgb(var(--theme-primary)); 
-            border: 2px solid white; transform: translate(-50%, -50%) rotate(45deg); 
+            width: 14px; height: 14px; background: rgb(var(--theme-primary)); 
+            border: 2px solid white; transform: rotate(45deg); 
             box-shadow: 0 0 15px rgb(var(--theme-primary)); 
         }
 
         .marker-core { 
-            position: absolute; width: 8px; height: 8px; 
-            background: #71717a; border: 1.5px solid white; 
-            border-radius: 50%; transform: translate(-50%, -50%); 
+            width: 10px; height: 10px; background: #71717a; 
+            border: 2px solid white; border-radius: 50%; 
         }
         
         .core-unlocked { 
@@ -155,24 +149,10 @@ export default function ExploreTab({
           0%, 100% { stroke-opacity: 0.7; stroke-width: 1.5px; } 
           50% { stroke-opacity: 0.2; stroke-width: 2.5px; } 
         }
-
-        .leaflet-popup-content-wrapper { background: transparent !important; box-shadow: none !important; padding: 0 !important; }
-        .leaflet-popup-tip { display: none !important; }
       `}</style>
 
-      <MapContainer 
-        center={initialCenter} 
-        zoom={15} 
-        zoomControl={false} 
-        scrollWheelZoom={true} 
-        ref={setMapRef}
-        whenReady={(mapInstance) => {
-            // Backup fix: manual invalidate when map instance is ready
-            setTimeout(() => mapInstance.target.invalidateSize(), 100);
-        }}
-      >
+      <MapContainer center={initialCenter} zoom={15} zoomControl={false} scrollWheelZoom={true} ref={setMapRef}>
         <MapInvalidator />
-        
         <TileLayer
           key={isDark ? 'dark' : 'light'}
           url={isDark 
@@ -192,7 +172,7 @@ export default function ExploreTab({
           <>
             <Circle
               center={[stableUserLoc.lat, stableUserLoc.lng]}
-              radius={claimRadius}
+              radius={Number(claimRadius) || 20}
               pathOptions={{
                 color: 'rgb(var(--theme-primary))',
                 fillColor: 'rgb(var(--theme-primary))',
@@ -204,7 +184,7 @@ export default function ExploreTab({
             
             <Circle
               center={[stableUserLoc.lat, stableUserLoc.lng]}
-              radius={scanRadius}
+              radius={Number(scanRadius) || 50}
               pathOptions={{
                 color: 'rgb(var(--theme-primary))',
                 fillColor: 'transparent',
@@ -219,19 +199,20 @@ export default function ExploreTab({
           </>
         )}
 
-        {Object.values(spots).map((spot) => {
-          const isUnlocked = unlockedSpots.includes(spot.id);
-          return (
-            <Marker key={`${spot.id}-${isUnlocked}`} position={[spot.lat, spot.lng]} icon={spotIcon(isUnlocked)}>
-              <Popup closeButton={false} offset={[0, -5]}>
-                <div className="smart-glass p-3 rounded-2xl border border-white/10 min-w-[140px] shadow-2xl">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-1">Node</p>
-                  <p className="text-xs font-bold text-white truncate">{spot.name}</p>
-                </div>
-              </Popup>
-            </Marker>
-          );
-        })}
+        {Object.values(spots).map((spot) => (
+          <Marker 
+            key={`${spot.id}-${unlockedSpots.includes(spot.id)}`} 
+            position={[spot.lat, spot.lng]} 
+            icon={spotIcon(unlockedSpots.includes(spot.id))}
+          >
+            <Popup closeButton={false} offset={[0, -5]}>
+              <div className="smart-glass p-3 rounded-2xl border border-white/10 min-w-[140px] shadow-2xl">
+                <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-1">Node</p>
+                <p className="text-xs font-bold text-white truncate">{spot.name}</p>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
       </MapContainer>
     </div>
   );
