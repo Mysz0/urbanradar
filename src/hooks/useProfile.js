@@ -16,10 +16,10 @@ export function useProfile(user, showToast, fetchLeaderboard) {
 
     const fetchProfile = async () => {
       try {
-        // 1. Fetch Profile (Base Data) - Cleaned of missing columns
+        // 1. Fetch Profile using the EXACT columns from your DB
         let { data: profile } = await supabase
           .from('profiles')
-          .select('username, role, total_points, show_email, last_username_change, custom_radius')
+          .select('username, role, total_points, show_email, last_username_change, custom_radius, streak_count, last_visit')
           .eq('id', user.id)
           .maybeSingle();
 
@@ -31,60 +31,44 @@ export function useProfile(user, showToast, fetchLeaderboard) {
           setShowEmail(profile.show_email ?? false);
           setLastChange(profile.last_username_change);
           setCustomRadius(profile.custom_radius || 250);
-        }
 
-        // 2. STREAK LOGIC: Calculate from user_spots activity
-        const { data: claims } = await supabase
-          .from('user_spots')
-          .select('created_at')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-
-        if (claims && claims.length > 0) {
-          // Get unique dates of activity (ignoring time)
-          const uniqueDays = [...new Set(claims.map(c => 
-            new Date(c.created_at).toDateString()
-          ))];
-
-          const today = new Date().toDateString();
-          const yesterday = new Date();
-          yesterday.setDate(yesterday.getDate() - 1);
-          const yesterdayStr = yesterday.toDateString();
-
-          let streak = 0;
+          // --- STREAK LOGIC (Using streak_count column) ---
+          const now = new Date();
+          const todayStr = now.toDateString();
           
-          // Check if user was active today OR yesterday
-          if (uniqueDays[0] === today || uniqueDays[0] === yesterdayStr) {
-            streak = 1;
-            // Loop backwards through unique days to count the chain
-            for (let i = 0; i < uniqueDays.length - 1; i++) {
-              const current = new Date(uniqueDays[i]);
-              const prev = new Date(uniqueDays[i + 1]);
-              
-              // Calculate difference in days
-              const diffTime = Math.abs(current - prev);
-              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          let dbStreak = profile.streak_count || 0;
+          let lastVisitDate = profile.last_visit ? new Date(profile.last_visit) : null;
+          let newStreak = dbStreak;
 
-              if (diffDays === 1) {
-                streak++;
-              } else {
-                break; // Chain broken
-              }
-            }
+          if (!lastVisitDate) {
+            // Brand new user or first visit since column added
+            newStreak = 1;
+          } else if (lastVisitDate.toDateString() !== todayStr) {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            
+            // If they visited yesterday, increment. Otherwise reset.
+            newStreak = (lastVisitDate.toDateString() === yesterday.toDateString()) ? dbStreak + 1 : 1;
           }
 
-          setVisitData({ 
-            streak, 
-            last_visit: claims[0].created_at 
-          });
-          
-          // Show toast if they just claimed something today
-          if (uniqueDays[0] === today && streak > 0) {
-            // This prevents the toast from firing every refresh if you track locally
-            // but for now it confirms the logic is working
+          // Update local state immediately
+          setVisitData({ last_visit: now.toISOString(), streak: newStreak });
+
+          // 2. Update DB ONLY if it's a new day
+          if (!lastVisitDate || lastVisitDate.toDateString() !== todayStr) {
+            await supabase
+              .from('profiles')
+              .update({ 
+                streak_count: newStreak, 
+                last_visit: now.toISOString() 
+              })
+              .eq('id', user.id);
+
+            showToast(`${newStreak} Day Streak Active!`);
+            // Refresh leaderboard to show the new streak count
+            if (fetchLeaderboard) fetchLeaderboard();
           }
         }
-
       } catch (err) {
         console.error("Profile Fetch Error:", err);
       }
