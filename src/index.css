@@ -77,26 +77,15 @@ body {
 
 /* --- WINTER THEME SPECIFICS --- */
 [data-theme='winter'] .smart-glass {
-  background-image: linear-gradient(
-    135deg, 
-    rgba(255, 255, 255, 0.4) 0%, 
-    rgba(240, 249, 255, 0.2) 50%, 
-    rgba(186, 230, 253, 0.1) 100%
-  ) !important;
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(240, 249, 255, 0.2) 50%, rgba(186, 230, 253, 0.1) 100%) !important;
   backdrop-filter: blur(20px) saturate(125%);
   -webkit-backdrop-filter: blur(20px) saturate(125%);
   border: 1px solid rgba(255, 255, 255, 0.6) !important;
-  box-shadow: 
-    inset 0 1px 1px rgba(255, 255, 255, 0.4),
-    inset 0 0 15px rgba(125, 211, 252, 0.1);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.4), inset 0 0 15px rgba(125, 211, 252, 0.1);
 }
 
 .dark[data-theme='winter'] .smart-glass {
-  background: linear-gradient(
-    135deg, 
-    rgba(15, 23, 42, 0.85) 0%, 
-    rgba(30, 41, 59, 0.75) 100%
-  ) !important;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.75) 100%) !important;
   border-color: rgba(255, 255, 255, 0.15) !important;
 }
 
@@ -147,39 +136,28 @@ body {
   100% { transform: scale(2.2); opacity: 0; }
 }
 
-/* --- THE RADAR FIX (PINCH & SPIN) --- */
+/* --- THE RADAR FIX (FORCED DASHES & SPIN) --- */
 .radar-ping { 
-  /* 1. FIX CLUMPING: This keeps dashes consistent regardless of zoom */
+  /* 1. Prevent Clumping: Keeps line thickness constant during zoom */
   vector-effect: non-scaling-stroke !important;
-  /* Define dashes here instead of JS for stability */
-  stroke-dasharray: 12, 18 !important; 
+
+  /* 2. FORCE DASHES: 10px line, 20px gap. !important ensures it overrides any defaults */
+  stroke-dasharray: 10, 20 !important; 
   
-  /* 2. FIX SPIN: Force rotation around the circle's own coordinates */
-  transform-origin: center !important;
+  /* 3. FIX SPIN: 'fill-box' forces rotation around the circle itself, not the map */
   transform-box: fill-box !important; 
+  transform-origin: center center !important;
   
   animation: 
-    radarSweep 8s linear infinite, 
-    radarBreathe 4s ease-in-out infinite,
-    radarSpin 12s linear infinite !important; 
+    radarSpin 10s linear infinite !important;
     
   stroke-linecap: round;
-  pointer-events: none; /* Prevents interfering with map clicks */
+  pointer-events: none;
 }
 
 @keyframes radarSpin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
-}
-
-@keyframes radarSweep {
-  from { stroke-dashoffset: 100; }
-  to { stroke-dashoffset: 0; }
-}
-
-@keyframes radarBreathe { 
-  0%, 100% { stroke-opacity: 0.7; stroke-width: 1.5px; } 
-  50% { stroke-opacity: 0.2; stroke-width: 3px; } 
 }
 
 /* --- UI EFFECTS & MISC --- */
