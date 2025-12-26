@@ -15,7 +15,7 @@ export function useSpots(user, showToast, totalPoints, setTotalPoints, fetchLead
   };
 
   const getDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371e3; // Earth radius in meters
+    const R = 6371e3; 
     const φ1 = (lat1 * Math.PI) / 180;
     const φ2 = (lat2 * Math.PI) / 180;
     const Δφ = ((lat2 - lat1) * Math.PI) / 180;
@@ -32,11 +32,9 @@ export function useSpots(user, showToast, totalPoints, setTotalPoints, fetchLead
 
     const fetchSpotData = async () => {
       try {
-        // 1. Fetch Global Spots
         const { data: dbSpots } = await supabase.from('spots').select('*');
         setSpots(dbSpots ? dbSpots.reduce((acc, s) => ({ ...acc, [s.id]: s }), {}) : {});
 
-        // 2. Fetch User's Specific Spot Data
         const { data: userClaimData } = await supabase
           .from('user_spots')
           .select('*')
@@ -65,7 +63,7 @@ export function useSpots(user, showToast, totalPoints, setTotalPoints, fetchLead
     const todayStr = new Date().toDateString();
     let spotsToClaim = [];
 
-    // Check if input is coordinates or a specific spot ID
+    // Identify which spots are being interacted with
     if (typeof input === 'object' && input.lat && input.lng) {
       spotsToClaim = Object.values(spots).filter(spot => 
         getDistance(input.lat, input.lng, spot.lat, spot.lng) <= (customRadius || 250)
@@ -79,11 +77,15 @@ export function useSpots(user, showToast, totalPoints, setTotalPoints, fetchLead
     let totalEarned = 0;
     let claimCount = 0;
     const upsertRows = [];
+    
+    // CLONE arrays and objects for immutability
     const newSpotStreaks = { ...spotStreaks };
     const newUnlocked = [...unlockedSpots];
 
     spotsToClaim.forEach(spot => {
       const info = spotStreaks[spot.id] || { last_claim: null, streak: 0 };
+      
+      // Skip if already claimed today
       if (info.last_claim && new Date(info.last_claim).toDateString() === todayStr) return;
 
       const nextStreak = (Number(info.streak) || 0) + 1;
@@ -93,7 +95,9 @@ export function useSpots(user, showToast, totalPoints, setTotalPoints, fetchLead
       totalEarned += earned;
       claimCount++;
 
-      if (!newUnlocked.includes(spot.id)) newUnlocked.push(spot.id);
+      if (!newUnlocked.includes(spot.id)) {
+        newUnlocked.push(spot.id);
+      }
       
       const claimTimestamp = new Date().toISOString();
       newSpotStreaks[spot.id] = { last_claim: claimTimestamp, streak: nextStreak };
@@ -108,30 +112,41 @@ export function useSpots(user, showToast, totalPoints, setTotalPoints, fetchLead
 
     if (claimCount === 0) return showToast("Nodes already secured today", "error");
 
+    // 1. Update Database (User Spots)
     const { error: upsertError } = await supabase
       .from('user_spots')
       .upsert(upsertRows, { onConflict: 'user_id, spot_id' });
 
-    if (!upsertError) {
-      const newTotalPoints = (totalPoints || 0) + totalEarned;
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ 
-          total_points: newTotalPoints,
-          unlocked_spots: newUnlocked 
-        })
-        .eq('id', user.id);
-
-      if (!profileError) {
-        setUnlockedSpots(newUnlocked);
-        setSpotStreaks(newSpotStreaks);
-        setTotalPoints(newTotalPoints);
-        showToast(`Secured ${claimCount} nodes: +${totalEarned} XP!`);
-        if (fetchLeaderboard) fetchLeaderboard();
-      }
-    } else {
-      showToast("Sync Error", "error");
+    if (upsertError) {
+      console.error("Upsert Error:", upsertError);
+      return showToast("Sync Error", "error");
     }
+
+    // 2. Update Database (Profile Points)
+    const newTotalPoints = (totalPoints || 0) + totalEarned;
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ 
+        total_points: newTotalPoints,
+        // Optional: you can sync unlocked_spots here if your schema uses it, 
+        // but the 'user_spots' table is the primary source of truth.
+      })
+      .eq('id', user.id);
+
+    if (profileError) {
+      console.error("Profile Update Error:", profileError);
+      return showToast("Profile Sync Error", "error");
+    }
+
+    // 3. FORCE REACTIVE UI UPDATE
+    // We update state AFTER DB success but BEFORE waiting for any re-fetches
+    setUnlockedSpots([...newUnlocked]); // New array reference forces re-render
+    setSpotStreaks({...newSpotStreaks}); // New object reference forces re-render
+    setTotalPoints(newTotalPoints);
+
+    showToast(`Secured ${claimCount} nodes: +${totalEarned} XP!`, "success");
+    
+    if (fetchLeaderboard) fetchLeaderboard();
   };
 
   const removeSpot = async (id) => {
@@ -144,20 +159,19 @@ export function useSpots(user, showToast, totalPoints, setTotalPoints, fetchLead
 
     if (!error) {
       const newUnlocked = unlockedSpots.filter(x => x !== id);
-      setUnlockedSpots(newUnlocked);
+      setUnlockedSpots([...newUnlocked]);
       setSpotStreaks(prev => {
         const next = { ...prev };
         delete next[id];
-        return next;
+        return { ...next };
       });
-      await supabase.from('profiles').update({ unlocked_spots: newUnlocked }).eq('id', user.id);
       showToast("Node Cleared");
     }
   };
 
   return {
     spots,
-    setSpots, // Exported for useAdmin to update global list
+    setSpots,
     unlockedSpots,
     spotStreaks,
     setSpotStreaks,
