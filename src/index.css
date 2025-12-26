@@ -149,19 +149,22 @@ body {
 
 /* --- THE RADAR FIX (PINCH & SPIN) --- */
 .radar-ping { 
-  /* Non-scaling stroke keeps dashes from getting messy when zooming */
-  vector-effect: non-scaling-stroke;
+  /* 1. FIX CLUMPING: This keeps dashes consistent regardless of zoom */
+  vector-effect: non-scaling-stroke !important;
+  /* Define dashes here instead of JS for stability */
+  stroke-dasharray: 12, 18 !important; 
   
-  /* Centers rotation on the circle's own coordinates */
-  transform-origin: center;
-  transform-box: fill-box; 
+  /* 2. FIX SPIN: Force rotation around the circle's own coordinates */
+  transform-origin: center !important;
+  transform-box: fill-box !important; 
   
   animation: 
     radarSweep 8s linear infinite, 
     radarBreathe 4s ease-in-out infinite,
-    radarSpin 10s linear infinite; 
+    radarSpin 12s linear infinite !important; 
     
   stroke-linecap: round;
+  pointer-events: none; /* Prevents interfering with map clicks */
 }
 
 @keyframes radarSpin {
@@ -170,7 +173,7 @@ body {
 }
 
 @keyframes radarSweep {
-  from { stroke-dashoffset: 150; }
+  from { stroke-dashoffset: 100; }
   to { stroke-dashoffset: 0; }
 }
 
