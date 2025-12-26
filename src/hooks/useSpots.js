@@ -5,6 +5,7 @@ export function useSpots(user, showToast, totalPoints, setTotalPoints, fetchLead
   const [spots, setSpots] = useState({});
   const [unlockedSpots, setUnlockedSpots] = useState([]);
   const [spotStreaks, setSpotStreaks] = useState({});
+  const [activeBoost, setActiveBoost] = useState(null);
 
   const getMultiplier = (days) => {
     if (days >= 10) return 1.5;
@@ -48,6 +49,19 @@ export function useSpots(user, showToast, totalPoints, setTotalPoints, fetchLead
           });
           setUnlockedSpots(unlockedList);
           setSpotStreaks(streakMap);
+        }
+
+        // Fetch active XP boosts
+        const { data: activeInv } = await supabase
+          .from('user_inventory')
+          .select('*, shop_items(*)')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .eq('shop_items.category', 'boost')
+          .single();
+
+        if (activeInv && activeInv.shop_items) {
+          setActiveBoost(activeInv.shop_items.effect_value);
         }
       } catch (err) {
         console.error("Spot Data Fetch Error:", err);
@@ -110,8 +124,12 @@ export function useSpots(user, showToast, totalPoints, setTotalPoints, fetchLead
       if (info.last_claim && new Date(info.last_claim).toDateString() === todayStr) return;
 
       const nextStreak = (Number(info.streak) || 0) + 1;
-      const multiplier = getMultiplier(nextStreak);
-      const earned = Math.floor((spot.points || 0) * multiplier);
+      const baseMultiplier = getMultiplier(nextStreak);
+      
+      // APPLY STORE BOOSTS (XP Overdrive)
+      const finalMultiplier = activeBoost ? baseMultiplier * activeBoost : baseMultiplier;
+      
+      const earned = Math.floor((spot.points || 0) * finalMultiplier);
 
       totalEarned += earned;
       claimCount++;
@@ -157,7 +175,8 @@ export function useSpots(user, showToast, totalPoints, setTotalPoints, fetchLead
     setSpotStreaks({...newSpotStreaks});
     setTotalPoints(newTotalPoints);
 
-    showToast(`Secured ${claimCount} nodes: +${totalEarned} XP!`, "success");
+    const boostText = activeBoost ? ` (${(activeBoost - 1) * 100}% Boost Active!)` : "";
+    showToast(`Secured ${claimCount} nodes: +${totalEarned} XP!${boostText}`, "success");
     
     if (fetchLeaderboard) fetchLeaderboard();
   };

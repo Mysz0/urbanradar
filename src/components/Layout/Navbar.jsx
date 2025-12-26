@@ -1,25 +1,22 @@
 import React from 'react';
-import { Home, Compass, Trophy, User, Terminal } from 'lucide-react';
+import { Home, Compass, Trophy, ShoppingBag, User, Terminal } from 'lucide-react';
 
 export default function Navbar({ activeTab, setActiveTab, isAdmin, colors, isShrunk }) {
   const navItems = [
     { id: 'home', icon: Home },
     { id: 'explore', icon: Compass },
     { id: 'leaderboard', icon: Trophy },
+    { id: 'store', icon: ShoppingBag }, // New Shop & Inventory Tab
     { id: 'profile', icon: User },
     { id: 'dev', icon: Terminal, admin: true },
   ];
 
   return (
-    /* Changed bottom-6 to bottom-3 and added max-w-[90%] to keep it shorter */
     <div className="fixed bottom-3 left-0 right-0 flex justify-center w-full pointer-events-none z-50">
       <div className={`
         ${colors.nav} pointer-events-auto backdrop-blur-3xl rounded-[2.5rem] 
         flex items-center border shadow-2xl shadow-black/20 
-        
-        /* Shorter width constraint */
-        w-[92%] max-w-[380px]
-        
+        w-[92%] max-w-[420px]
         transition-[padding,gap,transform,width] duration-700 ease-in-out
         ${isShrunk ? 'p-1 gap-0' : 'p-1.5 gap-1'}
       `}>
@@ -29,7 +26,6 @@ export default function Navbar({ activeTab, setActiveTab, isAdmin, colors, isShr
               key={item.id} 
               onClick={() => setActiveTab(item.id)} 
               className={`
-                /* Added flex-1 to ensure mathematical centering */
                 relative flex flex-1 items-center justify-center rounded-[2rem]
                 transition-transform duration-200 ease-out
                 ${isShrunk ? 'p-3' : 'p-4'}

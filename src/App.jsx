@@ -174,7 +174,16 @@ export default function App() {
             setAppStyle={setAppStyle} 
           />
         )}
-        
+        {activeTab === 'store' && (
+          <StoreTab 
+            totalPoints={totalPoints} 
+            colors={colors} 
+            isDark={isDark} 
+            shopItems={shopItems} 
+            inventory={inventory} 
+            onBuy={buyItem}
+          />
+        )} 
         {activeTab === 'dev' && isAdmin && (
           <AdminTab 
             spots={spots} 
