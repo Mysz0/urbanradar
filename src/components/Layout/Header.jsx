@@ -6,6 +6,10 @@ export default function Header({ isAdmin, username, email, showEmail, isDark, lo
     <header className="relative pt-16 pb-32 px-10 rounded-b-[4.5rem] border-b border-white/[0.05]">
       {/* Background Overlays */}
       <div className="absolute inset-0 mist-overlay z-0 rounded-b-[4.5rem] overflow-hidden" />
+      
+      {/* FIX: Removed hardcoded transition-all to let the global CSS handle it.
+          The background color and backdrop-filter will now fade over 0.5s.
+      */}
       <div className={`absolute inset-0 ${isDark ? 'bg-zinc-950/40' : 'bg-white/10'} backdrop-blur-3xl z-10 rounded-b-[4.5rem]`} />
       
       <div className="max-w-md mx-auto flex justify-between items-center relative z-20">
@@ -23,7 +27,8 @@ export default function Header({ isAdmin, username, email, showEmail, isDark, lo
              )}
           </div>
           
-          <h1 className="text-3xl font-bold tracking-tighter italic uppercase leading-none truncate">
+          {/* h1 now uses the global color transition automatically */}
+          <h1 className="text-3xl font-bold tracking-tighter italic uppercase leading-none truncate dark:text-zinc-50 text-zinc-900">
             {username || 'Hunter'}<span className="text-[rgb(var(--theme-primary))] font-normal">.</span>
           </h1>
 
@@ -47,9 +52,11 @@ export default function Header({ isAdmin, username, email, showEmail, isDark, lo
             onClick={handleLogout} 
             style={{ 
               transform: `translate(${logoutMag.position.x}px, ${logoutMag.position.y}px)`,
+              /* We only keep the magnetic snap-back transition here */
               transition: logoutMag.position.x === 0 ? 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none'
             }}
-            className={`p-3.5 rounded-2xl border transition-all duration-300 z-30 shrink-0 ${
+            
+            className={`p-3.5 rounded-2xl border z-30 shrink-0 ${
               isDark 
               ? 'bg-zinc-900/80 border-white/10 text-zinc-500 hover:text-red-400' 
               : 'bg-white/80 border-[rgb(var(--theme-primary))]/20 text-[rgb(var(--theme-primary))] shadow-sm'
