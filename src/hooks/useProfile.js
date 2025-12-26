@@ -16,9 +16,10 @@ export function useProfile(user, showToast, fetchLeaderboard) {
 
     const fetchProfile = async () => {
       try {
+        // 1. Fetch Profile (Base Data)
         let { data: profile } = await supabase
           .from('profiles')
-          .select('*')
+          .select('username, role, total_points, show_email, last_username_change, custom_radius')
           .eq('id', user.id)
           .maybeSingle();
 
@@ -30,31 +31,54 @@ export function useProfile(user, showToast, fetchLeaderboard) {
           setShowEmail(profile.show_email ?? false);
           setLastChange(profile.last_username_change);
           setCustomRadius(profile.custom_radius || 250);
-
-          // --- DAILY VISIT STREAK LOGIC ---
-          const now = new Date();
-          const todayStr = now.toDateString();
-          const dbVisitData = profile.visit_data || { last_visit: null, streak: 0 };
-          let newStreak = dbVisitData.streak || 0;
-          const lastVisitDate = dbVisitData.last_visit ? new Date(dbVisitData.last_visit) : null;
-
-          if (!lastVisitDate) {
-            newStreak = 1;
-          } else if (lastVisitDate.toDateString() !== todayStr) {
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            newStreak = (lastVisitDate.toDateString() === yesterday.toDateString()) ? newStreak + 1 : 1;
-          }
-
-          if (!lastVisitDate || lastVisitDate.toDateString() !== todayStr) {
-            const updatedVisit = { last_visit: now.toISOString(), streak: newStreak };
-            setVisitData(updatedVisit);
-            await supabase.from('profiles').update({ visit_data: updatedVisit }).eq('id', user.id);
-            showToast(`${newStreak} Day Streak Active!`);
-          } else {
-            setVisitData(dbVisitData);
-          }
         }
+
+        // 2. Fetch Streak from NEW TABLE (user_streaks)
+        // Adjust 'user_streaks' to your actual table name if different
+        let { data: streakRow } = await supabase
+          .from('user_streaks')
+          .select('streak_count, last_visit')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        // --- DAILY VISIT STREAK LOGIC ---
+        const now = new Date();
+        const todayStr = now.toDateString();
+        
+        // Use the new table data or default to empty
+        let currentStreak = streakRow?.streak_count || 0;
+        const lastVisitDate = streakRow?.last_visit ? new Date(streakRow.last_visit) : null;
+        let newStreak = currentStreak;
+
+        if (!lastVisitDate) {
+          newStreak = 1;
+        } else if (lastVisitDate.toDateString() !== todayStr) {
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          
+          // Increment if yesterday, otherwise reset to 1
+          newStreak = (lastVisitDate.toDateString() === yesterday.toDateString()) ? currentStreak + 1 : 1;
+        }
+
+        // 3. Update the NEW table if the visit is new today
+        if (!lastVisitDate || lastVisitDate.toDateString() !== todayStr) {
+          const updatedVisit = { 
+            user_id: user.id, // Primary key link
+            last_visit: now.toISOString(), 
+            streak_count: newStreak 
+          };
+          
+          setVisitData({ last_visit: updatedVisit.last_visit, streak: newStreak });
+          
+          await supabase
+            .from('user_streaks')
+            .upsert(updatedVisit, { onConflict: 'user_id' });
+
+          showToast(`${newStreak} Day Streak Active!`);
+        } else {
+          setVisitData({ last_visit: lastVisitDate.toISOString(), streak: currentStreak });
+        }
+
       } catch (err) {
         console.error("Profile Fetch Error:", err);
       }
@@ -62,6 +86,9 @@ export function useProfile(user, showToast, fetchLeaderboard) {
 
     fetchProfile();
   }, [user]);
+
+  // ... (saveUsername, updateRadius, toggleEmailVisibility, resetTimer remain the same)
+  // Ensure saveUsername and toggleEmailVisibility ONLY update columns that exist in 'profiles'
 
   const saveUsername = async () => {
     const cleaned = tempUsername.trim();
@@ -122,19 +149,9 @@ export function useProfile(user, showToast, fetchLeaderboard) {
   };
 
   return {
-    username,
-    tempUsername,
-    setTempUsername,
-    userRole,
-    totalPoints,
-    setTotalPoints, // Exported so useSpots can update it
-    showEmail,
-    lastChange,
-    customRadius,
-    visitData,
-    saveUsername,
-    updateRadius,
-    toggleEmailVisibility,
-    resetTimer
+    username, tempUsername, setTempUsername,
+    userRole, totalPoints, setTotalPoints,
+    showEmail, lastChange, customRadius, visitData,
+    saveUsername, updateRadius, toggleEmailVisibility, resetTimer
   };
 }

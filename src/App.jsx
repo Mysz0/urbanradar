@@ -28,15 +28,14 @@ export default function App() {
   // 2. LOGIC EXTRACTION (Hooks)
   const { user, loading } = useAuth();
   
-  // FIXED: Added appStyle and setAppStyle to the destructuring here
   const { 
     theme, 
     setTheme, 
     isDark, 
     isAtTop, 
     isNavbarShrunk,
-    appStyle,     // <--- Added this
-    setAppStyle   // <--- Added this
+    appStyle,     
+    setAppStyle   
   } = useTheme();
   
   const showToast = (text, type = 'success') => {
@@ -54,7 +53,7 @@ export default function App() {
     updateNodeStreak
   } = useGameLogic(user, showToast);
 
-  // High-accuracy location + proximity check
+  // High-accuracy location + proximity check (Locked to 20m in logic)
   const { userLocation, mapCenter, isNearSpot, canClaim, activeSpotId } = useGeoLocation(spots, customRadius, spotStreaks);
 
   // Magnetic refs for the interactive buttons
@@ -64,7 +63,6 @@ export default function App() {
   // 3. UI HELPERS - ROLE BASED
   const isAdmin = userRole === 'admin'; 
   
-  // UPDATED: Using CSS variables from index.css for deep theme integration
   const colors = {
     bg: isDark ? 'bg-[var(--theme-map-bg-dark)]' : 'bg-[var(--theme-map-bg-light)]',
     card: 'smart-glass border-white/[0.03] shadow-2xl',
@@ -111,6 +109,7 @@ export default function App() {
         isDark={isDark} 
         logoutMag={logoutMag} 
         handleLogout={handleLogout} 
+        streak={visitData?.streak || 0} // <--- Added this to feed your new icon
       />
 
       <div className="max-w-md mx-auto px-6 -mt-16 relative z-30">
@@ -158,8 +157,8 @@ export default function App() {
             isDark={isDark} 
             lastChange={lastChange}
             user={user}
-            appStyle={appStyle}     // <--- Correctly passed
-            setAppStyle={setAppStyle} // <--- Correctly passed
+            appStyle={appStyle}     
+            setAppStyle={setAppStyle} 
           />
         )}
         

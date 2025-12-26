@@ -9,27 +9,37 @@ export function useGameLogic(user, showToast) {
 
   const fetchLeaderboard = async () => {
     try {
-      const { data: profiles } = await supabase
+      // CORRECTED: Removed deleted columns 'unlocked_spots' and 'visit_data'
+      // These now live in separate tables, so we fetch the base profile stats here.
+      const { data: profiles, error } = await supabase
         .from('profiles')
-        .select('username, total_points, unlocked_spots, visit_data')
+        .select('username, total_points')
         .order('total_points', { ascending: false })
         .limit(50);
       
+      if (error) throw error;
+
       if (profiles) {
         setLeaderboard(profiles.map(p => ({ 
           username: p.username || 'Anonymous', 
           score: p.total_points || 0, 
-          found: (p.unlocked_spots || []).length, 
-          streak: p.visit_data?.streak || 0 
+          // Note: Since these are in other tables now, we default to 0 
+          // to prevent UI crashes. You can add joins later if needed.
+          found: 0, 
+          streak: 0 
         })));
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+      console.error("Leaderboard fetch error:", err.message); 
+    }
   };
 
   // 1. Initialize Profile Logic
+  // This hook handles 'visitData' and 'username'
   const profile = useProfile(user, showToast, fetchLeaderboard);
 
-  // 2. Initialize Spot Logic (needs totalPoints state from profile)
+  // 2. Initialize Spot Logic 
+  // This hook handles 'spots', 'unlockedSpots', and 'claimSpot'
   const spots = useSpots(
     user, 
     showToast, 
@@ -52,13 +62,15 @@ export function useGameLogic(user, showToast) {
   );
 
   useEffect(() => {
-    if (user) fetchLeaderboard();
+    if (user) {
+      fetchLeaderboard();
+    }
   }, [user]);
 
   return {
-    ...profile,
-    ...spots,
-    ...admin,
+    ...profile, // Returns visitData (for the streak icon), username, etc.
+    ...spots,   // Returns spots, unlockedSpots, claimSpot
+    ...admin,   // Returns admin functions
     leaderboard,
     fetchLeaderboard
   };
