@@ -4,7 +4,6 @@ import { Target } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// 1. STABILIZED DISTANCE CALC
 function getDistance(lat1, lon1, lat2, lon2) {
   const R = 6371e3;
   const φ1 = lat1 * Math.PI/180;
@@ -23,10 +22,7 @@ function MapController({ coords }) {
 
   useEffect(() => {
     if (!coords?.lat || !coords?.lng) return;
-
     const moveDist = lastPos.current ? getDistance(coords.lat, coords.lng, lastPos.current.lat, lastPos.current.lng) : 999;
-
-    // SHAKE-PROOF: Only pan if user moved > 3 meters
     if (moveDist > 3) {
       map.panTo([coords.lat, coords.lng], { animate: true, duration: 1 });
       lastPos.current = coords;
@@ -35,11 +31,9 @@ function MapController({ coords }) {
   return null;
 }
 
-// UPDATED: Added claimRadius to props
 export default function ExploreTab({ spots = {}, unlockedSpots = [], userLocation, isDark, claimRadius = 20 }) {
   const [map, setMap] = useState(null);
   
-  // 2. COORDINATE ROUNDING
   const stableUserLoc = useMemo(() => {
     if (!userLocation?.lat) return null;
     return {
@@ -50,16 +44,23 @@ export default function ExploreTab({ spots = {}, unlockedSpots = [], userLocatio
 
   const initialCenter = useMemo(() => stableUserLoc ? [stableUserLoc.lat, stableUserLoc.lng] : [40.7306, -73.9352], []);
 
+  // FIXED: Increased iconSize from [0,0] to [20,20] and added fallback styles
   const userIcon = useMemo(() => L.divIcon({
     className: 'leaflet-user-icon',
-    html: `<div class="user-marker-container"><div class="user-pulse-ring"></div><div class="user-marker-core"></div></div>`,
-    iconSize: [0, 0], iconAnchor: [0, 0]
+    html: `
+      <div class="user-marker-container" style="width: 20px; height: 20px;">
+        <div class="user-pulse-ring"></div>
+        <div class="user-marker-core" style="background: rgb(var(--theme-primary)); width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>
+      </div>`,
+    iconSize: [20, 20], 
+    iconAnchor: [10, 10]
   }), []);
 
   const spotIcon = useMemo(() => L.divIcon({
     className: 'leaflet-spot-icon',
     html: `<div class="marker-container"><div class="pulse-ring"></div><div class="marker-core"></div></div>`,
-    iconSize: [0, 0], iconAnchor: [0, 0]
+    iconSize: [20, 20], 
+    iconAnchor: [10, 10]
   }), []);
 
   return (
@@ -70,7 +71,7 @@ export default function ExploreTab({ spots = {}, unlockedSpots = [], userLocatio
       }`}
     >
       <button 
-        onClick={() => map?.flyTo([stableUserLoc.lat, stableUserLoc.lng], 15)}
+        onClick={() => stableUserLoc && map?.flyTo([stableUserLoc.lat, stableUserLoc.lng], 16)}
         className="absolute top-6 right-6 z-[1000] smart-glass p-3 rounded-2xl border border-[rgb(var(--theme-primary))]/20 active:scale-90 transition-all pointer-events-auto"
       >
         <Target size={18} className="text-[rgb(var(--theme-primary))]" />
@@ -84,7 +85,6 @@ export default function ExploreTab({ spots = {}, unlockedSpots = [], userLocatio
         scrollWheelZoom={true}
         ref={setMap}
         preferCanvas={true}
-        markerZoomAnimation={true}
       >
         <TileLayer
           key={isDark ? 'dark-tiles' : 'light-tiles'}
@@ -92,23 +92,25 @@ export default function ExploreTab({ spots = {}, unlockedSpots = [], userLocatio
             ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" 
             : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           }
-          attribution=""
         />
 
         <MapController coords={stableUserLoc} />
 
         {stableUserLoc && (
           <>
-            <Marker position={[stableUserLoc.lat, stableUserLoc.lng]} icon={userIcon} />
+            {/* The Dot */}
+            <Marker position={[stableUserLoc.lat, stableUserLoc.lng]} icon={userIcon} zIndexOffset={1000} />
+            
+            {/* The Claim Circle */}
             <Circle 
               center={[stableUserLoc.lat, stableUserLoc.lng]}
-              // UPDATED: Now uses dynamic claimRadius from DB
               radius={claimRadius} 
               pathOptions={{ 
                 color: 'rgb(var(--theme-primary))', 
                 fillColor: 'rgb(var(--theme-primary))', 
-                fillOpacity: 0.1,
-                weight: 1,
+                fillOpacity: 0.15,
+                weight: 2,
+                dashArray: '5, 10',
                 interactive: false 
               }}
             />
@@ -120,7 +122,7 @@ export default function ExploreTab({ spots = {}, unlockedSpots = [], userLocatio
             key={spot.id} 
             position={[spot.lat, spot.lng]} 
             icon={spotIcon} 
-            opacity={unlockedSpots.includes(spot.id) ? 1 : 0.4}
+            opacity={unlockedSpots.includes(spot.id) ? 1 : 0.6}
           >
              <Popup closeButton={false} offset={[0, -10]}>
               <div className="custom-popup-box">
@@ -132,7 +134,6 @@ export default function ExploreTab({ spots = {}, unlockedSpots = [], userLocatio
         ))}
       </MapContainer>
 
-      {/* FOOTER STATUS PANEL */}
       <div className="absolute bottom-6 left-6 right-6 z-[1000] pointer-events-none">
         <div className="smart-glass border p-4 rounded-2xl flex justify-between items-center shadow-2xl">
           <div className={`text-[10px] font-bold tracking-widest uppercase ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
@@ -141,9 +142,8 @@ export default function ExploreTab({ spots = {}, unlockedSpots = [], userLocatio
                 <span>{stableUserLoc.lat.toFixed(5)} N</span>
                 <span>{stableUserLoc.lng.toFixed(5)} E</span>
               </span>
-            ) : 'AQUIRING SIGNAL...'}
+            ) : 'ACQUIRING SIGNAL...'}
           </div>
-          {/* UPDATED: Displays dynamic range */}
           <div className="text-[rgb(var(--theme-primary))] font-black text-[10px] italic uppercase tracking-tighter flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full bg-[rgb(var(--theme-primary))] animate-pulse" />
             {claimRadius}M RANGE
