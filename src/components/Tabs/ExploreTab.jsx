@@ -4,7 +4,6 @@ import { Target } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Fixes gray screen on load
 function MapInvalidator() {
   const map = useMap();
   useEffect(() => {
@@ -16,7 +15,6 @@ function MapInvalidator() {
   return null;
 }
 
-// Map Status UI
 function MapInterface({ stableUserLoc, isDark, claimRadius, customRadius }) {
   const map = useMap();
   return (
@@ -28,7 +26,7 @@ function MapInterface({ stableUserLoc, isDark, claimRadius, customRadius }) {
               e.preventDefault();
               if (stableUserLoc) map.flyTo([stableUserLoc.lat, stableUserLoc.lng], 16);
             }}
-            className="smart-glass w-12 h-12 flex items-center justify-center rounded-2xl border border-white/10 active:scale-90 transition-all shadow-2xl"
+            className="smart-glass w-12 h-12 flex items-center justify-center rounded-2xl active:scale-90 transition-all shadow-2xl"
           >
             <Target size={22} className="text-[rgb(var(--theme-primary))]" />
           </button>
@@ -39,7 +37,7 @@ function MapInterface({ stableUserLoc, isDark, claimRadius, customRadius }) {
         <div className="leaflet-control w-full pointer-events-none">
           <div className="smart-glass border p-4 rounded-3xl flex justify-between items-center shadow-2xl w-full pointer-events-auto">
             <div className="text-[10px] font-bold tracking-widest uppercase opacity-70">
-              {stableUserLoc ? `${stableUserLoc.lat.toFixed(5)}°N ${stableUserLoc.lng.toFixed(5)}°E` : 'SCANNING...'}
+              {stableUserLoc ? `${stableUserLoc.lat.toFixed(5)}°N ${stableUserLoc.lng.toFixed(5)}°E` : 'LOCATING...'}
             </div>
             <div className="text-[rgb(var(--theme-primary))] font-black text-[10px] uppercase tracking-tighter flex items-center gap-5">
               <span className="opacity-60">CLAIM: {claimRadius}M</span>
@@ -75,14 +73,13 @@ export default function ExploreTab({
     return [40.7306, -73.9352];
   }, []);
 
-  // --- ICONS SYNCED WITH YOUR CSS ---
   const userIcon = useMemo(() => L.divIcon({
     className: 'custom-div-icon',
     html: `<div class="marker-pin-user">
              <div class="pulse"></div>
              <div class="dot"></div>
            </div>`,
-    iconSize: [0, 0], // CSS absolute positioning handles this
+    iconSize: [0, 0],
     iconAnchor: [0, 0]
   }), []);
 
@@ -97,7 +94,7 @@ export default function ExploreTab({
 
   return (
     <div className={`relative w-full h-[70vh] rounded-[3rem] overflow-hidden border transition-all duration-700 ${
-      isDark ? 'border-white/5 bg-zinc-950' : 'border-[rgb(var(--theme-primary))]/10'
+      isDark ? 'border-white/5 bg-zinc-950' : 'border-[rgb(var(--theme-primary))]/10 bg-emerald-50'
     }`}>
       <MapContainer center={initialCenter} zoom={15} zoomControl={false} scrollWheelZoom={true} ref={setMapRef}>
         <MapInvalidator />
@@ -117,27 +114,28 @@ export default function ExploreTab({
 
         {stableUserLoc && (
           <>
+            {/* STATIC CLAIM RANGE */}
             <Circle
               center={[stableUserLoc.lat, stableUserLoc.lng]}
               radius={Number(claimRadius) || 20}
               pathOptions={{
                 color: 'rgb(var(--theme-primary))',
                 fillColor: 'rgb(var(--theme-primary))',
-                fillOpacity: 0.15,
-                weight: 1,
+                fillOpacity: 0.1,
+                weight: 1.5,
                 interactive: false
               }}
             />
             
+            {/* ANIMATED DETECTION RANGE */}
             <Circle
               center={[stableUserLoc.lat, stableUserLoc.lng]}
               radius={Number(customRadius) || 50}
               pathOptions={{
                 color: 'rgb(var(--theme-primary))',
                 fillColor: 'transparent',
-                weight: 1,
                 dashArray: '10, 15',
-                className: 'radar-ping', // USES YOUR CSS ANIMATION
+                className: 'radar-ping', // TRIGGERS CSS ANIMATION
                 interactive: false
               }}
             />

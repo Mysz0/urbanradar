@@ -171,11 +171,23 @@ body {
   100% { transform: scale(2.2); opacity: 0; }
 }
 
-/* Radar Animation for Scanning Ring */
-.radar-ping { animation: radarPing 4s ease-in-out infinite; }
-@keyframes radarPing { 
-  0%, 100% { stroke-opacity: 0.7; stroke-width: 1px; } 
-  50% { stroke-opacity: 0.2; stroke-width: 2.5px; } 
+/* --- ANIMATED DETECTION RADIUS --- */
+.radar-ping { 
+  animation: radarSweep 20s linear infinite, radarBreathe 4s ease-in-out infinite; 
+  stroke-linecap: round;
+  transform-origin: center;
+}
+
+/* Makes the dashes crawl around the circle */
+@keyframes radarSweep {
+  from { stroke-dashoffset: 500; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* Makes the ring "breathe" in opacity and thickness */
+@keyframes radarBreathe { 
+  0%, 100% { stroke-opacity: 0.5; stroke-width: 1.5px; } 
+  50% { stroke-opacity: 0.15; stroke-width: 3px; } 
 }
 
 /* --- UI EFFECTS --- */
