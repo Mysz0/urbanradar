@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { ShoppingCart, Package, Sparkles, Coins, Zap, Maximize, Lock } from 'lucide-react';
+import { ShoppingCart, Package, Sparkles, Coins, Zap, Maximize, CheckCircle2 } from 'lucide-react';
 
-export default function StoreTab({ totalPoints, colors, shopItems = [], inventory = [], onBuy }) {
+export default function StoreTab({ totalPoints, colors, shopItems = [], inventory = [], onBuy, onActivate }) {
   const [view, setView] = useState('shop');
 
   const iconMap = {
@@ -68,17 +68,22 @@ export default function StoreTab({ totalPoints, colors, shopItems = [], inventor
           inventory.length > 0 ? (
             inventory.map((inv) => (
               <div key={inv.id} className={`${colors.card} p-5 rounded-[2rem] border border-white/5 flex items-center gap-4`}>
-                <div className="w-12 h-12 rounded-xl bg-[rgb(var(--theme-primary))]/10 flex items-center justify-center">
-                  {iconMap[inv.shop_items?.icon_name] || <Package size={20} />}
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${inv.is_active ? 'bg-[rgb(var(--theme-primary))]/20 shadow-[0_0_15px_rgba(var(--theme-primary),0.3)]' : 'bg-white/5'}`}>
+                  {inv.is_active ? <CheckCircle2 size={20} className="text-[rgb(var(--theme-primary))]" /> : (iconMap[inv.shop_items?.icon_name] || <Package size={20} />)}
                 </div>
                 <div className="flex-1">
                   <h4 className="font-bold text-sm text-white">{inv.shop_items?.name}</h4>
-                  <p className="text-[9px] font-bold text-[rgb(var(--theme-primary))] uppercase tracking-widest">
-                    {inv.is_active ? 'Active' : 'In Stock'}
+                  <p className={`text-[9px] font-black uppercase tracking-widest ${inv.is_active ? 'text-[rgb(var(--theme-primary))]' : 'text-zinc-500'}`}>
+                    {inv.is_active ? 'Currently Active' : 'In Stock'}
                   </p>
                 </div>
                 {inv.shop_items?.category === 'boost' && !inv.is_active && (
-                  <button className="text-[9px] font-black bg-white/10 px-3 py-1.5 rounded-lg hover:bg-white/20">ACTIVATE</button>
+                  <button 
+                    onClick={() => onActivate(inv.id)}
+                    className="text-[9px] font-black bg-[rgb(var(--theme-primary))]/10 text-[rgb(var(--theme-primary))] px-4 py-2 rounded-xl hover:bg-[rgb(var(--theme-primary))]/20 transition-colors border border-[rgb(var(--theme-primary))]/20"
+                  >
+                    ACTIVATE
+                  </button>
                 )}
               </div>
             ))

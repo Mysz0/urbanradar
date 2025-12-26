@@ -189,6 +189,7 @@ export default function App() {
             shopItems={shopItems} 
             inventory={inventory} 
             onBuy={buyItem}
+            onActivate={activateItem}
           />
         )} 
 

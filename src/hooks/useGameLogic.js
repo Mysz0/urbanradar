@@ -41,10 +41,28 @@ export function useGameLogic(user, showToast) {
   };
 
   const profile = useProfile(user, showToast, fetchLeaderboard);
-  const spots = useSpots(user, showToast, profile.totalPoints, profile.setTotalPoints, fetchLeaderboard);
-  const store = useStore(user, profile.totalPoints, profile.setTotalPoints, showToast);
+  
+  // Initialize Spots
+  const spots = useSpots(
+    user, 
+    showToast, 
+    profile.totalPoints, 
+    profile.setTotalPoints, 
+    fetchLeaderboard
+  );
+  
+  // Initialize Store (Includes buyItem and activateItem)
+  const store = useStore(
+    user, 
+    profile.totalPoints, 
+    profile.setTotalPoints, 
+    showToast
+  );
+
+  // Initialize Voting
   const { handleVote } = useVotes(user, spots.setSpots);
 
+  // Initialize Admin
   const admin = useAdmin(
     user, 
     profile.userRole, 
@@ -65,7 +83,7 @@ export function useGameLogic(user, showToast) {
     ...profile, 
     ...spots, 
     ...admin,
-    ...store,
+    ...store, // Spreads shopItems, inventory, buyItem, activateItem
     handleVote, 
     leaderboard, 
     fetchLeaderboard 
