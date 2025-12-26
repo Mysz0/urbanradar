@@ -1,15 +1,12 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
-import { Target, Lock, CheckCircle2, ChevronUp, ChevronDown } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, useMapEvents } from 'react-leaflet';
+import { Target, Lock, CheckCircle2, ChevronUp, ChevronDown, Zap } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Tracks zoom level to scale the custom SVG icon dynamically
 function ZoomHandler({ setZoom }) {
   useMapEvents({
-    zoomend: (e) => {
-      setZoom(e.target.getZoom());
-    },
+    zoomend: (e) => setZoom(e.target.getZoom()),
   });
   return null;
 }
@@ -31,8 +28,11 @@ function MapInvalidator() {
   return null;
 }
 
-function MapInterface({ stableUserLoc, claimRadius, customRadius }) {
+function MapInterface({ stableUserLoc, claimRadius, customRadius, radiusBonus }) {
   const map = useMap();
+  const finalScan = (customRadius || 250) + (radiusBonus || 0);
+  const finalClaim = (claimRadius || 20) + (radiusBonus || 0);
+
   return (
     <>
       <div className="leaflet-top leaflet-right" style={{ marginTop: '24px', marginRight: '24px' }}>
@@ -56,10 +56,12 @@ function MapInterface({ stableUserLoc, claimRadius, customRadius }) {
               {stableUserLoc ? `${stableUserLoc.lat.toFixed(5)}°N ${stableUserLoc.lng.toFixed(5)}°E` : 'LOCATING...'}
             </div>
             <div className="text-[rgb(var(--theme-primary))] font-black text-[10px] uppercase tracking-tighter flex items-center gap-5">
-              <span className="opacity-60">CLAIM: {claimRadius}M</span>
+              <span className="opacity-60 flex items-center gap-1">
+                {radiusBonus > 0 && <Zap size={10} />} CLAIM: {finalClaim}M
+              </span>
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-[rgb(var(--theme-primary))] animate-pulse" />
-                SCAN: {customRadius}M
+                SCAN: {finalScan}M
               </div>
             </div>
           </div>
@@ -76,7 +78,8 @@ export default function ExploreTab({
   isDark, 
   claimRadius, 
   customRadius,
-  onVote // Prop to handle the voting logic externally
+  radiusBonus = 0, // NEW PROP from useGeoLocation
+  onVote 
 }) {
   const [mapRef, setMapRef] = useState(null);
   const [zoom, setZoom] = useState(16);
@@ -86,39 +89,22 @@ export default function ExploreTab({
     return { lat: userLocation.lat, lng: userLocation.lng };
   }, [userLocation?.lat, userLocation?.lng]);
 
-  const fallbackCenter = [40.7306, -73.9352];
+  const fallbackCenter = [50.0121, 22.6742];
 
   const animatedUserIcon = useMemo(() => {
-    const scale = Math.pow(2, zoom - 16);
-    const size = 200 * scale;
-
+    const size = 60; // Fixed size for the center point icon
     return L.divIcon({
       className: 'soft-radar-icon',
       html: `
-        <svg viewBox="0 0 200 200" width="${size}" height="${size}" class="radar-svg">
-          <defs>
-            <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="4" />
-            </filter>
-          </defs>
-          <g class="radar-rotation-group">
-            <circle cx="100" cy="100" r="70" fill="none" 
-              stroke="rgb(var(--theme-primary))" stroke-width="8" 
-              stroke-dasharray="20 30" stroke-linecap="round" 
-              stroke-opacity="0.25" filter="url(#softGlow)" />
-            <circle cx="100" cy="100" r="70" fill="none" 
-              stroke="rgb(var(--theme-primary))" stroke-width="2.5" 
-              stroke-dasharray="20 30" stroke-linecap="round" 
-              stroke-opacity="0.7" />
-          </g>
-          <circle cx="100" cy="100" r="25" fill="rgb(var(--theme-primary))" fill-opacity="0.1" class="radar-aura" />
-          <circle cx="100" cy="100" r="7" fill="white" stroke="rgb(var(--theme-primary))" stroke-width="2.5" />
-        </svg>
+        <div class="relative flex items-center justify-center w-full h-full">
+          <div class="absolute w-8 h-8 bg-[rgb(var(--theme-primary))] rounded-full opacity-20 animate-ping"></div>
+          <div class="w-4 h-4 bg-white border-2 border-[rgb(var(--theme-primary))] rounded-full shadow-lg z-10"></div>
+        </div>
       `,
       iconSize: [size, size],
       iconAnchor: [size / 2, size / 2]
     });
-  }, [zoom]);
+  }, []);
 
   const spotIcon = (isUnlocked) => L.divIcon({
     className: 'custom-div-icon',
@@ -135,7 +121,6 @@ export default function ExploreTab({
         center={stableUserLoc ? [stableUserLoc.lat, stableUserLoc.lng] : fallbackCenter} 
         zoom={16} 
         zoomControl={false} 
-        scrollWheelZoom={true} 
         ref={setMapRef}
       >
         <ZoomHandler setZoom={setZoom} />
@@ -149,52 +134,50 @@ export default function ExploreTab({
             : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"}
         />
 
-        <MapInterface stableUserLoc={stableUserLoc} claimRadius={claimRadius} customRadius={customRadius} />
+        <MapInterface 
+          stableUserLoc={stableUserLoc} 
+          claimRadius={claimRadius} 
+          customRadius={customRadius} 
+          radiusBonus={radiusBonus} 
+        />
 
-        {stableUserLoc && <Marker position={[stableUserLoc.lat, stableUserLoc.lng]} icon={animatedUserIcon} zIndexOffset={1000} />}
+        {stableUserLoc && (
+          <>
+            {/* Visual Scan Range Circle */}
+            <Circle 
+              center={[stableUserLoc.lat, stableUserLoc.lng]}
+              radius={(customRadius || 250) + radiusBonus}
+              pathOptions={{
+                fillColor: 'rgb(var(--theme-primary))',
+                fillOpacity: 0.05,
+                color: 'rgb(var(--theme-primary))',
+                weight: 1,
+                dashArray: '5, 10'
+              }}
+            />
+            <Marker position={[stableUserLoc.lat, stableUserLoc.lng]} icon={animatedUserIcon} zIndexOffset={1000} />
+          </>
+        )}
 
         {Object.values(spots).map((spot) => {
           const isUnlocked = unlockedSpots.includes(spot.id);
           return (
-            <Marker 
-              key={spot.id} 
-              position={[spot.lat, spot.lng]} 
-              icon={spotIcon(isUnlocked)}
-            >
+            <Marker key={spot.id} position={[spot.lat, spot.lng]} icon={spotIcon(isUnlocked)}>
               <Popup closeButton={false} offset={[0, -5]}>
                 <div className="smart-glass p-3 rounded-2xl border border-white/10 min-w-[180px] shadow-2xl">
                   <div className="flex items-center justify-between mb-1.5">
                     <p className={`text-[9px] font-black uppercase tracking-widest ${isUnlocked ? 'text-[rgb(var(--theme-primary))]' : 'text-zinc-500'}`}>
                       {isUnlocked ? 'CLAIMED' : 'LOCKED'}
                     </p>
-                    {isUnlocked ? (
-                      <CheckCircle2 size={12} className="text-[rgb(var(--theme-primary))]" />
-                    ) : (
-                      <Lock size={12} className="text-zinc-500" />
-                    )}
+                    {isUnlocked ? <CheckCircle2 size={12} className="text-[rgb(var(--theme-primary))]" /> : <Lock size={12} className="text-zinc-500" />}
                   </div>
                   <p className="text-xs font-bold text-white truncate mb-3">{spot.name}</p>
-
                   <div className="flex items-center gap-2 border-t border-white/5 pt-3">
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onVote?.(spot.id, 'upvotes');
-                      }}
-                      className="flex-1 flex items-center justify-center py-1.5 rounded-xl bg-white/5 hover:bg-emerald-500/20 hover:text-emerald-400 transition-colors active:scale-95"
-                    >
-                      <ChevronUp size={18} />
-                      <span className="text-[10px] font-bold ml-1">{spot.upvotes || 0}</span>
+                    <button onClick={(e) => { e.stopPropagation(); onVote?.(spot.id, 'upvotes'); }} className="flex-1 flex items-center justify-center py-1.5 rounded-xl bg-white/5 hover:bg-emerald-500/20 hover:text-emerald-400 transition-colors">
+                      <ChevronUp size={18} /><span className="text-[10px] font-bold ml-1">{spot.upvotes || 0}</span>
                     </button>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onVote?.(spot.id, 'downvotes');
-                      }}
-                      className="flex-1 flex items-center justify-center py-1.5 rounded-xl bg-white/5 hover:bg-rose-500/20 hover:text-rose-400 transition-colors active:scale-95"
-                    >
-                      <ChevronDown size={18} />
-                      <span className="text-[10px] font-bold ml-1">{spot.downvotes || 0}</span>
+                    <button onClick={(e) => { e.stopPropagation(); onVote?.(spot.id, 'downvotes'); }} className="flex-1 flex items-center justify-center py-1.5 rounded-xl bg-white/5 hover:bg-rose-500/20 hover:text-rose-400 transition-colors">
+                      <ChevronDown size={18} /><span className="text-[10px] font-bold ml-1">{spot.downvotes || 0}</span>
                     </button>
                   </div>
                 </div>

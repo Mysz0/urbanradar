@@ -67,6 +67,7 @@ export default function App() {
 
   // High-accuracy location + proximity check (Dynamic thresholds from DB)
   const { userLocation, mapCenter, isNearSpot, canClaim, activeSpotId } = useGeoLocation(
+    user,
     spots, 
     customRadius, 
     spotStreaks, 
@@ -161,6 +162,7 @@ export default function App() {
             customRadius={customRadius}
             colors={colors} 
             onVote={handleVote}
+            radiusBonus={radiusBonus}
           />
         )}
         

@@ -27,43 +27,40 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
   };
 
   const buyItem = async (item) => {
+    // Client-side check for UX
     if (totalPoints < item.price) return showToast("Not enough XP", "error");
 
-    const newPoints = totalPoints - item.price;
-    const { error: pError } = await supabase
-      .from('profiles')
-      .update({ total_points: newPoints })
-      .eq('id', user.id);
+    setLoading(true);
+    
+    try {
+      // Securely calling the SQL function (Atomic Transaction)
+      const { error } = await supabase.rpc('buy_item', { 
+        target_item_id: item.id 
+      });
 
-    if (pError) return showToast("Purchase failed", "error");
+      if (error) throw error;
 
-    const { error: iError } = await supabase
-      .from('user_inventory')
-      .upsert({ 
-        user_id: user.id, 
-        item_id: item.id,
-        quantity: 1 
-      }, { onConflict: 'user_id, item_id' });
-
-    if (iError) {
-      await supabase.from('profiles').update({ total_points: totalPoints }).eq('id', user.id);
-      return showToast("Inventory error", "error");
+      // Update local state points
+      setTotalPoints(prev => prev - item.price);
+      showToast(`Purchased ${item.name}!`, "success");
+      
+      // Refresh local inventory list
+      await fetchData();
+    } catch (err) {
+      console.error("Purchase error:", err.message);
+      showToast(err.message || "Purchase failed", "error");
+    } finally {
+      setLoading(false);
     }
-
-    setTotalPoints(newPoints);
-    showToast(`Purchased ${item.name}!`, "success");
-    fetchData();
   };
 
   const activateItem = async (inventoryId) => {
     if (!user) return;
 
-    // 1. Find the item in local state
     const itemToActivate = inventory.find(inv => inv.id === inventoryId);
     if (!itemToActivate) return;
 
     try {
-      // 2. If it's a boost, deactivate other active boosts first
       if (itemToActivate.shop_items.category === 'boost') {
         await supabase
           .from('user_inventory')
@@ -72,7 +69,6 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
           .eq('is_active', true);
       }
 
-      // 3. Activate the chosen item
       const { error } = await supabase
         .from('user_inventory')
         .update({ 
@@ -84,9 +80,8 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
       if (error) throw error;
 
       showToast(`${itemToActivate.shop_items.name} Activated!`, "success");
-      fetchData(); // Refresh to update UI and active status
+      fetchData(); 
       
-      // Force a reload if it's a permanent upgrade or global boost
       if (itemToActivate.shop_items.category === 'upgrade') {
         window.location.reload(); 
       }
