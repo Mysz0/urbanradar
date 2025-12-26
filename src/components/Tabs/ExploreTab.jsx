@@ -4,7 +4,7 @@ import { Target } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// 1. FIXES THE GRAY SCREEN
+// 1. FIXES THE GRAY SCREEN: Forces Leaflet to recalculate its container size after mount
 function MapInvalidator() {
   const map = useMap();
   useEffect(() => {
@@ -89,7 +89,7 @@ export default function ExploreTab({
   userLocation, 
   isDark, 
   claimRadius, 
-  scanRadius 
+  customRadius // FIXED: Renamed from scanRadius to match App.jsx prop
 }) {
   const [mapRef, setMapRef] = useState(null);
 
@@ -103,7 +103,6 @@ export default function ExploreTab({
     return [40.7306, -73.9352];
   }, []);
 
-  // 2. FIXES MISALIGNMENT: Fixed anchor [15, 15] for a [30, 30] icon
   const userIcon = useMemo(() => L.divIcon({
     className: 'custom-div-icon',
     html: `<div class="icon-wrapper"><div class="user-diamond-core"></div></div>`,
@@ -125,25 +124,20 @@ export default function ExploreTab({
       <style>{`
         .leaflet-container { height: 100% !important; width: 100% !important; background: #18181b !important; }
         .custom-div-icon { background: none !important; border: none !important; }
-        
         .icon-wrapper { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; }
-
         .user-diamond-core { 
             width: 14px; height: 14px; background: rgb(var(--theme-primary)); 
             border: 2px solid white; transform: rotate(45deg); 
             box-shadow: 0 0 15px rgb(var(--theme-primary)); 
         }
-
         .marker-core { 
             width: 10px; height: 10px; background: #71717a; 
             border: 2px solid white; border-radius: 50%; 
         }
-        
         .core-unlocked { 
             background: rgb(var(--theme-primary)) !important; 
             box-shadow: 0 0 10px rgb(var(--theme-primary)) !important; 
         }
-
         .radar-ping { animation: radarPing 4s ease-in-out infinite; }
         @keyframes radarPing { 
           0%, 100% { stroke-opacity: 0.7; stroke-width: 1.5px; } 
@@ -165,7 +159,7 @@ export default function ExploreTab({
           stableUserLoc={stableUserLoc} 
           isDark={isDark} 
           claimRadius={claimRadius} 
-          scanRadius={scanRadius}
+          scanRadius={customRadius} // FIXED: Passing customRadius to interface
         />
 
         {stableUserLoc && (
@@ -184,7 +178,7 @@ export default function ExploreTab({
             
             <Circle
               center={[stableUserLoc.lat, stableUserLoc.lng]}
-              radius={Number(scanRadius) || 50}
+              radius={Number(customRadius) || 50} // FIXED: Using customRadius for the outer circle
               pathOptions={{
                 color: 'rgb(var(--theme-primary))',
                 fillColor: 'transparent',
@@ -209,6 +203,9 @@ export default function ExploreTab({
               <div className="smart-glass p-3 rounded-2xl border border-white/10 min-w-[140px] shadow-2xl">
                 <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-1">Node</p>
                 <p className="text-xs font-bold text-white truncate">{spot.name}</p>
+                {unlockedSpots.includes(spot.id) && (
+                  <p className="text-[8px] text-[rgb(var(--theme-primary))] font-bold mt-1 tracking-tighter">SECURED</p>
+                )}
               </div>
             </Popup>
           </Marker>
