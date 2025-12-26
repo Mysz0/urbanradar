@@ -1,20 +1,22 @@
 import { useState, useEffect } from 'react';
 import { getDistance } from '../utils/geoUtils'; 
 
-export function useGeoLocation(spots, customRadius, spotStreaks = {}) {
+
+export function useGeoLocation(spots, customRadius, spotStreaks = {}, claimRadius) {
   const [userLocation, setUserLocation] = useState(null);
   const [proximity, setProximity] = useState({ isNear: false, canClaim: false, spotId: null });
   const [mapCenter] = useState([50.0121, 22.6742]);
 
   useEffect(() => {
-    // 1. HARDCODED SECURITY LIMITS
-    const CLAIM_RANGE = 20; // Meters (Locked for security)
-    const DETECTION_RANGE = customRadius || 250; // Visual radius for Home Screen appearance
+    // 1. DYNAMIC RADIUS LIMITS
+    const DETECTION_RANGE = customRadius || 250; 
+    const CLAIM_RANGE = claimRadius || 20; 
+    
     const todayStr = new Date().toDateString();
 
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
-        // 2. SHAKE-PROOFING: Rounding to 6 decimal places removes GPS micro-jitter
+        // 2. SHAKE-PROOFING: Rounding to 6 decimal places
         const coords = { 
           lat: Math.round(pos.coords.latitude * 1000000) / 1000000, 
           lng: Math.round(pos.coords.longitude * 1000000) / 1000000 
@@ -34,7 +36,7 @@ export function useGeoLocation(spots, customRadius, spotStreaks = {}) {
           const streakInfo = spotStreaks[spot.id];
           const isLoggedToday = streakInfo?.last_claim && new Date(streakInfo.last_claim).toDateString() === todayStr;
 
-          // 3. DETECTION LOGIC (Shows the node in the Home Tab)
+          // 3. DETECTION LOGIC (Controls Home Tab appearance)
           if (dist <= DETECTION_RANGE) {
             if (!isLoggedToday) {
               if (dist < closestReadyDist) {
@@ -49,8 +51,8 @@ export function useGeoLocation(spots, customRadius, spotStreaks = {}) {
             }
           }
 
-          // 4. CLAIM LOGIC (Locked to 20m)
-          // Even if DETECTION_RANGE is huge, button only works within 20m
+          // 4. CLAIM LOGIC (Controls "Claim" button availability)
+        
           if (dist <= CLAIM_RANGE && !isLoggedToday) {
             foundClaimable = true;
           }
@@ -74,7 +76,7 @@ export function useGeoLocation(spots, customRadius, spotStreaks = {}) {
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [spots, customRadius, spotStreaks]);
+  }, [spots, customRadius, claimRadius, spotStreaks]);
 
   return { 
     userLocation, 

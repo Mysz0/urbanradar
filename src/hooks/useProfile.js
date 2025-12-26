@@ -9,6 +9,7 @@ export function useProfile(user, showToast, fetchLeaderboard) {
   const [showEmail, setShowEmail] = useState(false);
   const [lastChange, setLastChange] = useState(null);
   const [customRadius, setCustomRadius] = useState(250);
+  const [claimRadius, setClaimRadius] = useState(20); // New state for Claim Range
   const [visitData, setVisitData] = useState({ last_visit: null, streak: 0 });
 
   useEffect(() => {
@@ -16,10 +17,10 @@ export function useProfile(user, showToast, fetchLeaderboard) {
 
     const fetchProfile = async () => {
       try {
-        // 1. Fetch Profile using the EXACT columns from your DB
+        // 1. Fetch Profile including the new claim_radius column
         let { data: profile } = await supabase
           .from('profiles')
-          .select('username, role, total_points, show_email, last_username_change, custom_radius, streak_count, last_visit')
+          .select('username, role, total_points, show_email, last_username_change, custom_radius, claim_radius, streak_count, last_visit')
           .eq('id', user.id)
           .maybeSingle();
 
@@ -31,8 +32,9 @@ export function useProfile(user, showToast, fetchLeaderboard) {
           setShowEmail(profile.show_email ?? false);
           setLastChange(profile.last_username_change);
           setCustomRadius(profile.custom_radius || 250);
+          setClaimRadius(profile.claim_radius || 20); // Sync from DB
 
-          // --- STREAK LOGIC (Using streak_count column) ---
+          // --- STREAK LOGIC ---
           const now = new Date();
           const todayStr = now.toDateString();
           
@@ -41,20 +43,15 @@ export function useProfile(user, showToast, fetchLeaderboard) {
           let newStreak = dbStreak;
 
           if (!lastVisitDate) {
-            // Brand new user or first visit since column added
             newStreak = 1;
           } else if (lastVisitDate.toDateString() !== todayStr) {
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
-            
-            // If they visited yesterday, increment. Otherwise reset.
             newStreak = (lastVisitDate.toDateString() === yesterday.toDateString()) ? dbStreak + 1 : 1;
           }
 
-          // Update local state immediately
           setVisitData({ last_visit: now.toISOString(), streak: newStreak });
 
-          // 2. Update DB ONLY if it's a new day
           if (!lastVisitDate || lastVisitDate.toDateString() !== todayStr) {
             await supabase
               .from('profiles')
@@ -65,7 +62,6 @@ export function useProfile(user, showToast, fetchLeaderboard) {
               .eq('id', user.id);
 
             showToast(`${newStreak} Day Streak Active!`);
-            // Refresh leaderboard to show the new streak count
             if (fetchLeaderboard) fetchLeaderboard();
           }
         }
@@ -105,6 +101,7 @@ export function useProfile(user, showToast, fetchLeaderboard) {
     }
   };
 
+  // Logic for Detection Radius (Visuals)
   const updateRadius = async (v) => {
     const { error } = await supabase
       .from('profiles')
@@ -112,7 +109,19 @@ export function useProfile(user, showToast, fetchLeaderboard) {
       .eq('id', user.id);
     if (!error) {
       setCustomRadius(v);
-      showToast(`Radius: ${v}m`);
+      showToast(`Detect: ${v}m`);
+    }
+  };
+
+  // Logic for Claim Radius (Action)
+  const updateClaimRadius = async (v) => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ claim_radius: v })
+      .eq('id', user.id);
+    if (!error) {
+      setClaimRadius(v);
+      showToast(`Claim: ${v}m`);
     }
   };
 
@@ -138,7 +147,7 @@ export function useProfile(user, showToast, fetchLeaderboard) {
   return {
     username, tempUsername, setTempUsername,
     userRole, totalPoints, setTotalPoints,
-    showEmail, lastChange, customRadius, visitData,
-    saveUsername, updateRadius, toggleEmailVisibility, resetTimer
+    showEmail, lastChange, customRadius, claimRadius, visitData,
+    saveUsername, updateRadius, updateClaimRadius, toggleEmailVisibility, resetTimer
   };
 }

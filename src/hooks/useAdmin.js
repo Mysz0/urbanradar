@@ -4,11 +4,20 @@ import { supabase } from '../supabase';
 export function useAdmin(user, userRole, showToast, setSpots, setSpotStreaks, totalPoints, setTotalPoints, getMultiplier, fetchLeaderboard) {
   const isAdmin = userRole === 'admin';
   
-  const radiusOptions = [
+  // 1. Separate options for the two different radius types
+  const detectionOptions = [
     { label: '250m', val: 250 },
     { label: '500m', val: 500 },
     { label: '1km', val: 1000 },
     { label: '5km', val: 5000 },
+  ];
+
+  const claimOptions = [
+    { label: '10m', val: 10 },
+    { label: '20m', val: 20 },
+    { label: '50m', val: 50 },
+    { label: '100m', val: 100 },
+    { label: '500m', val: 500 },
   ];
 
   const resetTimer = async () => {
@@ -64,7 +73,8 @@ export function useAdmin(user, userRole, showToast, setSpots, setSpotStreaks, to
   };
 
   return {
-    radiusOptions,
+    detectionOptions,
+    claimOptions,
     resetTimer,
     addNewSpot,
     deleteSpotFromDB,

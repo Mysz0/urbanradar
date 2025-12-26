@@ -9,7 +9,6 @@ export function useGameLogic(user, showToast) {
 
   const fetchLeaderboard = async () => {
     try {
-      // 1. Fetch profiles with the NEW streak columns you added
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
         .select('id, username, total_points, streak_count')
@@ -18,7 +17,6 @@ export function useGameLogic(user, showToast) {
       
       if (profileError) throw profileError;
 
-      // 2. Fetch user_spots to calculate "Nodes Secured" (The 5 nodes fix)
       const { data: allClaims, error: claimsError } = await supabase
         .from('user_spots')
         .select('user_id');
@@ -29,9 +27,7 @@ export function useGameLogic(user, showToast) {
         const mappedLeaderboard = profiles.map(p => ({
           username: p.username || 'Anonymous',
           score: p.total_points || 0,
-          // Count real rows in user_spots for each user
           found: allClaims ? allClaims.filter(c => c.user_id === p.id).length : 0,
-          // Use the streak_count column directly from the profile
           streak: p.streak_count || 0 
         }));
 
@@ -42,14 +38,35 @@ export function useGameLogic(user, showToast) {
     }
   };
 
-  // Initialize hooks
+  // 1. Initialize Profile (Now includes claimRadius and updateClaimRadius)
   const profile = useProfile(user, showToast, fetchLeaderboard);
+
+  // 2. Initialize Spots
   const spots = useSpots(user, showToast, profile.totalPoints, profile.setTotalPoints, fetchLeaderboard);
-  const admin = useAdmin(user, profile.userRole, showToast, spots.setSpots, spots.setSpotStreaks, profile.totalPoints, profile.setTotalPoints, spots.getMultiplier, fetchLeaderboard);
+
+  // 3. Initialize Admin (Now has access to both detection and claim options)
+  const admin = useAdmin(
+    user, 
+    profile.userRole, 
+    showToast, 
+    spots.setSpots, 
+    spots.setSpotStreaks, 
+    profile.totalPoints, 
+    profile.setTotalPoints, 
+    spots.getMultiplier, 
+    fetchLeaderboard
+  );
 
   useEffect(() => {
     if (user) fetchLeaderboard();
   }, [user]);
 
-  return { ...profile, ...spots, ...admin, leaderboard, fetchLeaderboard };
+  // We return EVERYTHING so App.jsx can destructure it
+  return { 
+    ...profile, 
+    ...spots, 
+    ...admin, 
+    leaderboard, 
+    fetchLeaderboard 
+  };
 }

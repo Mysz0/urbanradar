@@ -47,14 +47,26 @@ export default function App() {
     spots, unlockedSpots, visitData, spotStreaks,
     username, tempUsername, setTempUsername,
     userRole, totalPoints,
-    showEmail, lastChange, customRadius, leaderboard,
+    showEmail, lastChange, leaderboard,
     claimSpot, saveUsername, toggleEmailVisibility,
-    removeSpot, updateRadius, resetTimer, addNewSpot, deleteSpotFromDB,
-    updateNodeStreak
+    removeSpot, resetTimer, addNewSpot, deleteSpotFromDB,
+    updateNodeStreak,
+    // NEW RADIUS LOGIC
+    customRadius,      // Detection Radius from DB
+    claimRadius,       // Claim Radius from DB
+    updateRadius,      // DB Setter for Detection
+    updateClaimRadius, // DB Setter for Claim
+    detectionOptions,  // Array for Admin buttons
+    claimOptions       // Array for Admin buttons
   } = useGameLogic(user, showToast);
 
-  // High-accuracy location + proximity check (Locked to 20m in logic)
-  const { userLocation, mapCenter, isNearSpot, canClaim, activeSpotId } = useGeoLocation(spots, customRadius, spotStreaks);
+  // High-accuracy location + proximity check (Dynamic thresholds from DB)
+  const { userLocation, mapCenter, isNearSpot, canClaim, activeSpotId } = useGeoLocation(
+    spots, 
+    customRadius, 
+    spotStreaks, 
+    claimRadius
+  );
 
   // Magnetic refs for the interactive buttons
   const themeMag = useMagnetic();
@@ -170,8 +182,15 @@ export default function App() {
             isDark={isDark} 
             colors={colors} 
             userLocation={userLocation} 
+            // PROPS FOR DETECTION
             currentRadius={customRadius} 
             updateRadius={updateRadius} 
+            detectionOptions={detectionOptions}
+            // PROPS FOR CLAIM
+            currentClaimRadius={claimRadius}
+            updateClaimRadius={updateClaimRadius}
+            claimOptions={claimOptions}
+            // UTILS
             resetTimer={resetTimer} 
             addNewSpot={addNewSpot} 
             deleteSpotFromDB={deleteSpotFromDB}
