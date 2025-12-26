@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
 import { Target } from 'lucide-react';
 import L from 'leaflet';
@@ -15,7 +15,7 @@ function MapInvalidator() {
   return null;
 }
 
-function MapInterface({ stableUserLoc, isDark, claimRadius, customRadius }) {
+function MapInterface({ stableUserLoc, claimRadius, customRadius }) {
   const map = useMap();
   return (
     <>
@@ -114,7 +114,7 @@ export default function ExploreTab({
 
         {stableUserLoc && (
           <>
-            {/* STATIC CLAIM RANGE */}
+            {/* STATIC CLAIM RANGE (Inner Circle) */}
             <Circle
               center={[stableUserLoc.lat, stableUserLoc.lng]}
               radius={Number(claimRadius) || 20}
@@ -127,15 +127,15 @@ export default function ExploreTab({
               }}
             />
             
-            {/* ANIMATED DETECTION RANGE */}
+            {/* ANIMATED DETECTION RANGE (Outer Spinning Scan Circle) */}
             <Circle
               center={[stableUserLoc.lat, stableUserLoc.lng]}
               radius={Number(customRadius) || 50}
               pathOptions={{
                 color: 'rgb(var(--theme-primary))',
                 fillColor: 'transparent',
-                dashArray: '10, 15',
-                className: 'radar-ping', // TRIGGERS CSS ANIMATION
+                dashArray: '20, 30', // Increased spacing to make rotation obvious
+                className: 'radar-ping', // Links to the spinning CSS
                 interactive: false
               }}
             />

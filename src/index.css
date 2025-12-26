@@ -70,7 +70,7 @@ body {
   color: var(--theme-text-title-dark) !important; 
 }
 
-/* --- WINTER THEME: FROSTED ICE (GLITCH-FREE) --- */
+/* --- WINTER THEME --- */
 [data-theme='winter'] .smart-glass {
   background-image: linear-gradient(
     135deg, 
@@ -78,12 +78,9 @@ body {
     rgba(240, 249, 255, 0.2) 50%, 
     rgba(186, 230, 253, 0.1) 100%
   ) !important;
-  
   backdrop-filter: blur(20px) saturate(125%);
   -webkit-backdrop-filter: blur(20px) saturate(125%);
-  
   border: 1px solid rgba(255, 255, 255, 0.6) !important;
-  
   box-shadow: 
     inset 0 1px 1px rgba(255, 255, 255, 0.4),
     inset 0 0 15px rgba(125, 211, 252, 0.1);
@@ -121,7 +118,6 @@ body {
   justify-content: center !important; 
 }
 
-/* THE ALIGNMENT FIX: Use absolute positioning inside the icon to force true center */
 .marker-pin-user { 
   position: absolute; 
   display: flex; 
@@ -145,7 +141,6 @@ body {
   animation: user-pulse 2s infinite; 
 }
 
-/* Node Markers: Theme Color for Unlocked, Gray for Locked */
 .marker-pin-spot {
   position: absolute;
   display: flex;
@@ -155,14 +150,14 @@ body {
 
 .marker-pin-spot .dot { 
   width: 8px; height: 8px; 
-  background: #71717a; /* Default Gray */
+  background: #71717a; 
   border: 1.5px solid white; 
   border-radius: 50%; 
   transition: all 0.4s ease;
 }
 
 .marker-pin-spot.unlocked .dot { 
-  background: rgb(var(--theme-primary)) !important; /* Dynamic Theme Color */
+  background: rgb(var(--theme-primary)) !important; 
   box-shadow: 0 0 8px rgb(var(--theme-primary)); 
 }
 
@@ -171,23 +166,34 @@ body {
   100% { transform: scale(2.2); opacity: 0; }
 }
 
-/* --- ANIMATED DETECTION RADIUS --- */
+/* --- ANIMATED SCAN CIRCLE (THE SPINNING FIX) --- */
 .radar-ping { 
-  animation: radarSweep 20s linear infinite, radarBreathe 4s ease-in-out infinite; 
+  /* Combined animations: Sweep (dash crawl), Breathe (pulsing), Spin (rotation) */
+  animation: 
+    radarSweep 8s linear infinite, 
+    radarBreathe 4s ease-in-out infinite,
+    radarSpin 6s linear infinite; 
+    
   stroke-linecap: round;
+  
+  /* CRITICAL: Force rotation around the center of the circle path */
   transform-origin: center;
+  transform-box: fill-box; 
 }
 
-/* Makes the dashes crawl around the circle */
+@keyframes radarSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 @keyframes radarSweep {
-  from { stroke-dashoffset: 500; }
+  from { stroke-dashoffset: 150; }
   to { stroke-dashoffset: 0; }
 }
 
-/* Makes the ring "breathe" in opacity and thickness */
 @keyframes radarBreathe { 
-  0%, 100% { stroke-opacity: 0.5; stroke-width: 1.5px; } 
-  50% { stroke-opacity: 0.15; stroke-width: 3px; } 
+  0%, 100% { stroke-opacity: 0.7; stroke-width: 1.5px; } 
+  50% { stroke-opacity: 0.2; stroke-width: 3px; } 
 }
 
 /* --- UI EFFECTS --- */
