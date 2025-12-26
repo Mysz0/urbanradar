@@ -1,4 +1,5 @@
 import React from 'react';
+import { Flame } from 'lucide-react';
 
 export default function LeaderboardTab({ leaderboard, username, colors }) {
   return (
@@ -18,7 +19,7 @@ export default function LeaderboardTab({ leaderboard, username, colors }) {
             }`}
           >
             <div className="flex items-center gap-4">
-              {/* Rank Badge - Primary color bg for #1, light tint for others */}
+              {/* Rank Badge */}
               <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-xs transition-colors duration-500 ${
                 index === 0 
                   ? 'bg-[rgb(var(--theme-primary))] text-zinc-950 shadow-lg shadow-[var(--theme-primary-glow)]' 
@@ -39,13 +40,24 @@ export default function LeaderboardTab({ leaderboard, username, colors }) {
               </div>
             </div>
 
-            <div className="text-right">
-              <p className={`text-sm font-black tracking-tighter ${
-                isCurrentUser ? 'text-[rgb(var(--theme-primary))]' : ''
-              }`}>
-                {entry.score.toLocaleString()}
-              </p>
-              <p className="text-[8px] font-bold opacity-30 uppercase tracking-tighter">Total XP</p>
+            <div className="flex items-center gap-4">
+              {/* STREAK COLUMN */}
+              {entry.streak > 0 && (
+                <div className="flex flex-col items-center opacity-80">
+                   <Flame size={12} className="text-orange-500 fill-orange-500/20" />
+                   <span className="text-[9px] font-black text-orange-500 tracking-tighter">{entry.streak}D</span>
+                </div>
+              )}
+
+              {/* SCORE COLUMN */}
+              <div className="text-right min-w-[60px]">
+                <p className={`text-sm font-black tracking-tighter ${
+                  isCurrentUser ? 'text-[rgb(var(--theme-primary))]' : ''
+                }`}>
+                  {entry.score.toLocaleString()}
+                </p>
+                <p className="text-[8px] font-bold opacity-30 uppercase tracking-tighter">Total XP</p>
+              </div>
             </div>
           </div>
         );

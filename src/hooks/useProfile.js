@@ -16,7 +16,7 @@ export function useProfile(user, showToast, fetchLeaderboard) {
 
     const fetchProfile = async () => {
       try {
-        // 1. Fetch Profile (Base Data)
+        // 1. Fetch Profile (Base Data) - Cleaned of missing columns
         let { data: profile } = await supabase
           .from('profiles')
           .select('username, role, total_points, show_email, last_username_change, custom_radius')
@@ -33,50 +33,56 @@ export function useProfile(user, showToast, fetchLeaderboard) {
           setCustomRadius(profile.custom_radius || 250);
         }
 
-        // 2. Fetch Streak from NEW TABLE (user_streaks)
-        // Adjust 'user_streaks' to your actual table name if different
-        let { data: streakRow } = await supabase
-          .from('user_streaks')
-          .select('streak_count, last_visit')
+        // 2. STREAK LOGIC: Calculate from user_spots activity
+        const { data: claims } = await supabase
+          .from('user_spots')
+          .select('created_at')
           .eq('user_id', user.id)
-          .maybeSingle();
+          .order('created_at', { ascending: false });
 
-        // --- DAILY VISIT STREAK LOGIC ---
-        const now = new Date();
-        const todayStr = now.toDateString();
-        
-        // Use the new table data or default to empty
-        let currentStreak = streakRow?.streak_count || 0;
-        const lastVisitDate = streakRow?.last_visit ? new Date(streakRow.last_visit) : null;
-        let newStreak = currentStreak;
+        if (claims && claims.length > 0) {
+          // Get unique dates of activity (ignoring time)
+          const uniqueDays = [...new Set(claims.map(c => 
+            new Date(c.created_at).toDateString()
+          ))];
 
-        if (!lastVisitDate) {
-          newStreak = 1;
-        } else if (lastVisitDate.toDateString() !== todayStr) {
+          const today = new Date().toDateString();
           const yesterday = new Date();
           yesterday.setDate(yesterday.getDate() - 1);
-          
-          // Increment if yesterday, otherwise reset to 1
-          newStreak = (lastVisitDate.toDateString() === yesterday.toDateString()) ? currentStreak + 1 : 1;
-        }
+          const yesterdayStr = yesterday.toDateString();
 
-        // 3. Update the NEW table if the visit is new today
-        if (!lastVisitDate || lastVisitDate.toDateString() !== todayStr) {
-          const updatedVisit = { 
-            user_id: user.id, // Primary key link
-            last_visit: now.toISOString(), 
-            streak_count: newStreak 
-          };
+          let streak = 0;
           
-          setVisitData({ last_visit: updatedVisit.last_visit, streak: newStreak });
-          
-          await supabase
-            .from('user_streaks')
-            .upsert(updatedVisit, { onConflict: 'user_id' });
+          // Check if user was active today OR yesterday
+          if (uniqueDays[0] === today || uniqueDays[0] === yesterdayStr) {
+            streak = 1;
+            // Loop backwards through unique days to count the chain
+            for (let i = 0; i < uniqueDays.length - 1; i++) {
+              const current = new Date(uniqueDays[i]);
+              const prev = new Date(uniqueDays[i + 1]);
+              
+              // Calculate difference in days
+              const diffTime = Math.abs(current - prev);
+              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-          showToast(`${newStreak} Day Streak Active!`);
-        } else {
-          setVisitData({ last_visit: lastVisitDate.toISOString(), streak: currentStreak });
+              if (diffDays === 1) {
+                streak++;
+              } else {
+                break; // Chain broken
+              }
+            }
+          }
+
+          setVisitData({ 
+            streak, 
+            last_visit: claims[0].created_at 
+          });
+          
+          // Show toast if they just claimed something today
+          if (uniqueDays[0] === today && streak > 0) {
+            // This prevents the toast from firing every refresh if you track locally
+            // but for now it confirms the logic is working
+          }
         }
 
       } catch (err) {
@@ -86,9 +92,6 @@ export function useProfile(user, showToast, fetchLeaderboard) {
 
     fetchProfile();
   }, [user]);
-
-  // ... (saveUsername, updateRadius, toggleEmailVisibility, resetTimer remain the same)
-  // Ensure saveUsername and toggleEmailVisibility ONLY update columns that exist in 'profiles'
 
   const saveUsername = async () => {
     const cleaned = tempUsername.trim();
