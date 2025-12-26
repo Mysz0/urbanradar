@@ -1,8 +1,18 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import { Target } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+
+// Tracks zoom level to scale the custom SVG icon dynamically
+function ZoomHandler({ setZoom }) {
+  useMapEvents({
+    zoomend: (e) => {
+      setZoom(e.target.getZoom());
+    },
+  });
+  return null;
+}
 
 function MapRecenter({ location }) {
   const map = useMap();
@@ -38,6 +48,7 @@ function MapInterface({ stableUserLoc, claimRadius, customRadius }) {
           </button>
         </div>
       </div>
+
       <div className="leaflet-bottom leaflet-left leaflet-right" style={{ marginBottom: '24px', padding: '0 24px' }}>
         <div className="leaflet-control w-full pointer-events-none">
           <div className="smart-glass border p-4 rounded-3xl flex justify-between items-center shadow-2xl w-full pointer-events-auto">
@@ -58,8 +69,17 @@ function MapInterface({ stableUserLoc, claimRadius, customRadius }) {
   );
 }
 
-export default function ExploreTab({ spots = {}, unlockedSpots = [], userLocation, isDark, claimRadius, customRadius }) {
+export default function ExploreTab({ 
+  spots = {}, 
+  unlockedSpots = [], 
+  userLocation, 
+  isDark, 
+  claimRadius, 
+  customRadius 
+}) {
   const [mapRef, setMapRef] = useState(null);
+  const [zoom, setZoom] = useState(16);
+
   const stableUserLoc = useMemo(() => {
     if (!userLocation?.lat) return null;
     return { lat: userLocation.lat, lng: userLocation.lng };
@@ -67,69 +87,92 @@ export default function ExploreTab({ spots = {}, unlockedSpots = [], userLocatio
 
   const fallbackCenter = [40.7306, -73.9352];
 
+  // RADAR ICON THAT SCALES WITH ZOOM
   const animatedUserIcon = useMemo(() => {
+    // Dynamic scale logic: base size 200px at zoom level 16
+    const scale = Math.pow(2, zoom - 16);
+    const size = 200 * scale;
+
     return L.divIcon({
       className: 'soft-radar-icon',
       html: `
-        <svg viewBox="0 0 200 200" class="radar-svg" style="width: 200px; height: 200px;">
+        <svg viewBox="0 0 200 200" width="${size}" height="${size}" class="radar-svg">
           <defs>
-            <filter id="glow">
-              <feGaussianBlur stdDeviation="3.5" result="coloredBlur"/>
-              <feMerge>
-                <feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/>
-              </feMerge>
+            <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="4" />
             </filter>
           </defs>
 
-          <g class="radar-rotation-group" filter="url(#glow)">
-            <circle 
-              cx="100" cy="100" r="75" 
-              fill="none" 
-              stroke="rgb(var(--theme-primary))" 
-              stroke-width="5" 
-              stroke-dasharray="20 40" 
-              stroke-linecap="round" 
-              stroke-opacity="0.5" 
-            />
-            <circle 
-              cx="100" cy="100" r="75" 
-              fill="none" 
-              stroke="rgb(var(--theme-primary))" 
-              stroke-width="1.5" 
-              stroke-dasharray="20 40" 
-              stroke-linecap="round" 
-            />
+          <g class="radar-rotation-group">
+            <circle cx="100" cy="100" r="70" fill="none" 
+              stroke="rgb(var(--theme-primary))" stroke-width="8" 
+              stroke-dasharray="20 30" stroke-linecap="round" 
+              stroke-opacity="0.25" filter="url(#softGlow)" />
+            
+            <circle cx="100" cy="100" r="70" fill="none" 
+              stroke="rgb(var(--theme-primary))" stroke-width="2.5" 
+              stroke-dasharray="20 30" stroke-linecap="round" 
+              stroke-opacity="0.7" />
           </g>
 
-          <circle cx="100" cy="100" r="75" fill="none" stroke="rgb(var(--theme-primary))" stroke-width="1" stroke-opacity="0.1" />
-
-          <circle cx="100" cy="100" r="6" fill="white" filter="url(#glow)" />
-          <circle cx="100" cy="100" r="12" fill="rgb(var(--theme-primary))" fill-opacity="0.1" class="radar-aura" />
+          <circle cx="100" cy="100" r="25" fill="rgb(var(--theme-primary))" fill-opacity="0.1" class="radar-aura" />
+          <circle cx="100" cy="100" r="7" fill="white" stroke="rgb(var(--theme-primary))" stroke-width="2.5" />
         </svg>
       `,
-      iconSize: [200, 200],
-      iconAnchor: [100, 100]
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2]
     });
-  }, []);
+  }, [zoom, isDark]); // Updates when zooming or theme changes
 
   const spotIcon = (isUnlocked) => L.divIcon({
     className: 'custom-div-icon',
     html: `<div class="marker-pin-spot ${isUnlocked ? 'unlocked' : ''}"><div class="dot"></div></div>`,
-    iconSize: [0, 0], iconAnchor: [0, 0]
+    iconSize: [0, 0],
+    iconAnchor: [0, 0]
   });
 
   return (
     <div className={`relative w-full h-[70vh] rounded-[3rem] overflow-hidden border transition-all duration-700 ${
       isDark ? 'border-white/5 bg-zinc-950' : 'border-[rgb(var(--theme-primary))]/10 bg-emerald-50'
     }`}>
-      <MapContainer center={stableUserLoc ? [stableUserLoc.lat, stableUserLoc.lng] : fallbackCenter} zoom={16} zoomControl={false} scrollWheelZoom={true} ref={setMapRef}>
+      <MapContainer 
+        center={stableUserLoc ? [stableUserLoc.lat, stableUserLoc.lng] : fallbackCenter} 
+        zoom={16} 
+        zoomControl={false} 
+        scrollWheelZoom={true} 
+        ref={setMapRef}
+      >
+        <ZoomHandler setZoom={setZoom} />
         <MapInvalidator />
         <MapRecenter location={stableUserLoc} />
-        <TileLayer key={isDark ? 'dark' : 'light'} url={isDark ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"} />
-        <MapInterface stableUserLoc={stableUserLoc} claimRadius={claimRadius} customRadius={customRadius} />
-        {stableUserLoc && <Marker position={[stableUserLoc.lat, stableUserLoc.lng]} icon={animatedUserIcon} zIndexOffset={1000} />}
+        
+        <TileLayer
+          key={isDark ? 'dark' : 'light'}
+          url={isDark 
+            ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" 
+            : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"}
+        />
+
+        <MapInterface 
+          stableUserLoc={stableUserLoc} 
+          claimRadius={claimRadius} 
+          customRadius={customRadius} 
+        />
+
+        {stableUserLoc && (
+          <Marker 
+            position={[stableUserLoc.lat, stableUserLoc.lng]} 
+            icon={animatedUserIcon} 
+            zIndexOffset={1000} 
+          />
+        )}
+
         {Object.values(spots).map((spot) => (
-          <Marker key={spot.id} position={[spot.lat, spot.lng]} icon={spotIcon(unlockedSpots.includes(spot.id))}>
+          <Marker 
+            key={spot.id} 
+            position={[spot.lat, spot.lng]} 
+            icon={spotIcon(unlockedSpots.includes(spot.id))}
+          >
             <Popup closeButton={false} offset={[0, -5]}>
               <div className="smart-glass p-3 rounded-2xl border border-white/10 min-w-[140px] shadow-2xl">
                 <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-1">Node</p>

@@ -99,41 +99,31 @@ body {
 /* Smooth Constant Rotation */
 .radar-rotation-group {
   transform-origin: center;
-  animation: radarRotate 10s linear infinite;
+  animation: radarRotate 12s linear infinite;
 }
 
-/* Breathing Heartbeat Aura */
+/* Heartbeat Pulse for Aura */
 .radar-aura {
   transform-origin: center;
-  animation: auraHeartbeat 3s ease-in-out infinite;
+  animation: auraPulse 3s ease-in-out infinite;
 }
 
-/* --- KEYFRAMES --- */
 @keyframes radarRotate {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
 
-@keyframes auraHeartbeat {
-  0%, 100% { transform: scale(1); opacity: 0.15; }
-  50% { transform: scale(1.4); opacity: 0.4; }
+@keyframes auraPulse {
+  0%, 100% { transform: scale(0.8); opacity: 0.1; }
+  50% { transform: scale(1.2); opacity: 0.35; }
 }
 
 /* --- NODES / SPOTS --- */
-.custom-div-icon { 
-  background: none !important; 
-  border: none !important; 
-}
-
+.custom-div-icon { background: none !important; border: none !important; }
 .marker-pin-spot .dot { 
-  width: 10px; 
-  height: 10px; 
-  background: #71717a; 
-  border: 2px solid white; 
-  border-radius: 50%; 
-  transition: all 0.4s ease;
+  width: 10px; height: 10px; background: #71717a; 
+  border: 2px solid white; border-radius: 50%; transition: all 0.4s ease;
 }
-
 .marker-pin-spot.unlocked .dot { 
   background: rgb(var(--theme-primary)) !important; 
   box-shadow: 0 0 10px rgb(var(--theme-primary)); 
@@ -144,4 +134,25 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: rgba(var(--theme-primary), 0.2);
   border-radius: 10px;
+}
+
+/* --- ADDITIONAL UI ANIMATIONS (RESTORED) --- */
+.table-row-animate {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.table-row-animate:hover {
+  background: rgba(var(--theme-primary), 0.08);
+  transform: translateX(4px);
+}
+
+.hover-scale {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.hover-scale:hover {
+  transform: scale(1.02) translateY(-2px);
+}
+
+.active-shrink:active {
+  transform: scale(0.96);
 }
