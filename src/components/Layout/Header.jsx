@@ -1,7 +1,7 @@
 import React from 'react';
-import { LogOut, Flame } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 
-export default function Header({ isAdmin, username, email, showEmail, isDark, logoutMag, handleLogout, streak = 0 }) {
+export default function Header({ isAdmin, username, email, showEmail, isDark, logoutMag, handleLogout }) {
   return (
     <header className="relative pt-16 pb-32 px-10 rounded-b-[4.5rem] border-b border-white/[0.05]">
       {/* Background Overlays */}
@@ -21,16 +21,6 @@ export default function Header({ isAdmin, username, email, showEmail, isDark, lo
                  Explorer Mode
                </span>
              )}
-
-              {/* STREAK ICON: Integrated into your original layout */}
-              {streak > 0 && (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/20 animate-pulse">
-                  <Flame size={8} className="text-orange-500 fill-orange-500" />
-                  <span className="text-[7px] font-black tracking-[0.1em] text-orange-500 uppercase">
-                    {streak} Day Streak
-                  </span>
-                </div>
-              )}
           </div>
           
           <h1 className="text-3xl font-bold tracking-tighter italic uppercase leading-none truncate">

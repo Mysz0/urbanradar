@@ -147,7 +147,7 @@ export default function HomeTab({
         )}
       </div>
 
-      <StatCard mainVal={totalPoints} subVal={foundCount} colors={colors} />
+      <StatCard mainVal={totalPoints} subVal={foundCount} streak={streak} colors={colors} />
 
       {/* SEARCH AND NODES LIST */}
       <div className="space-y-3 px-1">

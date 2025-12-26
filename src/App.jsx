@@ -109,7 +109,6 @@ export default function App() {
         isDark={isDark} 
         logoutMag={logoutMag} 
         handleLogout={handleLogout} 
-        streak={visitData?.streak || 0} // <--- Added this to feed your new icon
       />
 
       <div className="max-w-md mx-auto px-6 -mt-16 relative z-30">
