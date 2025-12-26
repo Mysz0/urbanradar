@@ -73,38 +73,38 @@ export default function ExploreTab({ spots = {}, unlockedSpots = [], userLocatio
       html: `
         <svg viewBox="0 0 200 200" class="radar-svg" style="width: 200px; height: 200px;">
           <defs>
-            <radialGradient id="radarAura" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stop-color="rgb(var(--theme-primary))" stop-opacity="0.4" />
-              <stop offset="100%" stop-color="rgb(var(--theme-primary))" stop-opacity="0" />
-            </radialGradient>
-            
-            <filter id="ultraSoft">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="5" />
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="3.5" result="coloredBlur"/>
+              <feMerge>
+                <feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/>
+              </feMerge>
             </filter>
-
-            <mask id="sweepMask">
-               <path d="M 100 100 L 100 20 A 80 80 0 0 1 180 100 Z" fill="white" filter="url(#ultraSoft)" />
-            </mask>
           </defs>
-          
-          <circle cx="100" cy="100" r="85" class="radar-aura" fill="url(#radarAura)" filter="url(#ultraSoft)" />
-          
-          <circle cx="100" cy="100" r="80" fill="none" stroke="rgb(var(--theme-primary))" stroke-width="3" stroke-opacity="0.15" filter="url(#ultraSoft)" />
-          <circle cx="100" cy="100" r="80" fill="none" stroke="rgb(var(--theme-primary))" stroke-width="1" stroke-opacity="0.4" />
 
-          <g class="radar-rotation-group">
-            <path 
-              d="M 100 100 L 100 20 A 80 80 0 0 1 180 100 Z" 
-              fill="rgb(var(--theme-primary))" 
-              fill-opacity="0.3"
-              mask="url(#sweepMask)"
+          <g class="radar-rotation-group" filter="url(#glow)">
+            <circle 
+              cx="100" cy="100" r="75" 
+              fill="none" 
+              stroke="rgb(var(--theme-primary))" 
+              stroke-width="5" 
+              stroke-dasharray="20 40" 
+              stroke-linecap="round" 
+              stroke-opacity="0.5" 
             />
-            <line x1="100" y1="100" x2="100" y2="20" stroke="rgb(var(--theme-primary))" stroke-width="3" stroke-linecap="round" stroke-opacity="0.6" filter="url(#ultraSoft)" />
-            <line x1="100" y1="100" x2="100" y2="20" stroke="rgb(var(--theme-primary))" stroke-width="1" stroke-linecap="round" stroke-opacity="0.8" />
+            <circle 
+              cx="100" cy="100" r="75" 
+              fill="none" 
+              stroke="rgb(var(--theme-primary))" 
+              stroke-width="1.5" 
+              stroke-dasharray="20 40" 
+              stroke-linecap="round" 
+            />
           </g>
 
-          <circle cx="100" cy="100" r="6" fill="white" />
-          <circle cx="100" cy="100" r="6" fill="none" stroke="rgb(var(--theme-primary))" stroke-width="2" class="core-dot-pulse" />
+          <circle cx="100" cy="100" r="75" fill="none" stroke="rgb(var(--theme-primary))" stroke-width="1" stroke-opacity="0.1" />
+
+          <circle cx="100" cy="100" r="6" fill="white" filter="url(#glow)" />
+          <circle cx="100" cy="100" r="12" fill="rgb(var(--theme-primary))" fill-opacity="0.1" class="radar-aura" />
         </svg>
       `,
       iconSize: [200, 200],

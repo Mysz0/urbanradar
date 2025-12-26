@@ -79,7 +79,13 @@ body {
   background: transparent !important;
 }
 
-/* --- SOFT SVG RADAR SYSTEM --- */
+.leaflet-popup-content-wrapper {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* --- SOFT HUD RADAR SYSTEM --- */
 .soft-radar-icon {
   background: none !important;
   border: none !important;
@@ -90,22 +96,16 @@ body {
   overflow: visible !important;
 }
 
-/* Momentum-based Rotation */
+/* Smooth Constant Rotation */
 .radar-rotation-group {
   transform-origin: center;
-  animation: radarRotate 6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation: radarRotate 10s linear infinite;
 }
 
-/* Breathing Aura Ripple */
+/* Breathing Heartbeat Aura */
 .radar-aura {
   transform-origin: center;
-  animation: auraRipple 4s ease-in-out infinite;
-}
-
-/* Pulsing Center Dot */
-.core-dot-pulse {
-  transform-origin: center;
-  animation: dotPulse 2s ease-in-out infinite;
+  animation: auraHeartbeat 3s ease-in-out infinite;
 }
 
 /* --- KEYFRAMES --- */
@@ -114,22 +114,26 @@ body {
   to { transform: rotate(360deg); }
 }
 
-@keyframes auraRipple {
-  0%, 100% { transform: scale(0.95); opacity: 0.2; }
-  50% { transform: scale(1.05); opacity: 0.5; }
-}
-
-@keyframes dotPulse {
-  0%, 100% { transform: scale(1); opacity: 0.4; stroke-width: 2px; }
-  50% { transform: scale(2.5); opacity: 0; stroke-width: 1px; }
+@keyframes auraHeartbeat {
+  0%, 100% { transform: scale(1); opacity: 0.15; }
+  50% { transform: scale(1.4); opacity: 0.4; }
 }
 
 /* --- NODES / SPOTS --- */
-.custom-div-icon { background: none !important; border: none !important; }
-.marker-pin-spot .dot { 
-  width: 10px; height: 10px; background: #71717a; 
-  border: 2px solid white; border-radius: 50%; transition: all 0.4s ease;
+.custom-div-icon { 
+  background: none !important; 
+  border: none !important; 
 }
+
+.marker-pin-spot .dot { 
+  width: 10px; 
+  height: 10px; 
+  background: #71717a; 
+  border: 2px solid white; 
+  border-radius: 50%; 
+  transition: all 0.4s ease;
+}
+
 .marker-pin-spot.unlocked .dot { 
   background: rgb(var(--theme-primary)) !important; 
   box-shadow: 0 0 10px rgb(var(--theme-primary)); 
