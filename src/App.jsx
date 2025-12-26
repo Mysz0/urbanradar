@@ -153,6 +153,7 @@ export default function App() {
             spots={spots} 
             unlockedSpots={unlockedSpots}
             claimRadius={claimRadius}
+            customRadius={scanRadius}
             colors={colors} 
           />
         )}
