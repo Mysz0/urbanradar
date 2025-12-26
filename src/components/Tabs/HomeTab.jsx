@@ -30,8 +30,16 @@ export default function HomeTab({
     ? Math.round(getDistance(userLocation.lat, userLocation.lng, currentSpot.lat, currentSpot.lng))
     : null;
 
+  // --- FIXED LOGIC FOR INSTANT UPDATES ---
   const personalSpotData = activeSpotId ? spotStreaks?.[activeSpotId] : null;
-  const isLoggedToday = personalSpotData?.last_claim && new Date(personalSpotData.last_claim).toDateString() === todayStr;
+  
+  // Check if DB says it's claimed OR if it just entered our unlockedSpots array this session
+  const isLoggedToday = useMemo(() => {
+    const dbLogged = personalSpotData?.last_claim && new Date(personalSpotData.last_claim).toDateString() === todayStr;
+    const locallyLogged = unlockedSpots.includes(activeSpotId);
+    return dbLogged || locallyLogged;
+  }, [personalSpotData, unlockedSpots, activeSpotId, todayStr]);
+  // ---------------------------------------
 
   const sortOptions = [
     { id: 'ready', label: 'Ready to Sync', icon: Zap },
@@ -52,7 +60,10 @@ export default function HomeTab({
     return unlockedSpots
       .map(id => {
         const sInfo = spotStreaks[id];
-        const isReady = sInfo?.last_claim ? new Date(sInfo.last_claim).toDateString() !== todayStr : true;
+        // Logic fix: A node is "Ready" only if it wasn't claimed today in DB AND isn't in our current active claim list
+        const dbReady = sInfo?.last_claim ? new Date(sInfo.last_claim).toDateString() !== todayStr : true;
+        const isReady = dbReady; 
+
         return { id, ...spots[id], streakCount: sInfo?.streak || 0, isReady };
       })
       .filter(node => node.name?.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -192,7 +203,6 @@ export default function HomeTab({
           </div>
         </div>
 
-        {/* NODES LIST */}
         <div className="grid gap-3 pb-24 pt-2">
           {filteredAndSortedNodes.length === 0 ? (
             <div className="p-10 text-center text-[10px] uppercase font-bold opacity-20 tracking-[0.2em]">
@@ -201,9 +211,12 @@ export default function HomeTab({
           ) : (
             filteredAndSortedNodes.map(node => {
               const rank = getNodeRank(node.streakCount);
+              // Check ready status against both DB and current session
+              const isReadyLocal = node.isReady && !unlockedSpots.includes(node.id);
+              
               return (
                 <div key={node.id} className="relative group transition-all">
-                  {node.isReady && (
+                  {isReadyLocal && (
                     <div className="absolute -left-1 top-4 bottom-4 w-1 bg-[rgb(var(--theme-primary))] rounded-full z-10 shadow-[0_0_10px_var(--theme-primary-glow)]" />
                   )}
                   <div className={`smart-glass border p-5 rounded-[2.2rem] flex items-center justify-between transition-all ${
@@ -214,15 +227,14 @@ export default function HomeTab({
                         {node.streakCount >= 10 ? <Trophy size={18} /> : node.streakCount > 1 ? <Flame size={18} fill="currentColor" /> : <CheckCircle2 size={18} />}
                       </div>
                       <div>
-                        {/* CSS takes over here: .font-bold will be pure white in dark mode */}
                         <p className="font-bold text-sm leading-none tracking-tight">
                           {node.name}
                         </p>
                         <div className="flex items-center gap-2 mt-2">
                           <span className={`text-[9px] font-black uppercase tracking-tighter ${
-                            node.isReady ? 'text-[rgb(var(--theme-primary))]' : 'opacity-40'
+                            isReadyLocal ? 'text-[rgb(var(--theme-primary))]' : 'opacity-40'
                           }`}>
-                            {node.isReady ? 'Sync Required' : 'Secured'}
+                            {isReadyLocal ? 'Sync Required' : 'Secured'}
                           </span>
                           {node.streakCount > 1 && (
                             <span className="text-[9px] font-bold opacity-40">
