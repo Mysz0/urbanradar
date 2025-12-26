@@ -4,6 +4,20 @@ import { Target } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
+// --- HELPER COMPONENTS ---
+
+// THE FIX: This component forces the map to recalculate its size when it loads
+// preventing the "gray screen" bug when switching tabs.
+function MapInvalidator() {
+  const map = useMap();
+  useEffect(() => {
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 100); // Small delay to ensure the DOM has rendered the container
+  }, [map]);
+  return null;
+}
+
 function getDistance(lat1, lon1, lat2, lon2) {
   const R = 6371e3;
   const φ1 = lat1 * Math.PI / 180;
@@ -71,31 +85,31 @@ function MapInterface({ coords, stableUserLoc, isDark, claimRadius, scanRadius }
   );
 }
 
+// --- MAIN COMPONENT ---
+
 export default function ExploreTab({ 
   spots = {}, 
   unlockedSpots = [], 
   userLocation, 
   isDark, 
-  claimRadius, 
-  scanRadius 
+  claimRadius = 20, 
+  scanRadius = 50 
 }) {
   const [mapRef, setMapRef] = useState(null);
 
   const stableUserLoc = useMemo(() => {
-    if (!userLocation || typeof userLocation.lat !== 'number') return null;
+    if (!userLocation?.lat) return null;
     return {
       lat: userLocation.lat,
       lng: userLocation.lng
     };
   }, [userLocation]);
 
-  // Fallback prevents the "Gray Screen" if GPS is slow to load
   const initialCenter = useMemo(() => {
-      if (stableUserLoc) return [stableUserLoc.lat, stableUserLoc.lng];
-      return [40.7306, -73.9352]; // Default New York fallback
+    if (stableUserLoc) return [stableUserLoc.lat, stableUserLoc.lng];
+    return [40.7306, -73.9352]; // Default New York fallback
   }, []);
 
-  // Use absolute centering for the diamond icon
   const userIcon = useMemo(() => L.divIcon({
     className: 'custom-div-icon',
     html: `<div class="user-diamond-core"></div>`,
@@ -115,7 +129,7 @@ export default function ExploreTab({
       isDark ? 'border-white/5 bg-zinc-950' : 'border-[rgb(var(--theme-primary))]/10 bg-emerald-50'
     }`}>
       <style>{`
-        .leaflet-container { height: 100% !important; width: 100% !important; background: transparent !important; }
+        .leaflet-container { height: 100% !important; width: 100% !important; background: #18181b !important; }
         .custom-div-icon { background: none !important; border: none !important; display: flex !important; align-items: center !important; justify-content: center !important; }
         
         .user-diamond-core { 
@@ -146,7 +160,19 @@ export default function ExploreTab({
         .leaflet-popup-tip { display: none !important; }
       `}</style>
 
-      <MapContainer center={initialCenter} zoom={15} zoomControl={false} scrollWheelZoom={true} ref={setMapRef}>
+      <MapContainer 
+        center={initialCenter} 
+        zoom={15} 
+        zoomControl={false} 
+        scrollWheelZoom={true} 
+        ref={setMapRef}
+        whenReady={(mapInstance) => {
+            // Backup fix: manual invalidate when map instance is ready
+            setTimeout(() => mapInstance.target.invalidateSize(), 100);
+        }}
+      >
+        <MapInvalidator />
+        
         <TileLayer
           key={isDark ? 'dark' : 'light'}
           url={isDark 
