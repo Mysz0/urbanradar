@@ -83,20 +83,39 @@ export default function ExploreTab({
 
   const fallbackCenter = [40.7306, -73.9352];
 
-  // THE ULTIMATE ANIMATED RADAR ICON
-  // This combines the User Dot, a Pulse, and a Rotating Sweep into one Marker
+  // SOFT SCIFI SVG RADAR
   const animatedUserIcon = useMemo(() => {
     return L.divIcon({
-      className: 'radar-container-icon',
+      className: 'soft-radar-icon',
       html: `
-        <div class="radar-wrapper">
-          <div class="radar-echo"></div>
-          <div class="radar-sweep"></div>
-          <div class="user-core">
-            <div class="core-glow"></div>
-            <div class="core-dot"></div>
-          </div>
-        </div>
+        <svg viewBox="0 0 200 200" class="radar-svg" style="width: 200px; height: 200px;">
+          <defs>
+            <radialGradient id="radarGradient" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="rgb(var(--theme-primary))" stop-opacity="0.3" />
+              <stop offset="100%" stop-color="rgb(var(--theme-primary))" stop-opacity="0" />
+            </radialGradient>
+            <filter id="softGlow">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="4" />
+            </filter>
+          </defs>
+          
+          <circle cx="100" cy="100" r="70" class="radar-aura" fill="url(#radarGradient)" />
+          
+          <g class="radar-rotation-group">
+            <path 
+              d="M 100 100 L 100 30 A 70 70 0 0 1 170 100 Z" 
+              fill="rgb(var(--theme-primary))" 
+              fill-opacity="0.2"
+              filter="url(#softGlow)"
+            />
+            <line x1="100" y1="100" x2="100" y2="30" stroke="rgb(var(--theme-primary))" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.6" />
+          </g>
+
+          <circle cx="100" cy="100" r="70" fill="none" stroke="rgb(var(--theme-primary))" stroke-width="0.5" stroke-opacity="0.3" />
+
+          <circle cx="100" cy="100" r="5" fill="white" />
+          <circle cx="100" cy="100" r="5" fill="none" stroke="rgb(var(--theme-primary))" stroke-width="2" class="core-dot-pulse" />
+        </svg>
       `,
       iconSize: [200, 200],
       iconAnchor: [100, 100]
