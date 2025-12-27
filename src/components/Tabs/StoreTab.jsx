@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingCart, Package, Sparkles, Coins, Zap, Maximize, CheckCircle2 } from 'lucide-react';
+import { ShoppingCart, Package, Sparkles, Coins, Zap, Maximize, CheckCircle2, Clock } from 'lucide-react';
 
 export default function StoreTab({ totalPoints, colors, shopItems = [], inventory = [], onBuy, onActivate }) {
   const [view, setView] = useState('shop');
@@ -56,7 +56,7 @@ export default function StoreTab({ totalPoints, colors, shopItems = [], inventor
                 disabled={totalPoints < item.price}
                 className={`px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-tighter transition-all ${
                   totalPoints >= item.price 
-                  ? 'bg-white text-zinc-950 active:scale-95' 
+                  ? 'bg-white text-zinc-950 active:scale-95 shadow-xl shadow-white/5' 
                   : 'bg-white/5 text-zinc-600 cursor-not-allowed'
                 }`}
               >
@@ -67,23 +67,38 @@ export default function StoreTab({ totalPoints, colors, shopItems = [], inventor
         ) : (
           inventory.length > 0 ? (
             inventory.map((inv) => (
-              <div key={inv.id} className={`${colors.card} p-5 rounded-[2rem] border border-white/5 flex items-center gap-4`}>
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${inv.is_active ? 'bg-[rgb(var(--theme-primary))]/20 shadow-[0_0_15px_rgba(var(--theme-primary),0.3)]' : 'bg-white/5'}`}>
+              <div key={inv.id} className={`${colors.card} p-5 rounded-[2rem] border border-white/5 flex items-center gap-4 relative overflow-hidden`}>
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center z-10 ${inv.is_active ? 'bg-[rgb(var(--theme-primary))]/20 shadow-[0_0_15px_rgba(var(--theme-primary),0.3)]' : 'bg-white/5'}`}>
                   {inv.is_active ? <CheckCircle2 size={20} className="text-[rgb(var(--theme-primary))]" /> : (iconMap[inv.shop_items?.icon_name] || <Package size={20} />)}
                 </div>
-                <div className="flex-1">
+                
+                <div className="flex-1 z-10">
                   <h4 className="font-bold text-sm text-white">{inv.shop_items?.name}</h4>
-                  <p className={`text-[9px] font-black uppercase tracking-widest ${inv.is_active ? 'text-[rgb(var(--theme-primary))]' : 'text-zinc-500'}`}>
-                    {inv.is_active ? 'Currently Active' : 'In Stock'}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className={`text-[9px] font-black uppercase tracking-widest ${inv.is_active ? 'text-[rgb(var(--theme-primary))]' : 'text-zinc-500'}`}>
+                      {inv.is_active ? 'Active' : 'In Stock'}
+                    </p>
+                    {inv.is_active && inv.timeLeft && (
+                      <div className="flex items-center gap-1 bg-black/20 px-2 py-0.5 rounded-full border border-white/5">
+                        <Clock size={8} className="text-[rgb(var(--theme-primary))]" />
+                        <span className="text-[9px] font-mono font-bold text-white/90">{inv.timeLeft}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
+
                 {inv.shop_items?.category === 'boost' && !inv.is_active && (
                   <button 
                     onClick={() => onActivate(inv.id)}
-                    className="text-[9px] font-black bg-[rgb(var(--theme-primary))]/10 text-[rgb(var(--theme-primary))] px-4 py-2 rounded-xl hover:bg-[rgb(var(--theme-primary))]/20 transition-colors border border-[rgb(var(--theme-primary))]/20"
+                    className="z-10 text-[9px] font-black bg-[rgb(var(--theme-primary))]/10 text-[rgb(var(--theme-primary))] px-4 py-2 rounded-xl hover:bg-[rgb(var(--theme-primary))]/20 transition-colors border border-[rgb(var(--theme-primary))]/20 active:scale-95"
                   >
                     ACTIVATE
                   </button>
+                )}
+
+                {/* Subtle background glow for active items */}
+                {inv.is_active && (
+                  <div className="absolute inset-0 bg-[rgb(var(--theme-primary))]/5 pointer-events-none" />
                 )}
               </div>
             ))
