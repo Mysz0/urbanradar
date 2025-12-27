@@ -67,7 +67,7 @@ export default function StoreTab({ totalPoints, colors, shopItems = [], inventor
         ) : (
           inventory.length > 0 ? (
             inventory.map((inv) => (
-              <div key={inv.id} className={`${colors.card} p-5 rounded-[2rem] border border-white/5 flex items-center gap-4 relative overflow-hidden`}>
+              <div key={inv.id} className={`${colors.card} p-5 rounded-[2rem] border border-white/5 flex items-center gap-4 relative overflow-hidden group`}>
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center z-10 ${inv.is_active ? 'bg-[rgb(var(--theme-primary))]/20 shadow-[0_0_15px_rgba(var(--theme-primary),0.3)]' : 'bg-white/5'}`}>
                   {inv.is_active ? <CheckCircle2 size={20} className="text-[rgb(var(--theme-primary))]" /> : (iconMap[inv.shop_items?.icon_name] || <Package size={20} />)}
                 </div>
@@ -94,6 +94,16 @@ export default function StoreTab({ totalPoints, colors, shopItems = [], inventor
                   >
                     ACTIVATE
                   </button>
+                )}
+
+                {/* Progress Bar Background */}
+                {inv.is_active && inv.shop_items?.category === 'boost' && (
+                  <div className="absolute bottom-0 left-0 w-full h-1 bg-white/5 overflow-hidden">
+                    <div 
+                      className="h-full bg-[rgb(var(--theme-primary))] transition-all duration-1000 ease-linear shadow-[0_0_8px_rgba(var(--theme-primary),0.5)]"
+                      style={{ width: `${inv.progress}%` }}
+                    />
+                  </div>
                 )}
 
                 {/* Subtle background glow for active items */}

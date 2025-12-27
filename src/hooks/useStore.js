@@ -6,21 +6,47 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Helper to calculate human-readable time left
-  const getTimeLeft = (activatedAt, durationHours) => {
-    if (!activatedAt || !durationHours) return null;
+  // Helper to calculate time, progress, and handle auto-deletion
+  const getItemStatus = (item) => {
+    if (!item.is_active || !item.activated_at || !item.shop_items?.duration_hours) {
+      return { timeLeft: null, progress: 100 };
+    }
     
-    const expiryTime = new Date(activatedAt).getTime() + (durationHours * 60 * 60 * 1000);
+    const durationMs = item.shop_items.duration_hours * 60 * 60 * 1000;
+    const startTime = new Date(item.activated_at).getTime();
+    const expiryTime = startTime + durationMs;
     const now = new Date().getTime();
     const diff = expiryTime - now;
 
-    if (diff <= 0) return "EXPIRED";
+    if (diff <= 0) {
+      // Logic for deleting expired boosts
+      if (item.shop_items.category === 'boost') {
+        deleteExpiredItem(item.id);
+      }
+      return { timeLeft: "EXPIRED", progress: 0 };
+    }
+
+    // Calculate percentage for progress bar
+    const progress = Math.max(0, Math.min(100, (diff / durationMs) * 100));
 
     const h = Math.floor(diff / (1000 * 60 * 60));
     const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     const s = Math.floor((diff % (1000 * 60)) / 1000);
 
-    return `${h}h ${m}m ${s}s`;
+    return { 
+      timeLeft: `${h}h ${m}m ${s}s`, 
+      progress: progress 
+    };
+  };
+
+  const deleteExpiredItem = async (inventoryId) => {
+    try {
+      await supabase.from('user_inventory').delete().eq('id', inventoryId);
+      // Immediately filter out from local state so it vanishes
+      setInventory(prev => prev.filter(i => i.id !== inventoryId));
+    } catch (err) {
+      console.error("Auto-delete failed:", err);
+    }
   };
 
   const fetchData = async () => {
@@ -34,10 +60,10 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
         .select('*, shop_items(*)')
         .eq('user_id', user.id);
       
-      const processedInv = (inv || []).map(item => ({
-        ...item,
-        timeLeft: item.is_active ? getTimeLeft(item.activated_at, item.shop_items.duration_hours) : null
-      }));
+      const processedInv = (inv || []).map(item => {
+        const { timeLeft, progress } = getItemStatus(item);
+        return { ...item, timeLeft, progress };
+      });
 
       setShopItems(items || []);
       setInventory(processedInv);
@@ -48,20 +74,21 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
     }
   };
 
-  // Live timer to update the countdown in UI every second
+  // Live timer to update the countdown and progress bar every second
   useEffect(() => {
     const timer = setInterval(() => {
-      setInventory(prevInv => prevInv.map(item => {
-        if (item.is_active && item.shop_items.category === 'boost') {
-          const newTime = getTimeLeft(item.activated_at, item.shop_items.duration_hours);
-          // If a boost just expired during the session, you might want to refresh data
-          if (newTime === "EXPIRED" && item.timeLeft !== "EXPIRED") {
-             fetchData();
+      setInventory(prevInv => {
+        const updated = prevInv.map(item => {
+          if (item.is_active && item.shop_items?.category === 'boost') {
+            const { timeLeft, progress } = getItemStatus(item);
+            return { ...item, timeLeft, progress };
           }
-          return { ...item, timeLeft: newTime };
-        }
-        return item;
-      }));
+          return item;
+        });
+
+        // Filter out items that are marked EXPIRED so they disappear from UI
+        return updated.filter(item => item.timeLeft !== "EXPIRED");
+      });
     }, 1000);
 
     return () => clearInterval(timer);
@@ -90,6 +117,7 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
 
     try {
       if (itemToActivate.shop_items.category === 'boost') {
+        // Deactivate other boosts first
         await supabase
           .from('user_inventory')
           .update({ is_active: false })
