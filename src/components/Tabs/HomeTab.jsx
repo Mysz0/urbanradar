@@ -30,16 +30,12 @@ export default function HomeTab({
     ? Math.round(getDistance(userLocation.lat, userLocation.lng, currentSpot.lat, currentSpot.lng))
     : null;
 
-  // --- FIXED LOGIC FOR INSTANT UPDATES ---
-  const personalSpotData = activeSpotId ? spotStreaks?.[activeSpotId] : null;
-  
-  // Check if DB says it's claimed OR if it just entered our unlockedSpots array this session
+  // --- LOGIC: Check if the CURRENT active spot is claimed today ---
   const isLoggedToday = useMemo(() => {
-    const dbLogged = personalSpotData?.last_claim && new Date(personalSpotData.last_claim).toDateString() === todayStr;
-    const locallyLogged = unlockedSpots.includes(activeSpotId);
-    return dbLogged || locallyLogged;
-  }, [personalSpotData, unlockedSpots, activeSpotId, todayStr]);
-  // ---------------------------------------
+    if (!activeSpotId) return false;
+    const personalData = spotStreaks[activeSpotId];
+    return personalData?.last_claim && new Date(personalData.last_claim).toDateString() === todayStr;
+  }, [spotStreaks, activeSpotId, todayStr]);
 
   const sortOptions = [
     { id: 'ready', label: 'Ready to Sync', icon: Zap },
@@ -58,11 +54,13 @@ export default function HomeTab({
 
   const filteredAndSortedNodes = useMemo(() => {
     return unlockedSpots
+      .filter(id => spots[id]) // Ensure spot exists in data
       .map(id => {
         const sInfo = spotStreaks[id];
-        // Logic fix: A node is "Ready" only if it wasn't claimed today in DB AND isn't in our current active claim list
-        const dbReady = sInfo?.last_claim ? new Date(sInfo.last_claim).toDateString() !== todayStr : true;
-        const isReady = dbReady; 
+        // A node is ready if it wasn't claimed today
+        const isReady = sInfo?.last_claim 
+          ? new Date(sInfo.last_claim).toDateString() !== todayStr 
+          : true;
 
         return { id, ...spots[id], streakCount: sInfo?.streak || 0, isReady };
       })
@@ -88,7 +86,7 @@ export default function HomeTab({
       
       {/* SCANNER SECTION */}
       <div className="flex flex-col gap-3">
-        {(isNearSpot && activeSpotId) ? (
+        {(isNearSpot && activeSpotId && currentSpot) ? (
           <div className="flex flex-col gap-3 animate-in zoom-in-95 duration-500">
             <div className={`flex items-center gap-3 smart-glass p-5 rounded-[2.5rem] border relative overflow-hidden ${isDark ? 'bg-zinc-900/60 border-white/10' : 'border-[rgb(var(--theme-primary))]/10'}`}>
               <div className={`${
@@ -211,12 +209,10 @@ export default function HomeTab({
           ) : (
             filteredAndSortedNodes.map(node => {
               const rank = getNodeRank(node.streakCount);
-              // Check ready status against both DB and current session
-              const isReadyLocal = node.isReady && !unlockedSpots.includes(node.id);
               
               return (
                 <div key={node.id} className="relative group transition-all">
-                  {isReadyLocal && (
+                  {node.isReady && (
                     <div className="absolute -left-1 top-4 bottom-4 w-1 bg-[rgb(var(--theme-primary))] rounded-full z-10 shadow-[0_0_10px_var(--theme-primary-glow)]" />
                   )}
                   <div className={`smart-glass border p-5 rounded-[2.2rem] flex items-center justify-between transition-all ${
@@ -232,9 +228,9 @@ export default function HomeTab({
                         </p>
                         <div className="flex items-center gap-2 mt-2">
                           <span className={`text-[9px] font-black uppercase tracking-tighter ${
-                            isReadyLocal ? 'text-[rgb(var(--theme-primary))]' : 'opacity-40'
+                            node.isReady ? 'text-[rgb(var(--theme-primary))]' : 'opacity-40'
                           }`}>
-                            {isReadyLocal ? 'Sync Required' : 'Secured'}
+                            {node.isReady ? 'Sync Required' : 'Secured'}
                           </span>
                           {node.streakCount > 1 && (
                             <span className="text-[9px] font-bold opacity-40">

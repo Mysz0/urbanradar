@@ -32,8 +32,6 @@ export function useSpots(user, showToast, totalPoints, setTotalPoints, fetchLead
 
     const fetchSpotData = async () => {
       try {
-        // 1. Parallel fetch for performance
-        // We fetch ALL votes globally to ensure the count is the "Source of Truth"
         const [spotsRes, allVotesRes, myVotesRes] = await Promise.all([
           supabase.from('spots').select('*'),
           supabase.from('spot_votes').select('spot_id, vote_type'),
@@ -42,7 +40,6 @@ export function useSpots(user, showToast, totalPoints, setTotalPoints, fetchLead
 
         if (spotsRes.error) throw spotsRes.error;
 
-        // 2. Aggregate all vote counts from the votes table
         const globalCounts = (allVotesRes.data || []).reduce((acc, v) => {
           if (!acc[v.spot_id]) acc[v.spot_id] = { up: 0, down: 0 };
           if (v.vote_type === 'up') acc[v.spot_id].up++;
@@ -50,13 +47,11 @@ export function useSpots(user, showToast, totalPoints, setTotalPoints, fetchLead
           return acc;
         }, {});
 
-        // 3. Create lookup for current user's personal vote
         const voteLookup = (myVotesRes.data || []).reduce((acc, v) => ({ 
           ...acc, 
           [v.spot_id]: v.vote_type 
         }), {});
 
-        // 4. Merge data: We use globalCounts to override potential stale data in 'spots' table
         const mergedSpots = (spotsRes.data || []).reduce((acc, s) => {
           const counts = globalCounts[s.id] || { up: 0, down: 0 };
           acc[s.id] = { 
@@ -70,7 +65,6 @@ export function useSpots(user, showToast, totalPoints, setTotalPoints, fetchLead
 
         setSpots(mergedSpots);
 
-        // 5. Fetch user claims/streaks
         const { data: userClaimData } = await supabase
           .from('user_spots')
           .select('*')
@@ -87,7 +81,6 @@ export function useSpots(user, showToast, totalPoints, setTotalPoints, fetchLead
           setSpotStreaks(streakMap);
         }
 
-        // 6. XP Boosts
         const { data: activeInv } = await supabase
           .from('user_inventory')
           .select('*, shop_items(*)')
@@ -105,6 +98,48 @@ export function useSpots(user, showToast, totalPoints, setTotalPoints, fetchLead
     };
 
     fetchSpotData();
+
+    // --- REALTIME SUBSCRIPTION START ---
+    const channel = supabase
+      .channel('public:spots')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'spots' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setSpots((prev) => ({
+              ...prev,
+              [payload.new.id]: { 
+                ...payload.new, 
+                upvotes: 0, 
+                downvotes: 0, 
+                myVote: null 
+              }
+            }));
+          } else if (payload.eventType === 'UPDATE') {
+            setSpots((prev) => ({
+              ...prev,
+              [payload.new.id]: { 
+                ...prev[payload.new.id], 
+                ...payload.new 
+              }
+            }));
+          } else if (payload.eventType === 'DELETE') {
+            setSpots((prev) => {
+              const next = { ...prev };
+              delete next[payload.old.id];
+              return next;
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // --- REALTIME SUBSCRIPTION END ---
+
   }, [user]);
 
   const claimSpot = async (input, customRadius) => {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { getDistance } from '../utils/geoUtils'; 
 import { supabase } from '../supabase';
 
@@ -7,11 +7,61 @@ export function useGeoLocation(user, spots, customRadius, spotStreaks = {}, clai
   const [proximity, setProximity] = useState({ isNear: false, canClaim: false, spotId: null });
   const [radiusBonus, setRadiusBonus] = useState(0);
   
-  // Use a ref for spots to avoid re-triggering the watch unnecessarily 
-  // if spots object reference changes but content doesn't
+  // Ref helps prevent the geolocation watch from restarting constantly
   const spotsRef = useRef(spots);
   useEffect(() => { spotsRef.current = spots; }, [spots]);
 
+  // --- 1. CORE CALCULATION LOGIC ---
+  const checkProximity = useCallback((coords) => {
+    if (!coords) return;
+
+    const DETECTION_RANGE = (customRadius || 250) + radiusBonus; 
+    const CLAIM_RANGE = (claimRadius || 20) + radiusBonus; 
+    const todayStr = new Date().toDateString();
+
+    let readySpot = null;
+    let closestReadyDist = Infinity;
+    let securedSpot = null;
+    let closestSecuredDist = Infinity;
+    let foundClaimable = false;
+
+    // We use the most recent spots data
+    const currentSpots = spots || {};
+
+    Object.values(currentSpots).forEach(spot => {
+      const dist = getDistance(coords.lat, coords.lng, spot.lat, spot.lng);
+      const streakInfo = spotStreaks[spot.id];
+      const isLoggedToday = streakInfo?.last_claim && 
+                           new Date(streakInfo.last_claim).toDateString() === todayStr;
+
+      if (dist <= DETECTION_RANGE) {
+        if (!isLoggedToday) {
+          if (dist < closestReadyDist) {
+            closestReadyDist = dist;
+            readySpot = spot.id;
+          }
+        } else {
+          if (dist < closestSecuredDist) {
+            closestSecuredDist = dist;
+            securedSpot = spot.id;
+          }
+        }
+      }
+
+      if (dist <= CLAIM_RANGE && !isLoggedToday) {
+        foundClaimable = true;
+      }
+    });
+
+    const activeId = readySpot || securedSpot;
+    setProximity({ 
+      isNear: !!activeId, 
+      canClaim: foundClaimable, 
+      spotId: activeId 
+    });
+  }, [spots, customRadius, claimRadius, spotStreaks, radiusBonus]);
+
+  // --- 2. RADIUS UPGRADES ---
   useEffect(() => {
     if (!user) return;
 
@@ -34,7 +84,7 @@ export function useGeoLocation(user, spots, customRadius, spotStreaks = {}, clai
     fetchUpgrades();
 
     const subscription = supabase
-      .channel('inventory_changes')
+      .channel('inventory_geo')
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -43,81 +93,38 @@ export function useGeoLocation(user, spots, customRadius, spotStreaks = {}, clai
       }, () => fetchUpgrades())
       .subscribe();
 
-    return () => { subscription.unsubscribe(); };
+    return () => { supabase.removeChannel(subscription); };
   }, [user]);
 
+  // --- 3. GEOLOCATION WATCHER ---
   useEffect(() => {
-    const DETECTION_RANGE = (customRadius || 250) + radiusBonus; 
-    const CLAIM_RANGE = (claimRadius || 20) + radiusBonus; 
-    const todayStr = new Date().toDateString();
-
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
-        // Shake-proofing with higher precision
         const coords = { 
           lat: pos.coords.latitude, 
           lng: pos.coords.longitude 
         };
-
-        // Update location state immediately
         setUserLocation(coords);
-
-        // Proximity calculation
-        let readySpot = null;
-        let closestReadyDist = Infinity;
-        let securedSpot = null;
-        let closestSecuredDist = Infinity;
-        let foundClaimable = false;
-
-        const currentSpots = spotsRef.current || {};
-
-        Object.values(currentSpots).forEach(spot => {
-          const dist = getDistance(coords.lat, coords.lng, spot.lat, spot.lng);
-          const streakInfo = spotStreaks[spot.id];
-          const isLoggedToday = streakInfo?.last_claim && 
-                               new Date(streakInfo.last_claim).toDateString() === todayStr;
-
-          if (dist <= DETECTION_RANGE) {
-            if (!isLoggedToday) {
-              if (dist < closestReadyDist) {
-                closestReadyDist = dist;
-                readySpot = spot.id;
-              }
-            } else {
-              if (dist < closestSecuredDist) {
-                closestSecuredDist = dist;
-                securedSpot = spot.id;
-              }
-            }
-          }
-
-          if (dist <= CLAIM_RANGE && !isLoggedToday) {
-            foundClaimable = true;
-          }
-        });
-
-        const activeId = readySpot || securedSpot;
-        setProximity({ 
-          isNear: !!activeId, 
-          canClaim: foundClaimable, 
-          spotId: activeId 
-        });
+        checkProximity(coords); // Run calculation on movement
       },
-      (err) => {
-        // Log instead of error to prevent crashing the UI experience
-        console.warn(`Geolocation error (${err.code}): ${err.message}`);
-      },
+      (err) => console.warn(`Geolocation error: ${err.message}`),
       { 
         enableHighAccuracy: true, 
-        maximumAge: 1000, // Allow 1 second old cache for smoother movement
-        timeout: 10000    // Increased to 10s to give the hardware breathing room
+        maximumAge: 1000, 
+        timeout: 10000 
       }
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
-    // Removed spots from dependency array to prevent watch restart loops
-    // using spotsRef instead inside the callback
-  }, [customRadius, claimRadius, spotStreaks, radiusBonus]);
+  }, [checkProximity]);
+
+  // --- 4. DYNAMIC UPDATE: RE-CALCULATE WHEN SPOTS CHANGE ---
+  // This is the fix for instant updates while standing still
+  useEffect(() => {
+    if (userLocation) {
+      checkProximity(userLocation);
+    }
+  }, [spots, checkProximity, userLocation]);
 
   return { 
     userLocation, 
