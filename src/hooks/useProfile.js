@@ -12,8 +12,8 @@ export function useProfile(user, showToast, fetchLeaderboard) {
   const [claimRadius, setClaimRadius] = useState(20);
   const [visitData, setVisitData] = useState({ last_visit: null, streak: 0 });
 
-  // 1. MOVED OUTSIDE: fetchProfile is now accessible to the return object
-  const fetchProfile = useCallback(async () => {
+  // UPDATED: fetchProfile now takes a parameter to decide if it should overwrite the input box
+  const fetchProfile = useCallback(async (isInitial = false) => {
     if (!user) return;
     try {
       let { data: profile } = await supabase
@@ -24,7 +24,12 @@ export function useProfile(user, showToast, fetchLeaderboard) {
 
       if (profile) {
         setUsername(profile.username || '');
-        setTempUsername(profile.username || '');
+        
+        // Only reset the typing box on initial load or explicitly requested sync
+        if (isInitial) {
+          setTempUsername(profile.username || '');
+        }
+
         setUserRole(profile.role || 'player');
         setTotalPoints(profile.total_points || 0);
         setShowEmail(profile.show_email ?? false);
@@ -32,7 +37,6 @@ export function useProfile(user, showToast, fetchLeaderboard) {
         setCustomRadius(profile.custom_radius || 250);
         setClaimRadius(profile.claim_radius || 20);
 
-        // --- STREAK LOGIC ---
         const now = new Date();
         const todayStr = now.toDateString();
         let dbStreak = profile.streak_count || 0;
@@ -67,16 +71,15 @@ export function useProfile(user, showToast, fetchLeaderboard) {
     }
   }, [user, fetchLeaderboard, showToast]);
 
-  // Initial load
+  // Initial load - we pass true to set the tempUsername for the first time
   useEffect(() => {
-    fetchProfile();
+    fetchProfile(true);
   }, [fetchProfile]);
 
   const saveUsername = async () => {
     const cleaned = tempUsername.trim();
     if (cleaned.length < 3) return showToast("Identity too short", "error");
     
-    // FIX: Added error toast for same-name attempt
     if (cleaned === username) {
       return showToast("This is already your current identity!", "error");
     }
@@ -100,6 +103,8 @@ export function useProfile(user, showToast, fetchLeaderboard) {
       setUsername(cleaned);
       setLastChange(now);
       showToast("Identity Synchronized");
+      // Re-sync profile but don't overwrite the box since user just typed it
+      fetchProfile(false); 
       if (fetchLeaderboard) fetchLeaderboard();
     }
   };
@@ -132,9 +137,10 @@ export function useProfile(user, showToast, fetchLeaderboard) {
   const resetTimer = async () => {
     if (!user) return;
     await supabase.from('profiles').update({ last_username_change: null }).eq('id', user.id);
-    // Explicitly update local state so ProfileTab reacts instantly
     setLastChange(null);
     showToast("Cooldown Bypassed");
+    // Ensure all profile states are fresh
+    fetchProfile(false);
   };
 
   return {
@@ -142,6 +148,6 @@ export function useProfile(user, showToast, fetchLeaderboard) {
     userRole, totalPoints, setTotalPoints,
     showEmail, lastChange, customRadius, claimRadius, visitData,
     saveUsername, updateRadius, updateClaimRadius, toggleEmailVisibility, resetTimer,
-    fetchProfile // Now properly returned!
+    fetchProfile
   };
 }
