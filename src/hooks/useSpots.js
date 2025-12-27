@@ -32,9 +32,45 @@ export function useSpots(user, showToast, totalPoints, setTotalPoints, fetchLead
 
     const fetchSpotData = async () => {
       try {
-        const { data: dbSpots } = await supabase.from('spots').select('*');
-        setSpots(dbSpots ? dbSpots.reduce((acc, s) => ({ ...acc, [s.id]: s }), {}) : {});
+        // 1. Parallel fetch for performance
+        // We fetch ALL votes globally to ensure the count is the "Source of Truth"
+        const [spotsRes, allVotesRes, myVotesRes] = await Promise.all([
+          supabase.from('spots').select('*'),
+          supabase.from('spot_votes').select('spot_id, vote_type'),
+          supabase.from('spot_votes').select('spot_id, vote_type').eq('user_id', user.id)
+        ]);
 
+        if (spotsRes.error) throw spotsRes.error;
+
+        // 2. Aggregate all vote counts from the votes table
+        const globalCounts = (allVotesRes.data || []).reduce((acc, v) => {
+          if (!acc[v.spot_id]) acc[v.spot_id] = { up: 0, down: 0 };
+          if (v.vote_type === 'up') acc[v.spot_id].up++;
+          if (v.vote_type === 'down') acc[v.spot_id].down++;
+          return acc;
+        }, {});
+
+        // 3. Create lookup for current user's personal vote
+        const voteLookup = (myVotesRes.data || []).reduce((acc, v) => ({ 
+          ...acc, 
+          [v.spot_id]: v.vote_type 
+        }), {});
+
+        // 4. Merge data: We use globalCounts to override potential stale data in 'spots' table
+        const mergedSpots = (spotsRes.data || []).reduce((acc, s) => {
+          const counts = globalCounts[s.id] || { up: 0, down: 0 };
+          acc[s.id] = { 
+            ...s, 
+            upvotes: counts.up,
+            downvotes: counts.down,
+            myVote: voteLookup[s.id] || null 
+          };
+          return acc;
+        }, {});
+
+        setSpots(mergedSpots);
+
+        // 5. Fetch user claims/streaks
         const { data: userClaimData } = await supabase
           .from('user_spots')
           .select('*')
@@ -51,14 +87,14 @@ export function useSpots(user, showToast, totalPoints, setTotalPoints, fetchLead
           setSpotStreaks(streakMap);
         }
 
-        // Fetch active XP boosts
+        // 6. XP Boosts
         const { data: activeInv } = await supabase
           .from('user_inventory')
           .select('*, shop_items(*)')
           .eq('user_id', user.id)
           .eq('is_active', true)
           .eq('shop_items.category', 'boost')
-          .single();
+          .maybeSingle();
 
         if (activeInv && activeInv.shop_items) {
           setActiveBoost(activeInv.shop_items.effect_value);
@@ -70,31 +106,6 @@ export function useSpots(user, showToast, totalPoints, setTotalPoints, fetchLead
 
     fetchSpotData();
   }, [user]);
-
-  const handleVote = async (spotId, columnName) => {
-    if (!user) return;
-
-    setSpots(prev => ({
-      ...prev,
-      [spotId]: {
-        ...prev[spotId],
-        [columnName]: (prev[spotId][columnName] || 0) + 1
-      }
-    }));
-
-    const { error } = await supabase.rpc('increment_vote', {
-      row_id: spotId,
-      column_name: columnName
-    });
-
-    if (error) {
-      console.error("Vote failed:", error);
-      const { data } = await supabase.from('spots').select('*').eq('id', spotId).single();
-      if (data) {
-        setSpots(prev => ({ ...prev, [spotId]: data }));
-      }
-    }
-  };
 
   const claimSpot = async (input, customRadius) => {
     if (!user) return;
@@ -126,9 +137,7 @@ export function useSpots(user, showToast, totalPoints, setTotalPoints, fetchLead
       const nextStreak = (Number(info.streak) || 0) + 1;
       const baseMultiplier = getMultiplier(nextStreak);
       
-      // APPLY STORE BOOSTS (XP Overdrive)
       const finalMultiplier = activeBoost ? baseMultiplier * activeBoost : baseMultiplier;
-      
       const earned = Math.floor((spot.points || 0) * finalMultiplier);
 
       totalEarned += earned;
@@ -209,7 +218,6 @@ export function useSpots(user, showToast, totalPoints, setTotalPoints, fetchLead
     setSpotStreaks,
     claimSpot,
     removeSpot,
-    handleVote,
     getMultiplier
   };
 }

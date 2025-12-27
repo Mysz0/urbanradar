@@ -59,8 +59,8 @@ export function useGameLogic(user, showToast) {
     showToast
   );
 
-  // Initialize Voting
-  const { handleVote } = useVotes(user, spots.setSpots);
+  // --- UPDATED: Initialize Voting with unlockedSpots check ---
+  const { handleVote } = useVotes(user, spots.setSpots, spots.unlockedSpots);
 
   // Initialize Admin
   const admin = useAdmin(
@@ -82,10 +82,9 @@ export function useGameLogic(user, showToast) {
   return { 
     ...profile, 
     ...spots, 
-    ...admin,
-    ...store, 
-    handleVote, 
-    leaderboard, 
-    fetchLeaderboard 
+    ...admin, 
+    ...store,
+    handleVote, // Return handleVote explicitly if needed, or it might be covered by spread
+    leaderboard
   };
 }

@@ -16,8 +16,6 @@ function MapRecenter({ location, isFollowing }) {
   
   useEffect(() => {
     if (!location || !isFollowing) return;
-    
-    // Using panTo for a smoother "gliding" feel instead of setView
     map.panTo([location.lat, location.lng], {
       animate: true,
       duration: 1.0 
@@ -103,13 +101,12 @@ export default function ExploreTab({
     return null;
   };
 
-  // FIX: Explicitly watch lat/lng inside useMemo
   const stableUserLoc = useMemo(() => {
     if (!userLocation?.lat || !userLocation?.lng) return null;
     return { lat: userLocation.lat, lng: userLocation.lng };
   }, [userLocation?.lat, userLocation?.lng]);
 
-  const fallbackCenter = [50.0121, 22.6742]; // Jarosław
+  const fallbackCenter = [50.0121, 22.6742];
 
   const animatedUserIcon = useMemo(() => {
     const size = 60;
@@ -199,17 +196,60 @@ export default function ExploreTab({
 
         {Object.values(spots).map((spot) => {
           const isUnlocked = unlockedSpots.includes(spot.id);
+          const hasUpvoted = spot.myVote === 'up';
+          const hasDownvoted = spot.myVote === 'down';
+
           return (
             <Marker key={spot.id} position={[spot.lat, spot.lng]} icon={spotIcon(isUnlocked)}>
               <Popup closeButton={false} offset={[0, -5]}>
-                <div className="smart-glass p-3 rounded-2xl border border-white/10 min-w-[180px] shadow-2xl">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <p className={`text-[9px] font-black uppercase tracking-widest ${isUnlocked ? 'text-[rgb(var(--theme-primary))]' : 'text-zinc-500'}`}>
-                      {isUnlocked ? 'CLAIMED' : 'LOCKED'}
+                {/* Reduced padding (p-1.5) and narrowed width to make it compact */}
+                <div className="smart-glass p-1.5 px-2 rounded-xl border border-white/10 min-w-[140px] shadow-2xl overflow-hidden">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <p className={`text-[7px] font-black uppercase tracking-[0.2em] ${isUnlocked ? 'text-[rgb(var(--theme-primary))]' : 'text-zinc-500'}`}>
+                      {isUnlocked ? 'UNLOCKED' : 'LOCKED'}
                     </p>
-                    {isUnlocked ? <CheckCircle2 size={12} className="text-[rgb(var(--theme-primary))]" /> : <Lock size={12} className="text-zinc-500" />}
+                    {isUnlocked ? <CheckCircle2 size={8} className="text-[rgb(var(--theme-primary))]" /> : <Lock size={8} className="text-zinc-500" />}
                   </div>
-                  <p className="text-xs font-bold text-white truncate mb-3">{spot.name}</p>
+                  
+                  <p className={`text-[10px] font-bold truncate mb-1.5 ${isDark ? 'text-white' : 'text-zinc-900'}`}>{spot.name}</p>
+
+                  <div className={`flex items-center justify-between pt-1.5 border-t ${isDark ? 'border-white/5' : 'border-zinc-200'}`}>
+                    <div className="flex items-center gap-1">
+                      <button 
+                        disabled={!isUnlocked}
+                        onClick={() => isUnlocked && onVote(spot.id, 'upvotes')}
+                        className={`p-1 rounded-md transition-all duration-300 ${
+                          isUnlocked 
+                            ? hasUpvoted 
+                              ? 'bg-[rgb(var(--theme-primary))] text-white shadow-[0_0_10px_rgba(var(--theme-primary),0.5)] scale-110' 
+                              : 'hover:bg-[rgb(var(--theme-primary))]/20 text-[rgb(var(--theme-primary))]' 
+                            : 'opacity-10 grayscale cursor-not-allowed'
+                        }`}
+                      >
+                        <ChevronUp size={12} strokeWidth={hasUpvoted ? 4 : 2} />
+                      </button>
+                      <button 
+                        disabled={!isUnlocked}
+                        onClick={() => isUnlocked && onVote(spot.id, 'downvotes')}
+                        className={`p-1 rounded-md transition-all duration-300 ${
+                          isUnlocked 
+                            ? hasDownvoted 
+                              ? 'bg-red-500 text-white shadow-[0_0_10px_rgba(239,68,68,0.5)] scale-110' 
+                              : 'hover:bg-red-500/20 text-red-500' 
+                            : 'opacity-10 grayscale cursor-not-allowed'
+                        }`}
+                      >
+                        <ChevronDown size={12} strokeWidth={hasDownvoted ? 4 : 2} />
+                      </button>
+                    </div>
+                    
+                    <div className="text-right leading-none">
+                      <p className={`text-[11px] font-black tracking-tighter ${isUnlocked ? (isDark ? 'text-white' : 'text-zinc-900') : 'opacity-20'}`}>
+                        {((spot.upvotes || 0) - (spot.downvotes || 0)).toLocaleString()}
+                      </p>
+                      <p className="text-[5px] uppercase font-black opacity-30">Rating</p>
+                    </div>
+                  </div>
                 </div>
               </Popup>
             </Marker>

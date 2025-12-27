@@ -93,14 +93,27 @@ body {
   isolation: isolate;
 }
 
-.smart-glass p, .smart-glass span, .smart-glass div {
-  color: inherit; /* Forces nested elements to respect the glass container's color */
-}
-
 .dark .smart-glass {
   background: var(--theme-bg-glass-dark);
   border-color: rgba(255, 255, 255, 0.08);
   color: var(--theme-text-title-dark) !important; 
+}
+
+/* --- LEAFLET POPUP CLEANUP (Fixes the White Box) --- */
+.leaflet-popup-content-wrapper {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+.leaflet-popup-tip-container {
+  display: none !important; /* Removes the white triangle/arrow */
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  width: auto !important;
 }
 
 /* --- PERIMETER ORBIT ANIMATION --- */
@@ -152,9 +165,6 @@ body {
   opacity: 1;
 }
 
-[data-theme='koi'] .node-card-animate:hover::before { animation-duration: 2s; }
-[data-theme='sakura'] .node-card-animate:hover::before { animation-duration: 6s; }
-
 @keyframes borderOrbit {
   from { offset-distance: 0%; }
   to { offset-distance: 100%; }
@@ -171,16 +181,6 @@ body {
 .marker-pin-spot.unlocked .dot { 
   background: rgb(var(--theme-primary)) !important; 
   box-shadow: 0 0 10px rgb(var(--theme-primary)); 
-}
-
-/* Sakura Floating Animation */
-[data-theme='sakura'] .marker-pin-spot.unlocked .dot {
-  animation: sakuraFloat 3s ease-in-out infinite !important;
-}
-
-@keyframes sakuraFloat {
-  0%, 100% { transform: translateY(0); filter: brightness(1); }
-  50% { transform: translateY(-5px); filter: brightness(1.2); }
 }
 
 /* --- RADAR SYSTEM --- */
