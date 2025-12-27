@@ -20,17 +20,33 @@ export function useAdmin(user, userRole, showToast, setSpots, setSpotStreaks, to
     { label: '500m', val: 500 },
   ];
 
+  // FIX: Added actual database logic to reset the name change cooldown
   const resetTimer = async () => {
-    showToast("Cooldowns Reset");
+    if (!user || !isAdmin) return;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ last_username_change: null })
+        .eq('id', user.id);
+
+      if (error) throw error;
+      
+      showToast("Username Cooldown Reset!", "success");
+    } catch (err) {
+      console.error("Reset Timer Error:", err);
+      showToast("Failed to reset cooldown", "error");
+    }
   };
 
   const addNewSpot = async (s) => {
     if (!isAdmin) return;
-    const id = s.name.toLowerCase().replace(/\s+/g, '-');
-    const { error } = await supabase.from('spots').insert([{ id, ...s }]);
+    // Using the ID passed from AdminTab (random hex) or fallback to slug
+    const id = s.id || s.name.toLowerCase().replace(/\s+/g, '-');
+    const { error } = await supabase.from('spots').insert([{ ...s, id }]);
     
     if (!error) {
-      setSpots(prev => ({ ...prev, [id]: { id, ...s } }));
+      setSpots(prev => ({ ...prev, [id]: { ...s, id } }));
       showToast("Deployed!");
     } else {
       showToast("Deployment Failed", "error");
