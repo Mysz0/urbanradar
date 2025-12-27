@@ -13,24 +13,16 @@ function ZoomHandler({ setZoom }) {
 
 function MapRecenter({ location, isFollowing }) {
   const map = useMap();
-  const lastPos = useRef(null);
   
   useEffect(() => {
     if (!location || !isFollowing) return;
     
-    // Only recenter if position changed significantly (more than ~1 meter)
-    const hasMovedSignificantly = !lastPos.current || 
-      Math.abs(lastPos.current.lat - location.lat) > 0.00001 ||
-      Math.abs(lastPos.current.lng - location.lng) > 0.00001;
-    
-    if (hasMovedSignificantly) {
-      map.setView([location.lat, location.lng], map.getZoom(), {
-        animate: true,
-        duration: 0.5
-      });
-      lastPos.current = location;
-    }
-  }, [location, map, isFollowing]);
+    // Using panTo for a smoother "gliding" feel instead of setView
+    map.panTo([location.lat, location.lng], {
+      animate: true,
+      duration: 1.0 
+    });
+  }, [location, isFollowing, map]);
   
   return null;
 }
@@ -57,9 +49,7 @@ function MapInterface({ stableUserLoc, claimRadius, customRadius, radiusBonus, o
             onClick={(e) => {
               e.preventDefault();
               if (stableUserLoc) {
-                map.flyTo([stableUserLoc.lat, stableUserLoc.lng], 16, {
-                  duration: 1
-                });
+                map.flyTo([stableUserLoc.lat, stableUserLoc.lng], 16, { duration: 1 });
                 onRecenter();
               }
             }}
@@ -102,25 +92,24 @@ export default function ExploreTab({
   radiusBonus = 0,
   onVote 
 }) {
-  const [mapRef, setMapRef] = useState(null);
   const [zoom, setZoom] = useState(16);
   const [isFollowing, setIsFollowing] = useState(true);
 
-  // Detect manual map movement to disable auto-follow
   const MapDragHandler = () => {
-    const map = useMapEvents({
+    useMapEvents({
       dragstart: () => setIsFollowing(false),
       zoomstart: () => setIsFollowing(false),
     });
     return null;
   };
 
+  // FIX: Explicitly watch lat/lng inside useMemo
   const stableUserLoc = useMemo(() => {
-    if (!userLocation?.lat) return null;
+    if (!userLocation?.lat || !userLocation?.lng) return null;
     return { lat: userLocation.lat, lng: userLocation.lng };
   }, [userLocation?.lat, userLocation?.lng]);
 
-  const fallbackCenter = [50.0121, 22.6742];
+  const fallbackCenter = [50.0121, 22.6742]; // Jarosław
 
   const animatedUserIcon = useMemo(() => {
     const size = 60;
@@ -152,7 +141,6 @@ export default function ExploreTab({
         center={stableUserLoc ? [stableUserLoc.lat, stableUserLoc.lng] : fallbackCenter} 
         zoom={16} 
         zoomControl={false} 
-        ref={setMapRef}
       >
         <ZoomHandler setZoom={setZoom} />
         <MapInvalidator />
@@ -164,9 +152,7 @@ export default function ExploreTab({
           url={isDark 
             ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" 
             : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"}
-          updateWhenIdle={false}
-          updateWhenZooming={false}
-          keepBuffer={2}
+          keepBuffer={3}
         />
 
         <MapInterface 
@@ -178,10 +164,8 @@ export default function ExploreTab({
         />
 
         {stableUserLoc && (
-          <>
-            {/* Claim Range Circle (inner, smaller) */}
+          <React.Fragment key={`user-loc-${stableUserLoc.lat}-${stableUserLoc.lng}`}>
             <Circle 
-              key={`claim-${stableUserLoc.lat}-${stableUserLoc.lng}-${radiusBonus}`}
               center={[stableUserLoc.lat, stableUserLoc.lng]}
               radius={(claimRadius || 20) + radiusBonus}
               pathOptions={{
@@ -193,9 +177,7 @@ export default function ExploreTab({
               }}
             />
             
-            {/* Scan Range Circle (outer, larger) */}
             <Circle 
-              key={`scan-${stableUserLoc.lat}-${stableUserLoc.lng}-${radiusBonus}`}
               center={[stableUserLoc.lat, stableUserLoc.lng]}
               radius={(customRadius || 250) + radiusBonus}
               pathOptions={{
@@ -212,7 +194,7 @@ export default function ExploreTab({
               icon={animatedUserIcon} 
               zIndexOffset={1000} 
             />
-          </>
+          </React.Fragment>
         )}
 
         {Object.values(spots).map((spot) => {
@@ -228,14 +210,6 @@ export default function ExploreTab({
                     {isUnlocked ? <CheckCircle2 size={12} className="text-[rgb(var(--theme-primary))]" /> : <Lock size={12} className="text-zinc-500" />}
                   </div>
                   <p className="text-xs font-bold text-white truncate mb-3">{spot.name}</p>
-                  <div className="flex items-center gap-2 border-t border-white/5 pt-3">
-                    <button onClick={(e) => { e.stopPropagation(); onVote?.(spot.id, 'upvotes'); }} className="flex-1 flex items-center justify-center py-1.5 rounded-xl bg-white/5 hover:bg-emerald-500/20 hover:text-emerald-400 transition-colors">
-                      <ChevronUp size={18} /><span className="text-[10px] font-bold ml-1">{spot.upvotes || 0}</span>
-                    </button>
-                    <button onClick={(e) => { e.stopPropagation(); onVote?.(spot.id, 'downvotes'); }} className="flex-1 flex items-center justify-center py-1.5 rounded-xl bg-white/5 hover:bg-rose-500/20 hover:text-rose-400 transition-colors">
-                      <ChevronDown size={18} /><span className="text-[10px] font-bold ml-1">{spot.downvotes || 0}</span>
-                    </button>
-                  </div>
                 </div>
               </Popup>
             </Marker>
@@ -243,7 +217,6 @@ export default function ExploreTab({
         })}
       </MapContainer>
 
-      {/* Follow Mode Indicator */}
       {!isFollowing && stableUserLoc && (
         <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none">
           <div className="smart-glass px-4 py-2 rounded-full border border-white/10 shadow-lg">

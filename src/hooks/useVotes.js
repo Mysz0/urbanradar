@@ -5,7 +5,9 @@ export function useVotes(user, setSpots) {
   const handleVote = async (spotId, voteType) => {
     if (!user) return;
 
-    // Ensure voteType matches what you send from the UI ('upvotes' or 'downvotes')
+    // Map incoming UI types to match DB constraints ('up' or 'down')
+    const dbVoteType = voteType === 'upvotes' ? 'up' : 'down';
+
     try {
       // 1. Check if vote already exists
       const { data: existingVote, error: fetchError } = await supabase
@@ -13,17 +15,17 @@ export function useVotes(user, setSpots) {
         .select('*')
         .eq('user_id', user.id)
         .eq('spot_id', spotId)
-        .maybeSingle(); // Use maybeSingle to avoid 406 errors if not found
+        .maybeSingle();
 
       if (existingVote) {
-        if (existingVote.vote_type === voteType) {
+        if (existingVote.vote_type === dbVoteType) {
           // Remove vote if clicking the same button again
           await supabase.from('spot_votes').delete().eq('id', existingVote.id);
         } else {
           // Change vote type (e.g., from up to down)
           await supabase
             .from('spot_votes')
-            .update({ vote_type: voteType })
+            .update({ vote_type: dbVoteType })
             .eq('id', existingVote.id);
         }
       } else {
@@ -31,24 +33,24 @@ export function useVotes(user, setSpots) {
         await supabase.from('spot_votes').insert({
           user_id: user.id,
           spot_id: spotId,
-          vote_type: voteType
+          vote_type: dbVoteType
         });
       }
 
-      // 2. Fetch fresh counts from the database
+      // 2. Fetch fresh counts from the database using correct strings 'up'/'down'
       const { count: upCount } = await supabase
         .from('spot_votes')
         .select('*', { count: 'exact', head: true })
         .eq('spot_id', spotId)
-        .eq('vote_type', 'upvotes');
+        .eq('vote_type', 'up');
 
       const { count: downCount } = await supabase
         .from('spot_votes')
         .select('*', { count: 'exact', head: true })
         .eq('spot_id', spotId)
-        .eq('vote_type', 'downvotes');
+        .eq('vote_type', 'down');
 
-      // 3. Update the spots table directly (Optional but recommended so counts are persistent)
+      // 3. Update the spots table directly
       await supabase
         .from('spots')
         .update({ 
@@ -59,6 +61,17 @@ export function useVotes(user, setSpots) {
 
       // 4. Update local state for immediate UI feedback
       setSpots(prev => {
+        // If spots is an array (common in useSpots), we need to handle it differently 
+        // than if it's an object keyed by spotId. Adjusting for standard array state:
+        if (Array.isArray(prev)) {
+          return prev.map(spot => 
+            spot.id === spotId 
+              ? { ...spot, upvotes: upCount || 0, downvotes: downCount || 0 }
+              : spot
+          );
+        }
+        
+        // If it is an object keyed by ID:
         if (!prev[spotId]) return prev;
         return {
           ...prev,
