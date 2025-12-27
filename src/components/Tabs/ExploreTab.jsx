@@ -91,7 +91,8 @@ export default function ExploreTab({
   onVote 
 }) {
   const [zoom, setZoom] = useState(16);
-  const [isFollowing, setIsFollowing] = useState(true);
+  // Only start following if we actually have a location
+  const [isFollowing, setIsFollowing] = useState(!!userLocation);
 
   const MapDragHandler = () => {
     useMapEvents({
@@ -106,7 +107,8 @@ export default function ExploreTab({
     return { lat: userLocation.lat, lng: userLocation.lng };
   }, [userLocation?.lat, userLocation?.lng]);
 
-  const fallbackCenter = [50.0121, 22.6742];
+  // Neutral World View coordinates
+  const fallbackCenter = [20, 0];
 
   const animatedUserIcon = useMemo(() => {
     const size = 60;
@@ -136,7 +138,7 @@ export default function ExploreTab({
     }`}>
       <MapContainer 
         center={stableUserLoc ? [stableUserLoc.lat, stableUserLoc.lng] : fallbackCenter} 
-        zoom={16} 
+        zoom={stableUserLoc ? 16 : 2} 
         zoomControl={false} 
       >
         <ZoomHandler setZoom={setZoom} />
@@ -202,7 +204,6 @@ export default function ExploreTab({
           return (
             <Marker key={spot.id} position={[spot.lat, spot.lng]} icon={spotIcon(isUnlocked)}>
               <Popup closeButton={false} offset={[0, -5]}>
-                {/* Reduced padding (p-1.5) and narrowed width to make it compact */}
                 <div className="smart-glass p-1.5 px-2 rounded-xl border border-white/10 min-w-[140px] shadow-2xl overflow-hidden">
                   <div className="flex items-center justify-between mb-0.5">
                     <p className={`text-[7px] font-black uppercase tracking-[0.2em] ${isUnlocked ? 'text-[rgb(var(--theme-primary))]' : 'text-zinc-500'}`}>
