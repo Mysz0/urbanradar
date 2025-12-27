@@ -17,17 +17,39 @@ export function useGeoLocation(user, spots, customRadius, spotStreaks = {}, clai
         .from('user_inventory')
         .select('*, shop_items(*)')
         .eq('user_id', user.id)
-        .eq('is_active', true)
-        .eq('shop_items.category', 'upgrade');
+        .eq('is_active', true);
 
       if (data) {
-        // Sum up all active radius bonuses
-        const totalBonus = data.reduce((acc, inv) => acc + (inv.shop_items.effect_value || 0), 0);
+        // Filter for radius boost items (icon_name = 'Maximize')
+        const radiusBoosts = data.filter(inv => inv.shop_items?.icon_name === 'Maximize');
+        
+        // Sum up all active radius bonuses (use effect_value or bonus_value or default 30)
+        const totalBonus = radiusBoosts.reduce((acc, inv) => {
+          return acc + (inv.shop_items?.effect_value || inv.shop_items?.bonus_value || 30);
+        }, 0);
+        
         setRadiusBonus(totalBonus);
       }
     };
 
     fetchUpgrades();
+
+    // Set up real-time subscription to update when boosts activate/expire
+    const subscription = supabase
+      .channel('inventory_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'user_inventory',
+        filter: `user_id=eq.${user.id}`
+      }, () => {
+        fetchUpgrades();
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [user]);
 
   useEffect(() => {
@@ -51,7 +73,6 @@ export function useGeoLocation(user, spots, customRadius, spotStreaks = {}, clai
         
         let securedSpot = null;
         let closestSecuredDist = Infinity;
-
         let foundClaimable = false;
 
         Object.values(spots).forEach(spot => {
@@ -81,7 +102,6 @@ export function useGeoLocation(user, spots, customRadius, spotStreaks = {}, clai
         });
 
         const activeId = readySpot || securedSpot;
-
         setProximity({ 
           isNear: !!activeId, 
           canClaim: foundClaimable, 
@@ -105,6 +125,6 @@ export function useGeoLocation(user, spots, customRadius, spotStreaks = {}, clai
     isNearSpot: proximity.isNear, 
     canClaim: proximity.canClaim, 
     activeSpotId: proximity.spotId,
-    radiusBonus // Exporting this so you can show the boosted range on the UI/Map if needed
+    radiusBonus // Exporting this so you can show the boosted range on the UI/Map
   };
 }
