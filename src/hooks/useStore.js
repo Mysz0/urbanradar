@@ -106,14 +106,15 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
   };
 
   const activateItem = async (inventoryId) => {
-    if (!user || loading) return; // Locked while loading to prevent spam
+    if (!user || loading) return;
     
     const itemToActivate = inventory.find(inv => inv.id === inventoryId);
     if (!itemToActivate || itemToActivate.is_active) return;
 
-    setLoading(true); // Lock the UI immediately
+    setLoading(true);
 
     try {
+      // Find if there is ALREADY an active row for this item type
       const activeRow = inventory.find(
         inv => inv.item_id === itemToActivate.item_id && inv.is_active
       );
@@ -121,7 +122,8 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
       const boostDurationMs = itemToActivate.shop_items.duration_hours * 60 * 60 * 1000;
 
       if (activeRow) {
-        // CASE: Add time to existing active boost
+        // --- STACKING TIME ---
+        // Add the new boost duration to the current active row's time
         const currentActivation = new Date(activeRow.activated_at).getTime();
         const newActivationDate = new Date(currentActivation + boostDurationMs);
 
@@ -130,7 +132,7 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
           .update({ activated_at: newActivationDate.toISOString() })
           .eq('id', activeRow.id);
 
-        // Deduct from the inventory stack
+        // Remove 1 from the inventory stack
         if (itemToActivate.quantity > 1) {
           await supabase.from('user_inventory')
             .update({ quantity: itemToActivate.quantity - 1 })
@@ -140,9 +142,9 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
         }
         showToast(`${itemToActivate.shop_items.name} Extended!`, "success");
       } else {
-        // CASE: First time activation
+        // --- FIRST ACTIVATION ---
         if (itemToActivate.quantity > 1) {
-          // Take one from stack, create new active row
+          // If a stack exists, keep the stack but create one active row
           await supabase.from('user_inventory')
             .update({ quantity: itemToActivate.quantity - 1 })
             .eq('id', itemToActivate.id);
@@ -155,7 +157,7 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
             activated_at: new Date().toISOString()
           });
         } else {
-          // Single item: activate it
+          // Flip the only existing row to active
           await supabase.from('user_inventory')
             .update({ 
               is_active: true, 
@@ -165,15 +167,13 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
         }
         showToast(`${itemToActivate.shop_items.name} Activated!`, "success");
       }
-      
-      // We must await fetchData to refresh the local inventory state 
-      // before allowing another click
+
       await fetchData(); 
     } catch (err) {
       console.error(err);
       showToast("Activation failed", "error");
     } finally {
-      setLoading(false); // Release the lock
+      setLoading(false);
     }
   };
 
