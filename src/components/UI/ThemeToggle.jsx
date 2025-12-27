@@ -4,6 +4,11 @@ import { Sun, Moon } from 'lucide-react';
 export default function ThemeToggle({ themeMag, setTheme, isDark, isAtTop }) {
   const isMagneticActive = themeMag.position.x !== 0 || themeMag.position.y !== 0;
 
+  // Calculate the travel coordinates based on isAtTop
+  // Mobile values: Absolute (4.05rem, 6.85rem) vs Fixed (1.5rem, 1.5rem)
+  const baseTop = isAtTop ? '4.05rem' : '1.5rem';
+  const baseRight = isAtTop ? '6.85rem' : '1.5rem';
+
   return (
     <button 
       ref={themeMag.ref} 
@@ -18,21 +23,22 @@ export default function ThemeToggle({ themeMag, setTheme, isDark, isAtTop }) {
       } ${isAtTop ? 'absolute' : 'fixed'}`}
       
       style={{ 
-        top: isAtTop ? '4.05rem' : '1.5rem', 
-        right: isAtTop ? '6.85rem' : '1.5rem',
+        // We keep top/right here so it knows its base, 
+        // but we ensure the transition is smooth.
+        top: baseTop, 
+        right: baseRight,
         
-        // This is the floating/traveling part
+        // Combining the magnetic movement
         transform: `translate(${themeMag.position.x}px, ${themeMag.position.y}px)`,
         
-        // --- THE FIX ---
-        // We only animate the transform (the travel) and the colors.
-        // We never animate 'top' or 'right' (the layout position).
+        // We use a slightly faster duration for mobile layout shifts 
+        // but keep the long duration for that 'traveling' feel.
         transition: isMagneticActive 
           ? 'none' 
-          : 'transform 0.7s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.5s ease, border-color 0.5s ease, color 0.5s ease, box-shadow 0.5s ease',
-        transitionProperty: isMagneticActive 
-          ? 'none' 
-          : 'transform, background-color, border-color, color, box-shadow'
+          : 'all 0.7s cubic-bezier(0.16, 1, 0.3, 1)',
+        
+        // Force the browser to treat background and layout shifts separately
+        transitionProperty: isMagneticActive ? 'none' : 'top, right, background-color, border-color, color, box-shadow, transform'
       }}
     >
       {isDark ? <Sun size={18}/> : <Moon size={18}/>}
