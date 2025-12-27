@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Flame, Users, MapPin, ChevronUp, ChevronDown } from 'lucide-react';
 
-export default function LeaderboardTab({ leaderboard, username, colors, spots = {} }) {
+export default function LeaderboardTab({ leaderboard, username, colors, spots = {}, isDark }) {
   const [view, setView] = useState('players'); // 'players' or 'nodes'
 
   // Sort nodes by popularity (upvotes - downvotes)
@@ -13,8 +13,8 @@ export default function LeaderboardTab({ leaderboard, username, colors, spots = 
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-24">
-      {/* View Switcher - Updated background to use theme glass */}
-      <div className="flex p-1.5 bg-[var(--theme-bg-glass-light)] dark:bg-white/5 rounded-[2rem] border border-[var(--theme-border-light)] dark:border-white/5 mx-4">
+      {/* View Switcher */}
+      <div className="flex p-1.5 bg-white/5 rounded-[2rem] border border-white/5 mx-4">
         <button
           onClick={() => setView('players')}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[1.6rem] transition-all duration-300 ${
@@ -45,7 +45,9 @@ export default function LeaderboardTab({ leaderboard, username, colors, spots = 
           return (
             <div 
               key={index} 
-              className="node-card-animate group collection-card p-5 rounded-[2.2rem] flex items-center justify-between backdrop-blur-md transition-all duration-500"
+              className={`node-card-animate group collection-card ${colors.card} p-5 rounded-[2.2rem] flex items-center justify-between border backdrop-blur-md transition-all duration-500 ${
+                isCurrentUser ? 'border-[rgb(var(--theme-primary))]/30' : 'border-white/5'
+              }`}
             >
               <div className="flex items-center gap-4">
                 <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-xs transition-all duration-500 group-hover:scale-110 ${
@@ -56,11 +58,10 @@ export default function LeaderboardTab({ leaderboard, username, colors, spots = 
                   {index + 1}
                 </div>
                 <div>
-                  {/* DYNAMIC TEXT COLOR */}
                   <p className={`font-bold text-sm transition-colors ${
                     isCurrentUser 
                       ? 'text-[rgb(var(--theme-primary))]' 
-                      : 'text-[var(--theme-text-title-light)] dark:text-[var(--theme-text-title-dark)]'
+                      : isDark ? 'text-[color:var(--theme-text-title-dark)]' : 'text-[color:var(--theme-text-title-light)]'
                   }`}>
                     @{entry.username} {isCurrentUser && '(YOU)'}
                   </p>
@@ -77,15 +78,14 @@ export default function LeaderboardTab({ leaderboard, username, colors, spots = 
                   </div>
                 )}
                 <div className="text-right min-w-[60px]">
-                  {/* DYNAMIC SCORE COLOR */}
                   <p className={`text-sm font-black tracking-tighter ${
                     isCurrentUser 
                       ? 'text-[rgb(var(--theme-primary))]' 
-                      : 'text-[var(--theme-text-title-light)] dark:text-[var(--theme-text-title-dark)]'
+                      : isDark ? 'text-[color:var(--theme-text-title-dark)]' : 'text-[color:var(--theme-text-title-light)]'
                   }`}>
                     {entry.score.toLocaleString()}
                   </p>
-                  <p className="text-[8px] font-bold opacity-30 uppercase tracking-tighter text-[var(--theme-text-title-light)] dark:text-[var(--theme-text-title-dark)]">Total XP</p>
+                  <p className="text-[8px] font-bold opacity-30 uppercase tracking-tighter">Total XP</p>
                 </div>
               </div>
             </div>
@@ -97,32 +97,33 @@ export default function LeaderboardTab({ leaderboard, username, colors, spots = 
           return (
             <div 
               key={node.id} 
-              className="node-card-animate group collection-card p-5 rounded-[2.2rem] flex items-center justify-between backdrop-blur-md transition-all"
+              className={`node-card-animate group collection-card ${colors.card} p-5 rounded-[2.2rem] flex items-center justify-between border border-white/5 backdrop-blur-md transition-all`}
             >
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-2xl bg-[rgb(var(--theme-primary))]/5 flex items-center justify-center font-black text-xs text-zinc-400 group-hover:text-[rgb(var(--theme-primary))] transition-colors">
+                <div className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center font-black text-xs text-zinc-400 group-hover:text-[rgb(var(--theme-primary))] transition-colors">
                   #{index + 1}
                 </div>
                 <div>
-                  {/* DYNAMIC NODE NAME COLOR */}
-                  <p className="font-bold text-sm text-[var(--theme-text-title-light)] dark:text-[var(--theme-text-title-dark)] truncate max-w-[150px]">
+                  <p className={`font-bold text-sm truncate max-w-[150px] ${
+                    isDark ? 'text-[color:var(--theme-text-title-dark)]' : 'text-[color:var(--theme-text-title-light)]'
+                  }`}>
                     {node.name}
                   </p>
                   <div className="flex items-center gap-3 mt-0.5">
-                    <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-500">
+                    <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-400">
                       <ChevronUp size={10} /> {node.upvotes || 0}
                     </span>
-                    <span className="flex items-center gap-1 text-[9px] font-bold text-rose-500">
+                    <span className="flex items-center gap-1 text-[9px] font-bold text-rose-400">
                       <ChevronDown size={10} /> {node.downvotes || 0}
                     </span>
                   </div>
                 </div>
               </div>
               <div className="text-right min-w-[60px]">
-                <p className={`text-sm font-black tracking-tighter ${netScore >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                <p className={`text-sm font-black tracking-tighter ${netScore >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                   {netScore > 0 ? `+${netScore}` : netScore}
                 </p>
-                <p className="text-[8px] font-bold opacity-30 uppercase tracking-tighter text-[var(--theme-text-title-light)] dark:text-[var(--theme-text-title-dark)]">Net Rating</p>
+                <p className="text-[8px] font-bold opacity-30 uppercase tracking-tighter">Net Rating</p>
               </div>
             </div>
           );
