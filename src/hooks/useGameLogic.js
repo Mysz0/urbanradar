@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'; 
+import { useState, useEffect, useCallback } from 'react'; 
 import { supabase } from '../supabase';
 import { useProfile } from './useProfile';
 import { useSpots } from './useSpots';
@@ -9,7 +9,8 @@ import { useStore } from './useStore';
 export function useGameLogic(user, showToast) {
   const [leaderboard, setLeaderboard] = useState([]);
 
-  const fetchLeaderboard = async () => {
+  // Memoize fetchLeaderboard to prevent infinite loops in the child hooks
+  const fetchLeaderboard = useCallback(async () => {
     try {
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
@@ -38,9 +39,8 @@ export function useGameLogic(user, showToast) {
     } catch (err) { 
       console.error("Leaderboard fetch error:", err.message); 
     }
-  };
+  }, []);
 
-  // Profile hook returns fetchProfile (the function that re-syncs user data)
   const profile = useProfile(user, showToast, fetchLeaderboard);
   
   const spots = useSpots(
@@ -60,7 +60,6 @@ export function useGameLogic(user, showToast) {
 
   const { handleVote } = useVotes(user, spots.setSpots, spots.unlockedSpots);
 
-  // --- UPDATED: Passing profile.fetchProfile to Admin ---
   const admin = useAdmin(
     user, 
     profile.userRole, 
@@ -71,12 +70,12 @@ export function useGameLogic(user, showToast) {
     profile.setTotalPoints, 
     spots.getMultiplier, 
     fetchLeaderboard,
-    profile.fetchProfile // Added this argument
+    profile.fetchProfile
   );
 
   useEffect(() => {
     if (user) fetchLeaderboard();
-  }, [user]);
+  }, [user, fetchLeaderboard]);
 
   return { 
     ...profile, 
@@ -85,6 +84,6 @@ export function useGameLogic(user, showToast) {
     ...store,
     handleVote,
     leaderboard,
-    fetchProfile: profile.fetchProfile // Explicitly return it for App.jsx to use
+    fetchProfile: profile.fetchProfile 
   };
 }

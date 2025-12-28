@@ -36,6 +36,8 @@ function MapInvalidator() {
 
 function MapInterface({ stableUserLoc, claimRadius, customRadius, radiusBonus, onRecenter }) {
   const map = useMap();
+  
+  // Calculate final values inside the render to ensure they are dynamic
   const finalScan = (customRadius || 250) + (radiusBonus || 0);
   const finalClaim = (claimRadius || 20) + (radiusBonus || 0);
 
@@ -66,7 +68,8 @@ function MapInterface({ stableUserLoc, claimRadius, customRadius, radiusBonus, o
             </div>
             <div className="text-[rgb(var(--theme-primary))] font-black text-[10px] uppercase tracking-tighter flex items-center gap-5">
               <span className="opacity-60 flex items-center gap-1">
-                {radiusBonus > 0 && <Zap size={10} />} CLAIM: {finalClaim}M
+                {/* Dynamically show Zap icon and updated claim range */}
+                {radiusBonus > 0 && <Zap size={10} className="animate-pulse" />} CLAIM: {finalClaim}M
               </span>
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-[rgb(var(--theme-primary))] animate-pulse" />
@@ -91,7 +94,6 @@ export default function ExploreTab({
   onVote 
 }) {
   const [zoom, setZoom] = useState(16);
-  // Only start following if we actually have a location
   const [isFollowing, setIsFollowing] = useState(!!userLocation);
 
   const MapDragHandler = () => {
@@ -107,7 +109,6 @@ export default function ExploreTab({
     return { lat: userLocation.lat, lng: userLocation.lng };
   }, [userLocation?.lat, userLocation?.lng]);
 
-  // Neutral World View coordinates
   const fallbackCenter = [20, 0];
 
   const animatedUserIcon = useMemo(() => {
@@ -163,7 +164,8 @@ export default function ExploreTab({
         />
 
         {stableUserLoc && (
-          <React.Fragment key={`user-loc-${stableUserLoc.lat}-${stableUserLoc.lng}`}>
+          /* Using radiusBonus in the key forces Leaflet to re-draw the circles when the boost changes */
+          <React.Fragment key={`user-loc-${stableUserLoc.lat}-${stableUserLoc.lng}-${radiusBonus}`}>
             <Circle 
               center={[stableUserLoc.lat, stableUserLoc.lng]}
               radius={(claimRadius || 20) + radiusBonus}

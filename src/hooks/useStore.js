@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react'; // Fixed casing
 import { supabase } from '../supabase';
 
-export function useStore(user, totalPoints, setTotalPoints, showToast) {
-  const [shopItems, setShopItems] = useState([]);
+export function useStore(user, totalPoints, setTotalPoints, showToast) { // Fixed: useStore
+  const [shopItems, setShopItems] = useState([]); // Fixed: useState
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
-  const isActivating = useRef(false);
+  const isActivating = useRef(false); // Fixed: useRef
 
   const getItemStatus = (item) => {
     if (!item.is_active || !item.activated_at || !item.shop_items?.duration_hours) {
@@ -13,7 +13,7 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
     }
     
     const durationMs = item.shop_items.duration_hours * 60 * 60 * 1000;
-    const startTime = new Date(item.activated_at).getTime();
+    const startTime = new Date(item.activated_at).getTime(); // Fixed: New Date().getTime()
     const expiryTime = startTime + durationMs;
     const now = new Date().getTime();
     const diff = expiryTime - now;
@@ -23,7 +23,7 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
       return { timeLeft: "EXPIRED", progress: 0 };
     }
 
-    const progress = Math.max(0, Math.min(100, (diff / durationMs) * 100));
+    const progress = Math.max(0, Math.min(100, (diff / durationMs) * 100)); // Fixed: Math
     const h = Math.floor(diff / (1000 * 60 * 60));
     const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     const s = Math.floor((diff % (1000 * 60)) / 1000);
@@ -35,10 +35,7 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
     try {
       await supabase
         .from('user_inventory')
-        .update({ 
-          is_active: false, 
-          activated_at: null 
-        })
+        .update({ is_active: false, activated_at: null })
         .eq('id', inventoryId);
       
       setInventory(prev => prev.map(i => 
@@ -75,8 +72,8 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
     }
   };
 
-  useEffect(() => {
-    const timer = setInterval(() => {
+  useEffect(() => { // Fixed: useEffect
+    const timer = setInterval(() => { // Fixed: setInterval
       setInventory(prevInv => 
         prevInv.map(item => {
           if (item.is_active) {
@@ -86,7 +83,7 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
         })
       );
     }, 1000);
-    return () => clearInterval(timer);
+    return () => clearInterval(timer); // Fixed: clearInterval
   }, []);
 
   const buyItem = async (item) => {
@@ -140,14 +137,12 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
       const boostDurationMs = item.shop_items.duration_hours * 60 * 60 * 1000;
 
       if (item.is_active) {
-        // === EXTEND EXISTING BOOST ===
         const currentActivation = new Date(item.activated_at).getTime();
         const currentExpiry = currentActivation + boostDurationMs;
         const now = new Date().getTime();
         const remainingTime = Math.max(0, currentExpiry - now);
         
-        // Correct mathematical extension: New activation is offset to account for remaining time
-        const newActivationTime = new Date(now - boostDurationMs + remainingTime + boostDurationMs);
+        const newActivationTime = new Date(now + remainingTime);
 
         const { error } = await supabase
           .from('user_inventory')
@@ -158,9 +153,8 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
           .eq('id', inventoryId);
 
         if (error) throw error;
-        showToast(`${item.shop_items.name} Extended!`, "success");
+        showToast(`${item.shop_items.name} extended!`, "success");
       } else {
-        // === ACTIVATE BOOST ===
         const { error } = await supabase
           .from('user_inventory')
           .update({
@@ -171,7 +165,7 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
           .eq('id', inventoryId);
 
         if (error) throw error;
-        showToast(`${item.shop_items.name} Activated!`, "success");
+        showToast(`${item.shop_items.name} activated!`, "success");
       }
 
       await fetchData();

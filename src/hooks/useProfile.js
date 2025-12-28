@@ -12,18 +12,25 @@ export function useProfile(user, showToast, fetchLeaderboard) {
   const [claimRadius, setClaimRadius] = useState(20);
   const [visitData, setVisitData] = useState({ last_visit: null, streak: 0 });
 
-  // 1. DATA FETCHING ONLY (Does not touch tempUsername)
+  // 1. DATA FETCHING (Handles Streak Logic & State Sync)
   const fetchProfile = useCallback(async () => {
-    if (!user) return;
+    const userId = user?.id;
+    if (!userId) return;
+
     try {
-      let { data: profile } = await supabase
+      const { data: profile, error } = await supabase
         .from('profiles')
         .select('username, role, total_points, show_email, last_username_change, custom_radius, claim_radius, streak_count, last_visit')
-        .eq('id', user.id)
+        .eq('id', userId)
         .maybeSingle();
+
+      if (error) throw error;
 
       if (profile) {
         setUsername(profile.username || '');
+        // We only set tempUsername if it's currently empty (initial load)
+        setTempUsername(prev => prev === '' ? (profile.username || '') : prev);
+        
         setUserRole(profile.role || 'player');
         setTotalPoints(profile.total_points || 0);
         setShowEmail(profile.show_email ?? false);
@@ -31,6 +38,7 @@ export function useProfile(user, showToast, fetchLeaderboard) {
         setCustomRadius(profile.custom_radius || 250);
         setClaimRadius(profile.claim_radius || 20);
 
+        // Streak & Visit Logic
         const now = new Date();
         const todayStr = now.toDateString();
         let dbStreak = profile.streak_count || 0;
@@ -47,6 +55,7 @@ export function useProfile(user, showToast, fetchLeaderboard) {
 
         setVisitData({ last_visit: now.toISOString(), streak: newStreak });
 
+        // Update DB if it's a new day
         if (!lastVisitDate || lastVisitDate.toDateString() !== todayStr) {
           await supabase
             .from('profiles')
@@ -54,40 +63,38 @@ export function useProfile(user, showToast, fetchLeaderboard) {
               streak_count: newStreak, 
               last_visit: now.toISOString() 
             })
-            .eq('id', user.id);
+            .eq('id', userId);
 
-          showToast(`${newStreak} Day Streak Active!`);
+          if (showToast) showToast(`${newStreak} Day Streak Active!`);
           if (fetchLeaderboard) fetchLeaderboard();
         }
       }
     } catch (err) {
       console.error("Profile Fetch Error:", err);
     }
-  }, [user]); // Minimal dependencies to prevent white screen/loops
+  }, [user?.id, showToast, fetchLeaderboard]);
 
-  // 2. INITIAL LOAD (Sets the input box ONLY ONCE)
+  // Initial load
   useEffect(() => {
-    if (user) {
-      fetchProfile().then(() => {
-        // After data is fetched, set the initial value of the input box
-        supabase.from('profiles')
-          .select('username')
-          .eq('id', user.id)
-          .single()
-          .then(({ data }) => {
-            if (data?.username) setTempUsername(data.username);
-          });
-      });
-    }
-  }, [user, fetchProfile]);
+    fetchProfile();
+  }, [fetchProfile]);
 
   const saveUsername = async () => {
+    if (!user?.id) return;
     const cleaned = tempUsername.trim();
-    if (cleaned.length < 3) return showToast("Identity too short", "error");
     
-    if (cleaned === username) {
-      return showToast("This is already your current identity!", "error");
+    // Cooldown check (7 days)
+    if (lastChange) {
+      const lastTs = new Date(lastChange).getTime();
+      const nowTs = new Date().getTime();
+      const diffDays = (nowTs - lastTs) / (1000 * 60 * 60 * 24);
+      if (diffDays < 7) {
+        return showToast(`Cooldown active: ${Math.ceil(7 - diffDays)} days left`, "error");
+      }
     }
+
+    if (cleaned.length < 3) return showToast("Identity too short", "error");
+    if (cleaned === username) return showToast("Already your identity!", "error");
 
     const { data: reserved } = await supabase
       .from('profiles')
@@ -98,22 +105,25 @@ export function useProfile(user, showToast, fetchLeaderboard) {
 
     if (reserved) return showToast("Identity already reserved", "error");
 
-    const now = new Date().toISOString();
+    const nowIso = new Date().toISOString();
     const { error } = await supabase
       .from('profiles')
-      .update({ username: cleaned, last_username_change: now })
+      .update({ username: cleaned, last_username_change: nowIso })
       .eq('id', user.id);
 
     if (!error) {
       setUsername(cleaned);
-      setTempUsername(cleaned); // Keep sync after success
-      setLastChange(now);
+      setTempUsername(cleaned);
+      setLastChange(nowIso);
       showToast("Identity Synchronized");
       if (fetchLeaderboard) fetchLeaderboard();
+    } else {
+      showToast("Update failed", "error");
     }
   };
 
   const updateRadius = async (v) => {
+    if (!user?.id) return;
     const { error } = await supabase.from('profiles').update({ custom_radius: v }).eq('id', user.id);
     if (!error) {
       setCustomRadius(v);
@@ -122,6 +132,7 @@ export function useProfile(user, showToast, fetchLeaderboard) {
   };
 
   const updateClaimRadius = async (v) => {
+    if (!user?.id) return;
     const { error } = await supabase.from('profiles').update({ claim_radius: v }).eq('id', user.id);
     if (!error) {
       setClaimRadius(v);
@@ -130,6 +141,7 @@ export function useProfile(user, showToast, fetchLeaderboard) {
   };
 
   const toggleEmailVisibility = async () => {
+    if (!user?.id) return;
     const newVal = !showEmail;
     const { error } = await supabase.from('profiles').update({ show_email: newVal }).eq('id', user.id);
     if (!error) {
@@ -139,11 +151,13 @@ export function useProfile(user, showToast, fetchLeaderboard) {
   };
 
   const resetTimer = async () => {
-    if (!user) return;
-    await supabase.from('profiles').update({ last_username_change: null }).eq('id', user.id);
-    setLastChange(null);
-    showToast("Cooldown Bypassed");
-    fetchProfile();
+    if (!user?.id) return;
+    const { error } = await supabase.from('profiles').update({ last_username_change: null }).eq('id', user.id);
+    if (!error) {
+      setLastChange(null);
+      showToast("Cooldown Bypassed");
+      fetchProfile();
+    }
   };
 
   return {

@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabase';
 
 export function useSpots(user, showToast, totalPoints, setTotalPoints, fetchLeaderboard) {
   const [spots, setSpots] = useState({});
   const [unlockedSpots, setUnlockedSpots] = useState([]);
   const [spotStreaks, setSpotStreaks] = useState({});
-  // Changed to specifically track XP multiplier
-  const [activeXPBoost, setActiveXPBoost] = useState(1); 
+  
+  const [activeXPBoost, setActiveXPBoost] = useState(1);
+  const [activeRadiusBoost, setActiveRadiusBoost] = useState(0); 
 
   const getMultiplier = (days) => {
     if (days >= 10) return 1.5;
@@ -19,35 +20,41 @@ export function useSpots(user, showToast, totalPoints, setTotalPoints, fetchLead
     const R = 6371e3; 
     const φ1 = (lat1 * Math.PI) / 180;
     const φ2 = (lat2 * Math.PI) / 180;
-    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
-    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
-    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    const δφ = ((lat2 - lat1) * Math.PI) / 180;
+    const δλ = ((lon2 - lon1) * Math.PI) / 180;
+    const a = Math.sin(δφ / 2) * Math.sin(δφ / 2) +
               Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+              Math.sin(δλ / 2) * Math.sin(δλ / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   };
 
-  const fetchActiveXPBoost = async () => {
-    if (!user) return;
+  const fetchActiveBonuses = useCallback(async () => {
+    if (!user?.id) return;
     try {
-      // FIX: Only fetch the boost with the 'Zap' icon (XP Overdrive)
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('user_inventory')
         .select('*, shop_items(*)')
         .eq('user_id', user.id)
-        .eq('is_active', true)
-        .eq('shop_items.icon_name', 'Zap');
+        .eq('is_active', true);
 
-      if (data && data.length > 0) {
-        setActiveXPBoost(data[0].shop_items.effect_value);
-      } else {
-        setActiveXPBoost(1); // Default to no boost
-      }
+      if (error) throw error;
+
+      let xpMult = 1;
+      let radBonus = 0;
+
+      data?.forEach(item => {
+        if (!item.shop_items) return;
+        if (item.shop_items.icon_name === 'Zap') xpMult = Math.max(xpMult, item.shop_items.effect_value);
+        if (item.shop_items.icon_name === 'Maximize') radBonus += item.shop_items.effect_value;
+      });
+
+      setActiveXPBoost(xpMult);
+      setActiveRadiusBoost(radBonus);
     } catch (err) {
-      console.error("XP Boost Fetch Error:", err);
+      console.error("Bonus fetch error:", err);
     }
-  };
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user) return;
@@ -60,204 +67,107 @@ export function useSpots(user, showToast, totalPoints, setTotalPoints, fetchLead
           supabase.from('spot_votes').select('spot_id, vote_type').eq('user_id', user.id)
         ]);
 
-        if (spotsRes.error) throw spotsRes.error;
-
         const globalCounts = (allVotesRes.data || []).reduce((acc, v) => {
           if (!acc[v.spot_id]) acc[v.spot_id] = { up: 0, down: 0 };
-          if (v.vote_type === 'up') acc[v.spot_id].up++;
-          if (v.vote_type === 'down') acc[v.spot_id].down++;
+          acc[v.spot_id][v.vote_type]++;
           return acc;
         }, {});
 
         const voteLookup = (myVotesRes.data || []).reduce((acc, v) => ({ 
-          ...acc, 
-          [v.spot_id]: v.vote_type 
+          ...acc, [v.spot_id]: v.vote_type 
         }), {});
 
-        const mergedSpots = (spotsRes.data || []).reduce((acc, s) => {
-          const counts = globalCounts[s.id] || { up: 0, down: 0 };
-          acc[s.id] = { 
-            ...s, 
-            upvotes: counts.up,
-            downvotes: counts.down,
-            myVote: voteLookup[s.id] || null 
-          };
+        const merged = (spotsRes.data || []).reduce((acc, s) => {
+          const c = globalCounts[s.id] || { up: 0, down: 0 };
+          acc[s.id] = { ...s, upvotes: c.up, downvotes: c.down, myvote: voteLookup[s.id] || null };
           return acc;
         }, {});
 
-        setSpots(mergedSpots);
+        setSpots(merged);
 
-        const { data: userClaimData } = await supabase
-          .from('user_spots')
-          .select('*')
-          .eq('user_id', user.id);
-
+        const { data: userClaimData } = await supabase.from('user_spots').select('*').eq('user_id', user.id);
         if (userClaimData) {
           const streakMap = {};
           const unlockedList = [];
           userClaimData.forEach((row) => {
-            unlockedList.push(row.spot_id);
+            unlockedList.push(String(row.spot_id));
             streakMap[row.spot_id] = { streak: row.streak, last_claim: row.last_claim };
           });
           setUnlockedSpots(unlockedList);
           setSpotStreaks(streakMap);
         }
-
-        await fetchActiveXPBoost();
-
-      } catch (err) {
-        console.error("Spot Data Fetch Error:", err);
-      }
+        await fetchActiveBonuses();
+      } catch (err) { console.error(err); }
     };
 
     fetchSpotData();
 
-    // REALTIME SUBSCRIPTIONS
-    const invChannel = supabase
-      .channel('inv_xp_sync')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'user_inventory', 
-        filter: `user_id=eq.${user.id}` 
-      }, () => fetchActiveXPBoost())
-      .subscribe();
-
-    const spotChannel = supabase
-      .channel('public:spots')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'spots' },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setSpots((prev) => ({
-              ...prev,
-              [payload.new.id]: { ...payload.new, upvotes: 0, downvotes: 0, myVote: null }
-            }));
-          } else if (payload.eventType === 'UPDATE') {
-            setSpots((prev) => ({
-              ...prev,
-              [payload.new.id]: { ...prev[payload.new.id], ...payload.new }
-            }));
-          } else if (payload.eventType === 'DELETE') {
-            setSpots((prev) => {
-              const next = { ...prev };
-              delete next[payload.old.id];
-              return next;
-            });
-          }
-        }
-      )
-      .subscribe();
+    const invChannel = supabase.channel('inv_sync').on('postgres_changes', { event: '*', schema: 'public', table: 'user_inventory', filter: `user_id=eq.${user.id}` }, () => fetchActiveBonuses()).subscribe();
+    const spotChannel = supabase.channel('spots_sync').on('postgres_changes', { event: '*', schema: 'public', table: 'spots' }, (payload) => {
+      if (payload.eventType === 'INSERT') fetchSpotData();
+      if (payload.eventType === 'UPDATE') fetchSpotData();
+      if (payload.eventType === 'DELETE') fetchSpotData();
+    }).subscribe();
 
     return () => {
       supabase.removeChannel(invChannel);
       supabase.removeChannel(spotChannel);
     };
-  }, [user]);
+  }, [user, fetchActiveBonuses]);
 
-  const claimSpot = async (input, customRadius) => {
+  const claimSpot = async (input, baseRadius) => {
     if (!user) return;
     const todayStr = new Date().toDateString();
-    let spotsToClaim = [];
+    const detectionRange = (baseRadius || 250) + activeRadiusBoost;
+    let targets = [];
 
-    const detectionRange = customRadius || 250;
-
-    if (typeof input === 'object' && input.lat && input.lng) {
-      spotsToClaim = Object.values(spots).filter(spot => 
-        getDistance(input.lat, input.lng, spot.lat, spot.lng) <= detectionRange
-      );
+    if (input?.lat && input?.lng) {
+      targets = Object.values(spots).filter(s => getDistance(input.lat, input.lng, s.lat, s.lng) <= detectionRange);
     } else if (typeof input === 'string' && spots[input]) {
-      spotsToClaim = [spots[input]];
+      targets = [spots[input]];
     }
 
-    if (spotsToClaim.length === 0) return showToast("No nodes in range", "error");
+    if (targets.length === 0) return showToast("No nodes in range", "error");
 
     let totalEarned = 0;
-    let claimCount = 0;
     const upsertRows = [];
-    
-    const newSpotStreaks = { ...spotStreaks };
-    const newUnlocked = [...unlockedSpots];
+    const newStreaks = { ...spotStreaks };
 
-    spotsToClaim.forEach(spot => {
+    targets.forEach(spot => {
       const info = spotStreaks[spot.id] || { last_claim: null, streak: 0 };
-      
       if (info.last_claim && new Date(info.last_claim).toDateString() === todayStr) return;
 
       const nextStreak = (Number(info.streak) || 0) + 1;
-      const baseMultiplier = getMultiplier(nextStreak);
+      const earned = Math.floor((spot.points || 100) * getMultiplier(nextStreak) * activeXPBoost);
       
-      // FIX: Use activeXPBoost (Defaults to 1, so math never breaks)
-      const finalMultiplier = baseMultiplier * activeXPBoost;
-      const earned = Math.floor((spot.points || 100) * finalMultiplier);
-
       totalEarned += earned;
-      claimCount++;
-
-      if (!newUnlocked.includes(spot.id)) {
-        newUnlocked.push(spot.id);
-      }
-      
-      const claimTimestamp = new Date().toISOString();
-      newSpotStreaks[spot.id] = { last_claim: claimTimestamp, streak: nextStreak };
-      
-      upsertRows.push({
-        user_id: user.id,
-        spot_id: spot.id,
-        streak: nextStreak,
-        last_claim: claimTimestamp
-      });
+      const ts = new Date().toISOString();
+      newStreaks[spot.id] = { last_claim: ts, streak: nextStreak };
+      upsertRows.push({ user_id: user.id, spot_id: spot.id, streak: nextStreak, last_claim: ts });
     });
 
-    if (claimCount === 0) return showToast("Nodes already secured today", "error");
+    if (upsertRows.length === 0) return showToast("Nodes secured today", "error");
 
-    const { error: upsertError } = await supabase
-      .from('user_spots')
-      .upsert(upsertRows, { onConflict: 'user_id, spot_id' });
+    const { error: uErr } = await supabase.from('user_spots').upsert(upsertRows, { onConflict: 'user_id, spot_id' });
+    if (uErr) return showToast("Sync error", "error");
 
-    if (upsertError) return showToast("Sync Error", "error");
+    const newTotal = (totalPoints || 0) + totalEarned;
+    await supabase.from('profiles').update({ total_points: newTotal }).eq('id', user.id);
 
-    const newTotalPoints = (totalPoints || 0) + totalEarned;
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({ total_points: newTotalPoints })
-      .eq('id', user.id);
-
-    if (profileError) return showToast("Profile Sync Error", "error");
-
-    setUnlockedSpots([...newUnlocked]);
-    setSpotStreaks({...newSpotStreaks});
-    setTotalPoints(newTotalPoints);
-
-    const boostPct = Math.round((activeXPBoost - 1) * 100);
-    const boostText = boostPct > 0 ? ` (${boostPct}% XP Boost active!)` : "";
-    
-    showToast(`Secured ${claimCount} nodes: +${totalEarned} XP!${boostText}`, "success");
-    
+    setUnlockedSpots(prev => [...new Set([...prev, ...upsertRows.map(r => String(r.spot_id))])]);
+    setSpotStreaks(newStreaks);
+    setTotalPoints(newTotal);
+    showToast(`Secured ${upsertRows.length} nodes: +${totalEarned} XP!`, "success");
     if (fetchLeaderboard) fetchLeaderboard();
   };
 
   const removeSpot = async (id) => {
-    if (!user) return;
-    const { error } = await supabase.from('user_spots').delete().eq('user_id', user.id).eq('spot_id', id);
-    if (!error) {
-      setUnlockedSpots(prev => prev.filter(x => x !== id));
-      setSpotStreaks(prev => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
-      showToast("Node Cleared");
-    }
+    try {
+      await supabase.from('user_spots').delete().eq('user_id', user.id).eq('spot_id', id);
+      setUnlockedSpots(prev => prev.filter(s => s !== String(id)));
+      showToast("Spot history cleared");
+    } catch (err) { showToast("Removal failed", "error"); }
   };
 
-  return {
-    spots,
-    setSpots,
-    unlockedSpots,
-    spotStreaks,
-    setSpotStreaks,
-    claimSpot,
-    removeSpot,
-    getMultiplier
-  };
+  return { spots, setSpots, unlockedSpots, spotStreaks, setSpotStreaks, claimSpot, removeSpot, getMultiplier, activeXPBoost, activeRadiusBoost };
 }
