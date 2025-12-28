@@ -1,0 +1,87 @@
+/* --- SMART GLASS UI --- */
+.smart-glass {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: var(--theme-bg-glass);
+  border: 1px solid var(--theme-border);
+  color: var(--theme-text-title);
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transition: all var(--trans-speed) cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* THEME SPECIFIC GLASS TWEAKS */
+[data-theme='winter'] .smart-glass {
+  box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='supernova'] .smart-glass {
+  box-shadow: 0 0 20px rgba(147, 51, 234, 0.15);
+}
+
+[data-theme='marble'] .smart-glass {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+/* --- STATIC NODE CARD (REPLACES ORBIT) --- */
+.node-card-static {
+  position: relative;
+  background: var(--theme-bg-glass);
+  border: 1px solid var(--theme-border);
+  border-radius: 2.2rem;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.node-card-static:hover {
+  /* Subtle lift and border highlight */
+  transform: translateY(-2px);
+  border-color: rgb(var(--theme-primary) / 0.4);
+  background: color-mix(in srgb, var(--theme-bg-glass), white 3%);
+  box-shadow: 
+    0 12px 24px -10px rgba(0, 0, 0, 0.4),
+    0 0 20px -5px rgb(var(--theme-primary) / 0.15);
+}
+
+/* Theme-specific hover states */
+[data-theme='supernova'] .node-card-static:hover {
+  box-shadow: 0 0 25px rgba(147, 51, 234, 0.2);
+  border-color: rgba(147, 51, 234, 0.5);
+}
+
+[data-theme='abyss'] .node-card-static:hover {
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.6);
+}
+
+/* --- ATMOSPHERE UTILITIES --- */
+.frozen-surface {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background-image: var(--frost-pattern);
+  mix-blend-mode: overlay;
+  opacity: 0.15;
+}
+
+/* --- ATMOSPHERE ANIMATIONS --- */
+@keyframes fallingPetal {
+  0% { transform: translateY(-10vh) translateX(0) rotate(0deg); opacity: 0; }
+  20% { opacity: 0.8; }
+  100% { transform: translateY(110vh) translateX(100px) rotate(360deg); opacity: 0; }
+}
+
+@keyframes floatUp {
+  0% { transform: translateY(0) scale(1); opacity: 0; }
+  50% { opacity: 0.4; }
+  100% { transform: translateY(-110vh) scale(1.5); opacity: 0; }
+}
+
+@keyframes shimmerMove {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 400% 400%; }
+}

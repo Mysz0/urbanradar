@@ -48,9 +48,9 @@ export default function LeaderboardTab({ leaderboard, username, spots = {}, isDa
           return (
             <div 
               key={index} 
-              className={`node-card-animate group smart-glass p-5 rounded-[2.2rem] flex items-center justify-between border transition-all duration-500 ${
+              className={`node-card-static group p-5 flex items-center justify-between transition-all duration-500 ${
                 isCurrentUser ? 'ring-1 ring-[rgb(var(--theme-primary))]/30' : ''
-              } hover:scale-[1.02] active:scale-[0.98]`}
+              } hover:scale-[1.02] active:scale-[0.98] mx-1`}
             >
               <div className="flex items-center gap-4">
                 <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-xs transition-transform duration-500 group-hover:scale-110 ${
@@ -93,7 +93,7 @@ export default function LeaderboardTab({ leaderboard, username, spots = {}, isDa
           return (
             <div 
               key={node.id} 
-              className="node-card-animate group smart-glass p-5 rounded-[2.2rem] flex items-center justify-between border transition-all duration-500 hover:scale-[1.02] active:scale-[0.98]"
+              className="node-card-static group p-5 flex items-center justify-between transition-all duration-500 hover:scale-[1.02] active:scale-[0.98] mx-1"
             >
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-2xl bg-[rgb(var(--theme-primary))]/5 flex items-center justify-center font-black text-xs text-[rgb(var(--theme-primary))]/40 transition-colors duration-500 group-hover:text-[rgb(var(--theme-primary))]">

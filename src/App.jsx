@@ -20,6 +20,7 @@ import StoreTab from './components/Tabs/StoreTab';
 import Login from './components/Auth/Login';
 import Toast from './components/UI/Toast';
 import ThemeToggle from './components/UI/ThemeToggle';
+import ThemeAtmosphere from './components/UI/ThemeAtmosphere';
 
 export default function App() {
   // 1. SHARED UI STATE
@@ -32,6 +33,9 @@ export default function App() {
   const {
     mode,
     setMode,
+    // ALIASING: mapping new names to old names so Login.jsx doesn't break
+    mode: theme,
+    setMode: setTheme,
     appStyle,
     setAppStyle,
     isDark,
@@ -43,7 +47,11 @@ export default function App() {
   useEffect(() => {
     const root = window.document.documentElement;
     root.setAttribute('data-theme', appStyle);
-    isDark ? root.classList.add('dark') : root.classList.remove('dark');
+    if (isDark) {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
   }, [appStyle, isDark]);
 
   const showToast = (text, type = 'success') => {
@@ -92,7 +100,7 @@ export default function App() {
     window.location.href = '/';
   };
 
-  // UPDATED: Loading screen now uses theme variables for background and spinner
+  // UPDATED: Loading screen now uses theme variables
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-[var(--theme-map-bg)]">
       <div className="w-8 h-8 border-4 border-[rgb(var(--theme-primary))] border-t-transparent rounded-full animate-spin shadow-[var(--theme-primary-glow)]" />
@@ -106,6 +114,9 @@ export default function App() {
   return (
     <div className="min-h-screen relative pb-36 transition-all duration-700 ease-in-out bg-[var(--theme-map-bg)] text-[var(--theme-text-title)]">
       
+      {/* 🚀 COMPLEX UI OVERLAYS (Winter frost, Sakura petals, etc.) */}
+      <ThemeAtmosphere activeStyle={appStyle} />
+
       <Toast statusMsg={statusMsg} />
 
       <ThemeToggle 

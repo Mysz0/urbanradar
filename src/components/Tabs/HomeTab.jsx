@@ -216,16 +216,22 @@ export default function HomeTab({
             filteredAndSortedNodes.map(node => {
               const rank = getNodeRank(node.streakCount);
               return (
-                <div key={node.id} className="relative group transition-all">
+                <div key={node.id} className="relative group">
+                  {/* Ready Indicator Sidebar */}
                   {node.isReady && (
                     <div className="absolute -left-1 top-4 bottom-4 w-1 bg-[rgb(var(--theme-primary))] rounded-full z-10 shadow-[0_0_10px_var(--theme-primary-glow)]" />
                   )}
-                  <div className="node-card-animate group smart-glass border p-5 rounded-[2.2rem] flex items-center justify-between transition-all duration-500 hover:scale-[1.02] active:scale-[0.98]">
+                  
+                  <div 
+                    onClick={() => claimSpot(node.id)}
+                    className="node-card-static p-5 flex items-center justify-between cursor-pointer active:scale-[0.98]"
+                  >
+                    {/* LEFT CONTENT */}
                     <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-transform duration-500 group-hover:scale-110 ${rank.bg} ${rank.color}`}>
+                      <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-6 ${rank.bg} ${rank.color}`}>
                         {node.streakCount >= 10 ? <Trophy size={18} /> : node.streakCount > 1 ? <Flame size={18} fill="currentColor" /> : <CheckCircle2 size={18} />}
                       </div>
-                      <div>
+                      <div className="flex flex-col">
                         <p className="font-bold text-sm leading-none tracking-tight">
                           {node.name}
                         </p>
@@ -243,8 +249,10 @@ export default function HomeTab({
                         </div>
                       </div>
                     </div>
+
+                    {/* RIGHT CONTENT */}
                     <div className="text-right">
-                      <p className="text-[11px] font-black">
+                      <p className="text-[11px] font-black group-hover:text-[rgb(var(--theme-primary))] transition-colors duration-300">
                         +{node.points}XP
                       </p>
                     </div>

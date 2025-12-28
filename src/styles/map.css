@@ -1,0 +1,32 @@
+/* --- LEAFLET POPUP CLEANUP --- */
+.leaflet-popup-content-wrapper {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border: none !important;
+}
+.leaflet-popup-tip-container { display: none !important; }
+.leaflet-popup-content { margin: 0 !important; width: auto !important; }
+
+/* --- MAP UI & MARKERS --- */
+.leaflet-control-attribution, .leaflet-control-zoom { display: none !important; }
+.leaflet-container { width: 100%; height: 100%; background: transparent !important; }
+
+.marker-pin-spot .dot { 
+  width: 10px; height: 10px; background: #71717a; 
+  border: 2px solid white; border-radius: 50%; transition: all 0.4s ease;
+}
+.marker-pin-spot.unlocked .dot { 
+  background: rgb(var(--theme-primary)) !important; 
+  box-shadow: 0 0 10px rgb(var(--theme-primary)); 
+}
+
+/* --- RADAR SYSTEM --- */
+.radar-rotation-group { transform-origin: center; animation: radarRotate 12s linear infinite; }
+.radar-aura { transform-origin: center; animation: auraPulse 3s ease-in-out infinite; }
+
+@keyframes radarRotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes auraPulse {
+  0%, 100% { transform: scale(0.8); opacity: 0.1; }
+  50% { transform: scale(1.2); opacity: 0.35; }
+}
