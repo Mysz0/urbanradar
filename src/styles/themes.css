@@ -1,149 +1,327 @@
-/* --- THEME VARIABLE ENGINE --- */
+/* ==============================================
+   THEME VARIABLE ENGINE - Enhanced Design System
+   ============================================== */
+
 :root {
-  /* Default / Emerald Theme */
-  --theme-primary: 16, 185, 129;
-  --theme-primary-glow: rgba(16, 185, 129, 0.8);
-  --theme-bg-glass: rgba(255, 255, 255, 0.6);
-  --theme-border: rgba(16, 185, 129, 0.15);
-  --theme-text-title: #18181b; 
-  --theme-text-sub: #064e3b;
-  --theme-map-bg: #f0fdf4;
-  --trans-speed: 0.5s;
+  /* System-wide constants */
+  --trans-speed: 0.4s;
+  --trans-timing: cubic-bezier(0.4, 0, 0.2, 1);
+  --blur-strength: 16px;
+  --glow-intensity: 0.5;
 }
 
-/* --- DARK MODE OVERRIDE FOR DEFAULT --- */
+/* ==============================================
+   DEFAULT THEME: EMERALD
+   Clean, professional, balanced
+   ============================================== */
+:root {
+  /* Primary color */
+  --theme-primary: 16, 185, 129;
+  --theme-primary-glow: rgba(16, 185, 129, 0.5);
+  
+  /* Surfaces */
+  --theme-bg-glass: rgba(255, 255, 255, 0.75);
+  --theme-card-bg: rgba(255, 255, 255, 0.8);
+  --theme-card-hover: rgba(255, 255, 255, 0.9);
+  
+  /* Borders & Effects */
+  --theme-border: rgba(16, 185, 129, 0.2);
+  --theme-border-hover: rgba(16, 185, 129, 0.4);
+  --theme-shadow: 0 4px 24px -8px rgba(16, 185, 129, 0.15);
+  --theme-shadow-hover: 0 8px 32px -8px rgba(16, 185, 129, 0.25);
+  
+  /* Typography */
+  --theme-text-title: #064e3b;
+  --theme-text-body: #065f46;
+  --theme-text-muted: #6b7280;
+  
+  /* Map/Canvas */
+  --theme-map-bg: #f0fdf4;
+}
+
 .dark:not([data-theme]), 
 .dark[data-theme='emerald'] {
-  --theme-bg-glass: rgba(24, 24, 27, 0.75);
-  --theme-border: rgba(255, 255, 255, 0.08);
-  --theme-text-title: #ffffff;
-  --theme-text-sub: #71717a;
-  --theme-map-bg: #09090b;
+  --theme-bg-glass: rgba(9, 9, 11, 0.85);
+  --theme-card-bg: rgba(24, 24, 27, 0.85);
+  --theme-card-hover: rgba(39, 39, 42, 0.9);
+  --theme-border: rgba(16, 185, 129, 0.15);
+  --theme-border-hover: rgba(16, 185, 129, 0.3);
+  --theme-text-title: #d1fae5;
+  --theme-text-body: #a7f3d0;
+  --theme-text-muted: #71717a;
+  --theme-map-bg: #0a0a0a;
+  --theme-shadow: 0 4px 24px -8px rgba(0, 0, 0, 0.5);
+  --theme-shadow-hover: 0 8px 32px -8px rgba(16, 185, 129, 0.3);
 }
 
-/* --- KOI THEME --- */
+/* ==============================================
+   KOI THEME
+   Organic, flowing, zen garden aesthetic
+   ============================================== */
 [data-theme='koi'] {
   --theme-primary: 234, 68, 38;
-  --theme-primary-glow: rgba(234, 68, 38, 0.8);
-  --theme-bg-glass: rgba(255, 250, 245, 0.8); 
-  --theme-border: rgba(234, 68, 38, 0.2);
-  --theme-text-title: #440c03;
-  --theme-text-sub: #7c2d12;
-  --theme-map-bg: #fafafa;
+  --theme-primary-glow: rgba(234, 68, 38, 0.4);
+  
+  --theme-bg-glass: rgba(255, 251, 248, 0.8);
+  --theme-card-bg: rgba(254, 247, 242, 0.85);
+  --theme-card-hover: rgba(254, 247, 242, 0.95);
+  
+  --theme-border: rgba(234, 68, 38, 0.18);
+  --theme-border-hover: rgba(234, 68, 38, 0.35);
+  --theme-shadow: 0 4px 24px -8px rgba(234, 68, 38, 0.12);
+  --theme-shadow-hover: 0 8px 32px -8px rgba(234, 68, 38, 0.2);
+  
+  --theme-text-title: #431407;
+  --theme-text-body: #7c2d12;
+  --theme-text-muted: #92400e;
+  
+  --theme-map-bg: #fffcfb;
+  
+  /* Texture patterns */
+  --water-texture: radial-gradient(circle at 20% 50%, rgba(234, 68, 38, 0.03) 0%, transparent 50%),
+                   radial-gradient(circle at 80% 80%, rgba(234, 68, 38, 0.02) 0%, transparent 50%);
 }
+
 .dark[data-theme='koi'] {
-  --theme-bg-glass: rgba(12, 12, 15, 0.9);
-  --theme-text-title: #ffffff;
-  --theme-map-bg: #050505;
-  --theme-border: rgba(234, 68, 38, 0.1);
+  --theme-bg-glass: rgba(12, 10, 9, 0.9);
+  --theme-card-bg: rgba(28, 25, 23, 0.9);
+  --theme-card-hover: rgba(41, 37, 36, 0.95);
+  --theme-border: rgba(234, 68, 38, 0.2);
+  --theme-border-hover: rgba(234, 68, 38, 0.4);
+  --theme-text-title: #fff7ed;
+  --theme-text-body: #fed7aa;
+  --theme-text-muted: #78716c;
+  --theme-map-bg: #0c0a09;
 }
 
-/* --- SAKURA THEME --- */
+/* ==============================================
+   SAKURA THEME
+   Delicate, romantic, soft petal aesthetic
+   ============================================== */
 [data-theme='sakura'] {
-  --theme-primary: 244, 172, 183;
-  --theme-primary-glow: rgba(244, 172, 183, 0.8);
-  --theme-bg-glass: rgba(255, 241, 242, 0.7); 
-  --theme-border: rgba(244, 172, 183, 0.3);
-  --theme-text-title: #9d174d;
-  --theme-text-sub: #be185d;
-  --theme-map-bg: #fff5f7;
-}
-.dark[data-theme='sakura'] {
-  --theme-bg-glass: rgba(28, 13, 16, 0.9);
-  --theme-text-title: #ffe4e6;
-  --theme-map-bg: #0a0405;
+  --theme-primary: 244, 114, 182;
+  --theme-primary-glow: rgba(244, 114, 182, 0.4);
+  
+  --theme-bg-glass: rgba(253, 242, 248, 0.8);
+  --theme-card-bg: rgba(252, 231, 243, 0.85);
+  --theme-card-hover: rgba(252, 231, 243, 0.95);
+  
+  --theme-border: rgba(244, 114, 182, 0.25);
+  --theme-border-hover: rgba(244, 114, 182, 0.45);
+  --theme-shadow: 0 4px 24px -8px rgba(244, 114, 182, 0.15);
+  --theme-shadow-hover: 0 8px 32px -8px rgba(244, 114, 182, 0.25);
+  
+  --theme-text-title: #831843;
+  --theme-text-body: #be185d;
+  --theme-text-muted: #9f1239;
+  
+  --theme-map-bg: #fdf2f8;
 }
 
-/* --- WINTER THEME --- */
+.dark[data-theme='sakura'] {
+  --theme-bg-glass: rgba(23, 11, 17, 0.9);
+  --theme-card-bg: rgba(39, 20, 30, 0.9);
+  --theme-card-hover: rgba(53, 28, 42, 0.95);
+  --theme-border: rgba(244, 114, 182, 0.2);
+  --theme-border-hover: rgba(244, 114, 182, 0.4);
+  --theme-text-title: #fce7f3;
+  --theme-text-body: #fbcfe8;
+  --theme-text-muted: #78716c;
+  --theme-map-bg: #0f0609;
+}
+
+/* ==============================================
+   WINTER THEME
+   Crisp, crystalline, frost aesthetic
+   ============================================== */
 [data-theme='winter'] {
-  --theme-primary: 125, 211, 252;
-  --theme-primary-glow: rgba(186, 230, 253, 0.9);
-  /* Brighter, more "icy" glass */
-  --theme-bg-glass: rgba(240, 249, 255, 0.3); 
-  --theme-border: rgba(255, 255, 255, 0.5);
+  --theme-primary: 56, 189, 248;
+  --theme-primary-glow: rgba(125, 211, 252, 0.6);
+  
+  --theme-bg-glass: rgba(248, 250, 252, 0.7);
+  --theme-card-bg: rgba(240, 249, 255, 0.8);
+  --theme-card-hover: rgba(240, 249, 255, 0.95);
+  
+  --theme-border: rgba(186, 230, 253, 0.5);
+  --theme-border-hover: rgba(125, 211, 252, 0.7);
+  --theme-shadow: 0 4px 24px -8px rgba(56, 189, 248, 0.2);
+  --theme-shadow-hover: 0 8px 32px -8px rgba(56, 189, 248, 0.3);
+  
   --theme-text-title: #0c4a6e;
-  --theme-text-sub: #0369a1;
-  --theme-map-bg: #f0f9ff;
-  --frost-pattern: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)' opacity='0.4'/%3E%3C/svg%3E");
-  --ice-shimmer: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(186,230,253,0.2) 50%, rgba(255,255,255,0.4) 100%);
-  --ice-cracks: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0L50 40L120 20L200 80M200 200L150 140L80 180L0 120M0 200L60 140M200 0L140 60' stroke='white' stroke-opacity='0.15' stroke-width='1' fill='none'/%3E%3C/svg%3E");
-  --frost-vignette: radial-gradient(circle, transparent 50%, rgba(186, 230, 253, 0.1) 100%);
+  --theme-text-body: #0369a1;
+  --theme-text-muted: #475569;
+  
+  --theme-map-bg: #f8fafc;
+  
+  /* Ice effects */
+  --frost-pattern: linear-gradient(135deg, rgba(186, 230, 253, 0.1) 0%, transparent 100%);
+  --ice-shimmer: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
 }
 
 .dark[data-theme='winter'] {
-  --theme-bg-glass: rgba(7, 25, 45, 0.6);
-  --theme-text-title: #f0f9ff; 
+  --theme-bg-glass: rgba(8, 27, 46, 0.85);
+  --theme-card-bg: rgba(15, 23, 42, 0.9);
+  --theme-card-hover: rgba(30, 41, 59, 0.95);
+  --theme-border: rgba(125, 211, 252, 0.2);
+  --theme-border-hover: rgba(125, 211, 252, 0.4);
+  --theme-text-title: #e0f2fe;
+  --theme-text-body: #bae6fd;
+  --theme-text-muted: #64748b;
   --theme-map-bg: #020617;
-  --theme-border: rgba(255, 255, 255, 0.15);
-  --frost-vignette: radial-gradient(circle, transparent 30%, rgba(125, 211, 252, 0.1) 100%);
 }
 
-/* --- ABYSS THEME --- */
+/* ==============================================
+   ABYSS THEME
+   Deep ocean, pressure, mysterious depths
+   ============================================== */
 [data-theme='abyss'] {
-  --theme-primary: 251, 146, 60; 
-  --theme-primary-glow: rgba(251, 146, 60, 0.8);
-  --theme-bg-glass: rgba(224, 242, 241, 0.7); 
-  --theme-border: rgba(0, 77, 64, 0.1);
-  --theme-text-title: #004d40;
-  --theme-text-sub: #00695c;
-  --theme-map-bg: #f0fdfa;
+  --theme-primary: 14, 165, 233;
+  --theme-primary-glow: rgba(14, 165, 233, 0.4);
+  
+  --theme-bg-glass: rgba(224, 242, 254, 0.75);
+  --theme-card-bg: rgba(186, 230, 253, 0.3);
+  --theme-card-hover: rgba(186, 230, 253, 0.5);
+  
+  --theme-border: rgba(7, 89, 133, 0.15);
+  --theme-border-hover: rgba(14, 165, 233, 0.3);
+  --theme-shadow: 0 8px 32px -12px rgba(3, 105, 161, 0.2);
+  --theme-shadow-hover: 0 12px 48px -12px rgba(3, 105, 161, 0.3);
+  
+  --theme-text-title: #0c4a6e;
+  --theme-text-body: #075985;
+  --theme-text-muted: #334155;
+  
+  --theme-map-bg: #f0f9ff;
 }
+
 .dark[data-theme='abyss'] {
-  --theme-bg-glass: rgba(3, 21, 37, 0.9);
-  --theme-text-title: #e0f2f1;
-  --theme-text-sub: #64748b;
+  --theme-bg-glass: rgba(3, 21, 37, 0.95);
+  --theme-card-bg: rgba(8, 37, 61, 0.9);
+  --theme-card-hover: rgba(12, 53, 87, 0.95);
+  --theme-border: rgba(14, 165, 233, 0.15);
+  --theme-border-hover: rgba(14, 165, 233, 0.35);
+  --theme-shadow: 0 8px 48px -12px rgba(0, 0, 0, 0.8);
+  --theme-shadow-hover: 0 12px 64px -12px rgba(14, 165, 233, 0.2);
+  --theme-text-title: #e0f2fe;
+  --theme-text-body: #7dd3fc;
+  --theme-text-muted: #475569;
   --theme-map-bg: #020617;
-  --theme-border: rgba(251, 146, 60, 0.2);
 }
 
-/* --- SALMON THEME --- */
+/* ==============================================
+   SALMON THEME
+   Warm, playful, coral aesthetic
+   ============================================== */
 [data-theme='salmon'] {
-  --theme-primary: 255, 140, 115;
-  --theme-primary-glow: rgba(255, 140, 115, 0.8);
-  --theme-bg-glass: rgba(255, 245, 242, 0.75); 
-  --theme-border: rgba(255, 140, 115, 0.25);
-  --theme-text-title: #7c2d12;
-  --theme-text-sub: #9a3412;
-  --theme-map-bg: #fffaf9;
-}
-.dark[data-theme='salmon'] {
-  --theme-bg-glass: rgba(26, 15, 13, 0.9);
-  --theme-text-title: #ffece8;
-  --theme-map-bg: #080302;
+  --theme-primary: 251, 113, 133;
+  --theme-primary-glow: rgba(251, 113, 133, 0.4);
+  
+  --theme-bg-glass: rgba(255, 251, 247, 0.8);
+  --theme-card-bg: rgba(254, 242, 242, 0.85);
+  --theme-card-hover: rgba(254, 242, 242, 0.95);
+  
+  --theme-border: rgba(251, 113, 133, 0.25);
+  --theme-border-hover: rgba(251, 113, 133, 0.45);
+  --theme-shadow: 0 4px 24px -8px rgba(251, 113, 133, 0.15);
+  --theme-shadow-hover: 0 8px 32px -8px rgba(251, 113, 133, 0.25);
+  
+  --theme-text-title: #881337;
+  --theme-text-body: #be123c;
+  --theme-text-muted: #78716c;
+  
+  --theme-map-bg: #fffbf8;
 }
 
-/* --- SUPERNOVA THEME --- */
+.dark[data-theme='salmon'] {
+  --theme-bg-glass: rgba(24, 15, 13, 0.9);
+  --theme-card-bg: rgba(43, 20, 15, 0.9);
+  --theme-card-hover: rgba(63, 30, 23, 0.95);
+  --theme-border: rgba(251, 113, 133, 0.2);
+  --theme-border-hover: rgba(251, 113, 133, 0.4);
+  --theme-text-title: #ffe4e6;
+  --theme-text-body: #fecdd3;
+  --theme-text-muted: #78716c;
+  --theme-map-bg: #0c0504;
+}
+
+/* ==============================================
+   SUPERNOVA THEME
+   High energy, cosmic, vibrant purple
+   ============================================== */
 [data-theme='supernova'] {
-  --theme-primary: 147, 51, 234;
-  --theme-primary-glow: rgba(147, 51, 234, 0.8);
-  --theme-bg-glass: rgba(250, 245, 255, 0.8); 
-  --theme-border: rgba(147, 51, 234, 0.25);
-  --theme-text-title: #4c1d95;
-  --theme-text-sub: #5b21b6;
+  --theme-primary: 168, 85, 247;
+  --theme-primary-glow: rgba(168, 85, 247, 0.5);
+  
+  --theme-bg-glass: rgba(250, 245, 255, 0.8);
+  --theme-card-bg: rgba(243, 232, 255, 0.85);
+  --theme-card-hover: rgba(243, 232, 255, 0.95);
+  
+  --theme-border: rgba(168, 85, 247, 0.25);
+  --theme-border-hover: rgba(168, 85, 247, 0.45);
+  --theme-shadow: 0 4px 32px -8px rgba(168, 85, 247, 0.25);
+  --theme-shadow-hover: 0 8px 48px -8px rgba(168, 85, 247, 0.35);
+  
+  --theme-text-title: #581c87;
+  --theme-text-body: #7e22ce;
+  --theme-text-muted: #6b7280;
+  
   --theme-map-bg: #faf5ff;
 }
+
 .dark[data-theme='supernova'] {
-  --theme-bg-glass: rgba(18, 10, 31, 0.9);
-  --theme-text-title: #f5f3ff; 
-  --theme-map-bg: #050208;
+  --theme-bg-glass: rgba(15, 10, 25, 0.9);
+  --theme-card-bg: rgba(30, 20, 50, 0.9);
+  --theme-card-hover: rgba(46, 32, 70, 0.95);
+  --theme-border: rgba(168, 85, 247, 0.25);
+  --theme-border-hover: rgba(168, 85, 247, 0.45);
+  --theme-shadow: 0 4px 32px -8px rgba(168, 85, 247, 0.4);
+  --theme-shadow-hover: 0 8px 48px -8px rgba(168, 85, 247, 0.5);
+  --theme-text-title: #f3e8ff;
+  --theme-text-body: #e9d5ff;
+  --theme-text-muted: #71717a;
+  --theme-map-bg: #080510;
 }
 
-/* --- MARBLE THEME --- */
+/* ==============================================
+   MARBLE THEME
+   Architectural, minimal, luxury black & white
+   ============================================== */
 [data-theme='marble'] {
-  --theme-primary: 0, 0, 0;
-  --theme-primary-glow: rgba(0, 0, 0, 0.2);
-  --theme-bg-glass: rgba(0, 0, 0, 0.9);
-  --theme-border: rgba(0, 0, 0, 0.1);
-  --theme-text-title: #ffffff;
-  --theme-text-sub: rgba(255, 255, 255, 0.6);
+  --theme-primary: 24, 24, 27;
+  --theme-primary-glow: rgba(24, 24, 27, 0.15);
+  
+  --theme-bg-glass: rgba(255, 255, 255, 0.95);
+  --theme-card-bg: rgba(250, 250, 250, 0.98);
+  --theme-card-hover: rgba(245, 245, 245, 1);
+  
+  --theme-border: rgba(0, 0, 0, 0.12);
+  --theme-border-hover: rgba(0, 0, 0, 0.24);
+  --theme-shadow: 0 2px 16px -4px rgba(0, 0, 0, 0.08);
+  --theme-shadow-hover: 0 4px 24px -4px rgba(0, 0, 0, 0.12);
+  
+  --theme-text-title: #18181b;
+  --theme-text-body: #27272a;
+  --theme-text-muted: #71717a;
+  
   --theme-map-bg: #ffffff;
 }
+
 .dark[data-theme='marble'] {
-  --theme-primary: 255, 255, 255;
-  --theme-primary-glow: rgba(255, 255, 255, 0.4);
-  --theme-bg-glass: rgba(255, 255, 255, 0.95);
-  --theme-border: rgba(255, 255, 255, 0.2);
-  --theme-text-title: #000000;
-  --theme-text-sub: rgba(0, 0, 0, 0.5);
+  --theme-primary: 228, 228, 231;
+  --theme-primary-glow: rgba(228, 228, 231, 0.2);
+  
+  --theme-bg-glass: rgba(9, 9, 11, 0.98);
+  --theme-card-bg: rgba(24, 24, 27, 0.98);
+  --theme-card-hover: rgba(39, 39, 42, 1);
+  
+  --theme-border: rgba(255, 255, 255, 0.1);
+  --theme-border-hover: rgba(255, 255, 255, 0.2);
+  --theme-shadow: 0 2px 16px -4px rgba(0, 0, 0, 0.4);
+  --theme-shadow-hover: 0 4px 24px -4px rgba(0, 0, 0, 0.6);
+  
+  --theme-text-title: #fafafa;
+  --theme-text-body: #e4e4e7;
+  --theme-text-muted: #71717a;
+  
   --theme-map-bg: #000000;
 }

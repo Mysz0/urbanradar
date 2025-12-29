@@ -1,109 +1,319 @@
 import React, { useMemo } from 'react';
 
-// WINTER: Frost overlay & Shimmering Ice
+/* ==============================================
+   WINTER: Crystalline Frost
+   ============================================== */
 const WinterEffect = () => (
   <>
-    {/* 1. Subtle Frost Vignette (Edges) */}
-    <div className="fixed inset-0 pointer-events-none z-0" 
-         style={{ background: 'var(--frost-vignette)' }} />
+    {/* Base frost vignette */}
+    <div 
+      className="fixed inset-0 pointer-events-none z-0" 
+      style={{ 
+        background: 'radial-gradient(circle at 50% 50%, transparent 40%, rgba(186, 230, 253, 0.15) 100%)'
+      }} 
+    />
     
-    {/* 2. Global Cracked Ice & Frost Surface */}
-    <div className="frozen-surface" />
-
-    {/* No more "big bar" shimmer here */}
+    {/* Animated frost layer */}
+    <div 
+      className="frozen-surface" 
+      style={{ 
+        background: 'linear-gradient(135deg, rgba(186, 230, 253, 0.08) 0%, transparent 100%)',
+        animation: 'iceBreath 10s ease-in-out infinite' 
+      }} 
+    />
+    
+    {/* Ice crystal sparkles */}
+    <div 
+      className="fixed inset-0 pointer-events-none z-0 opacity-20"
+      style={{
+        backgroundImage: `
+          radial-gradient(circle at 20% 30%, rgba(186, 230, 253, 0.4) 1px, transparent 1px),
+          radial-gradient(circle at 60% 70%, rgba(186, 230, 253, 0.3) 1px, transparent 1px),
+          radial-gradient(circle at 80% 20%, rgba(186, 230, 253, 0.3) 1px, transparent 1px)
+        `,
+        backgroundSize: '200px 200px, 300px 300px, 250px 250px',
+        animation: 'gentlePulse 8s ease-in-out infinite'
+      }}
+    />
   </>
 );
 
-// SAKURA: Falling petals & Pink glow
+/* ==============================================
+   SAKURA: Soft Petal Rain
+   ============================================== */
 const SakuraEffect = () => {
-  // Memoize the petals so they don't re-randomize on every render
   const petals = useMemo(() => {
-    return [...Array(12)].map((_, i) => ({
+    return [...Array(15)].map((_, i) => ({
       id: i,
       left: `${Math.random() * 100}%`,
-      duration: `${10 + Math.random() * 10}s`,
+      duration: `${12 + Math.random() * 8}s`,
       delay: `${Math.random() * 5}s`,
-      size: `${5 + Math.random() * 5}px`
+      size: `${4 + Math.random() * 6}px`,
+      rotation: Math.random() * 360
     }));
   }, []);
 
   return (
     <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-      <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_20%_20%,rgba(244,172,183,0.15),transparent_60%)]" />
-      <div className="absolute inset-0 opacity-40">
+      {/* Soft pink gradient backdrop */}
+      <div 
+        className="absolute inset-0 opacity-30"
+        style={{
+          background: 'radial-gradient(circle at 70% 20%, rgba(244, 114, 182, 0.12), transparent 60%)'
+        }}
+      />
+      
+      {/* Falling petals */}
+      <div className="absolute inset-0">
         {petals.map((p) => (
           <div 
             key={p.id} 
-            className="sakura-petal absolute bg-[rgb(var(--theme-primary))] rounded-full blur-[0.5px]"
+            className="sakura-petal absolute bg-gradient-to-br from-[rgb(var(--theme-primary))] to-pink-200 rounded-full blur-[0.5px]"
             style={{
               width: p.size, 
-              height: '5px', 
+              height: p.size, 
               left: p.left, 
               top: '-5%',
               animation: `fallingPetal ${p.duration} linear infinite`,
-              animationDelay: p.delay
+              animationDelay: p.delay,
+              transform: `rotate(${p.rotation}deg)`
             }} 
           />
         ))}
       </div>
+      
+      {/* Ambient glow */}
+      <div 
+        className="absolute inset-0 opacity-10"
+        style={{
+          background: 'radial-gradient(circle at 80% 80%, rgba(244, 114, 182, 0.3), transparent 70%)'
+        }}
+      />
     </div>
   );
 };
 
-// KOI: Water ripples
-const KoiEffect = () => (
-  <div className="fixed inset-0 pointer-events-none z-0">
-    <div className="absolute inset-0 opacity-20" 
-         style={{ background: 'radial-gradient(circle at 50% 50%, rgba(234,68,38,0.05) 0%, transparent 70%)' }} />
-    <div className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full border border-[rgb(var(--theme-primary))] opacity-10 animate-ping" 
-         style={{ animationDuration: '8s' }} />
-  </div>
-);
-
-// ABYSS: Floating bubbles
-const AbyssEffect = () => {
-  const bubbles = useMemo(() => {
-    return [...Array(12)].map((_, i) => ({
+/* ==============================================
+   KOI: Water Garden
+   ============================================== */
+const KoiEffect = () => {
+  const ripples = useMemo(() => {
+    return [...Array(5)].map((_, i) => ({
       id: i,
-      left: `${Math.random() * 100}%`,
-      duration: `${5 + Math.random() * 10}s`,
-      delay: `${Math.random() * 5}s`
+      left: `${10 + Math.random() * 80}%`, 
+      top: `${10 + Math.random() * 80}%`,  
+      delay: i * 2, 
+      size: 150 + Math.random() * 100
     }));
   }, []);
 
   return (
     <div className="fixed inset-0 pointer-events-none z-0">
-      {bubbles.map((b) => (
-        <div key={b.id} className="absolute bg-white rounded-full opacity-10"
-             style={{
-               width: '4px', height: '4px', left: b.left, bottom: '-5%',
-               animation: `floatUp ${b.duration} ease-in infinite`,
-               animationDelay: b.delay
-             }} />
+      <div 
+        className="absolute inset-0 opacity-15" 
+        style={{ 
+          background: 'var(--water-texture)',
+          backgroundSize: '500px 500px'
+        }} 
+      />
+      
+      {ripples.map((ripple) => (
+        <div 
+          key={ripple.id}
+          className="absolute rounded-full border"
+          style={{
+            width: `${ripple.size}px`,
+            height: `${ripple.size}px`,
+            left: ripple.left,
+            top: ripple.top,
+            borderColor: 'rgba(234, 68, 38, 0.3)',
+            animation: `rippleOut 10s ease-out infinite`,
+            animationDelay: `${ripple.delay}s`,
+            animationFillMode: 'backwards',
+            willChange: 'transform, opacity'
+          }}
+        />
       ))}
     </div>
   );
 };
 
-// SUPERNOVA: Pulsing starfield
-const SupernovaEffect = () => (
+/* ==============================================
+   ABYSS: Deep Ocean Pressure
+   ============================================== */
+const AbyssEffect = () => {
+  const bubbles = useMemo(() => {
+    return [...Array(12)].map((_, i) => ({
+      id: i,
+      left: `${Math.random() * 100}%`,
+      duration: `${10 + Math.random() * 12}s`,
+      delay: `${Math.random() * 6}s`,
+      size: `${2 + Math.random() * 2}px`
+    }));
+  }, []);
+
+  return (
+    <div className="fixed inset-0 pointer-events-none z-0">
+      {/* Deep gradient from bottom */}
+      <div 
+        className="absolute inset-0"
+        style={{
+          background: 'linear-gradient(to top, rgba(3, 21, 37, 0.4) 0%, transparent 60%)'
+        }}
+      />
+      
+      {/* Pressure zones */}
+      <div 
+        className="absolute inset-0 opacity-20"
+        style={{
+          background: `
+            radial-gradient(ellipse at 50% 100%, rgba(14, 165, 233, 0.15), transparent 50%),
+            radial-gradient(ellipse at 30% 60%, rgba(14, 165, 233, 0.08), transparent 40%)
+          `
+        }}
+      />
+      
+      {/* Rising bubbles */}
+      {bubbles.map((b) => (
+        <div 
+          key={b.id} 
+          className="absolute bg-gradient-to-t from-cyan-200 to-white rounded-full"
+          style={{
+            width: b.size, 
+            height: b.size, 
+            left: b.left, 
+            bottom: '-5%',
+            opacity: 0.15,
+            animation: `floatUp ${b.duration} ease-in infinite`,
+            animationDelay: b.delay,
+            boxShadow: '0 0 4px rgba(14, 165, 233, 0.3)'
+          }} 
+        />
+      ))}
+    </div>
+  );
+};
+
+/* ==============================================
+   SUPERNOVA: Cosmic Energy
+   ============================================== */
+const SupernovaEffect = () => {
+  const particles = useMemo(() => {
+    return [...Array(30)].map((_, i) => ({
+      id: i,
+      left: `${Math.random() * 100}%`,
+      top: `${Math.random() * 100}%`,
+      delay: Math.random() * 3,
+      duration: 2 + Math.random() * 2
+    }));
+  }, []);
+
+  return (
+    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+      {/* Energy field base */}
+      <div 
+        className="absolute inset-0"
+        style={{
+          background: 'radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.08), transparent 70%)',
+          animation: 'gentlePulse 6s ease-in-out infinite'
+        }}
+      />
+      
+      {/* Grid pattern */}
+      <div 
+        className="absolute inset-0 opacity-5"
+        style={{
+          backgroundImage: `
+            linear-gradient(rgba(168, 85, 247, 0.3) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(168, 85, 247, 0.3) 1px, transparent 1px)
+          `,
+          backgroundSize: '50px 50px'
+        }}
+      />
+      
+      {/* Energy particles */}
+      {particles.map((p) => (
+        <div
+          key={p.id}
+          className="absolute w-1 h-1 bg-purple-400 rounded-full"
+          style={{
+            left: p.left,
+            top: p.top,
+            animation: `gentlePulse ${p.duration}s ease-in-out infinite`,
+            animationDelay: `${p.delay}s`,
+            boxShadow: '0 0 6px rgba(168, 85, 247, 0.6)'
+          }}
+        />
+      ))}
+      
+      {/* Scanlines overlay */}
+      <div 
+        className="absolute inset-0 opacity-[0.02]"
+        style={{
+          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, white 3px)'
+        }}
+      />
+    </div>
+  );
+};
+
+/* ==============================================
+   SALMON: Warm Coral Waves
+   ============================================== */
+const SalmonEffect = () => (
   <div className="fixed inset-0 pointer-events-none z-0">
-    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(147,51,234,0.1),transparent_80%)] animate-pulse" />
-    <div className="absolute inset-0 opacity-20"
-         style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '50px 50px' }} />
+    {/* Warm gradient waves */}
+    <div 
+      className="absolute inset-0 opacity-25"
+      style={{
+        background: `
+          radial-gradient(ellipse at 60% 30%, rgba(251, 113, 133, 0.15), transparent 60%),
+          radial-gradient(ellipse at 30% 70%, rgba(251, 113, 133, 0.1), transparent 50%)
+        `
+      }}
+    />
+    
+    {/* Organic shapes */}
+    <div 
+      className="absolute inset-0 opacity-10"
+      style={{
+        background: 'radial-gradient(circle at 20% 50%, rgba(251, 113, 133, 0.2) 0%, transparent 30%)',
+        animation: 'gentlePulse 8s ease-in-out infinite'
+      }}
+    />
   </div>
 );
 
+/* ==============================================
+   MARBLE: Minimal Architectural
+   ============================================== */
+const MarbleEffect = () => (
+  <div className="fixed inset-0 pointer-events-none z-0">
+    {/* Subtle vignette */}
+    <div 
+      className="absolute inset-0 opacity-5"
+      style={{
+        background: 'radial-gradient(circle at 50% 50%, transparent 60%, var(--theme-text-title) 100%)'
+      }}
+    />
+  </div>
+);
+
+/* ==============================================
+   MAIN COMPONENT
+   ============================================== */
 function ThemeAtmosphere({ activeStyle }) {
-  switch (activeStyle) {
-    case 'winter': return <WinterEffect />;
-    case 'sakura': return <SakuraEffect />;
-    case 'koi': return <KoiEffect />;
-    case 'abyss': return <AbyssEffect />;
-    case 'supernova': return <SupernovaEffect />;
-    default: return null;
-  }
+  const effects = {
+    winter: <WinterEffect />,
+    sakura: <SakuraEffect />,
+    koi: <KoiEffect />,
+    abyss: <AbyssEffect />,
+    supernova: <SupernovaEffect />,
+    salmon: <SalmonEffect />,
+    marble: <MarbleEffect />
+  };
+
+  return effects[activeStyle] || null;
 }
 
-// WRAP IN MEMO: This prevents the whole component from re-rendering unless the theme actually changes
 export default React.memo(ThemeAtmosphere);

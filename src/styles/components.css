@@ -1,102 +1,282 @@
-/* --- SMART GLASS UI --- */
+/* ==============================================
+   SMART GLASS UI SYSTEM - Enhanced
+   ============================================== */
+
 .smart-glass {
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  background: var(--theme-bg-glass);
+  backdrop-filter: blur(var(--blur-strength));
+  -webkit-backdrop-filter: blur(var(--blur-strength));
+  background: var(--theme-card-bg);
   border: 1px solid var(--theme-border);
   color: var(--theme-text-title);
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  transition: all var(--trans-speed) cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all var(--trans-speed) var(--trans-timing);
+  box-shadow: var(--theme-shadow);
 }
 
-/* THEME SPECIFIC GLASS TWEAKS */
-[data-theme='winter'] .smart-glass {
-  box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.1);
-}
-[data-theme='winter'] .node-card-static {
-  background-image: var(--ice-cracks);
-  background-size: 150px 150px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.1);
+.smart-glass:hover {
+  background: var(--theme-card-hover);
+  border-color: var(--theme-border-hover);
+  box-shadow: var(--theme-shadow-hover);
 }
 
-/* Update the global frozen surface to use cracks instead of just noise */
-[data-theme='winter'] .frozen-surface {
-  background-image: var(--ice-cracks), var(--frost-pattern);
-  background-size: 300px 300px, 200px 200px;
-  opacity: 0.2;
-}
+/* ==============================================
+   NODE CARD BASE
+   ============================================== */
 
-[data-theme='supernova'] .smart-glass {
-  box-shadow: 0 0 20px rgba(147, 51, 234, 0.15);
-}
-
-[data-theme='marble'] .smart-glass {
-  border: 1px solid rgba(255, 255, 255, 0.4);
-}
-
-/* --- STATIC NODE CARD (REPLACES ORBIT) --- */
 .node-card-static {
   position: relative;
-  background: var(--theme-bg-glass);
+  background: var(--theme-card-bg);
   border: 1px solid var(--theme-border);
-  border-radius: 2.2rem;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 1.5rem;
+  backdrop-filter: blur(var(--blur-strength));
+  -webkit-backdrop-filter: blur(var(--blur-strength));
+  transition: all 0.3s var(--trans-timing);
   overflow: hidden;
+  box-shadow: var(--theme-shadow);
 }
 
 .node-card-static:hover {
-  /* REMOVED: transform: translateY(-2px) to stop it looking clickable */
-  border-color: rgb(var(--theme-primary) / 0.3);
-  background: color-mix(in srgb, var(--theme-bg-glass), white 2%);
-  /* Keep a very subtle shadow just for depth */
-  box-shadow: 0 8px 16px -8px rgba(0, 0, 0, 0.3);
+  border-color: var(--theme-border-hover);
+  background: var(--theme-card-hover);
+  box-shadow: var(--theme-shadow-hover);
+  transform: translateY(-2px);
 }
 
-/* Theme-specific hover states */
+/* ==============================================
+   THEME-SPECIFIC UI ARCHITECTURE
+   ============================================== */
+
+/* --- WINTER: Frost & Ice Crystals --- */
+[data-theme='winter'] .smart-glass {
+  box-shadow: 
+    var(--theme-shadow),
+    inset 0 0 20px rgba(186, 230, 253, 0.1);
+}
+
+[data-theme='winter'] .node-card-static {
+  border-radius: 1rem;
+  position: relative;
+}
+
+[data-theme='winter'] .node-card-static::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--ice-shimmer);
+  background-size: 200% 100%;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+}
+
+[data-theme='winter'] .node-card-static:hover::before {
+  animation: shimmerMove 2s ease-in-out;
+  opacity: 1;
+}
+
+[data-theme='winter'] .node-card-static::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 50%, rgba(186, 230, 253, 0.15) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+/* --- KOI: Organic Water Flow --- */
+[data-theme='koi'] .node-card-static {
+  border-radius: 2rem 0.75rem 2rem 0.75rem;
+}
+
+[data-theme='koi'] .node-card-static::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--water-texture);
+  background-size: 200% 200%; /* ADD THIS: Gives it room to move */
+  opacity: 0.4;
+  pointer-events: none;
+  animation: waterFlow 20s linear infinite; /* ADD THIS: Makes it flow */
+}
+
+[data-theme='koi'] .node-card-static:hover {
+  border-radius: 0.75rem 2rem 0.75rem 2rem;
+  transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* --- SAKURA: Soft Petals --- */
+[data-theme='sakura'] .node-card-static {
+  border-radius: 2.5rem 0.5rem 2.5rem 0.5rem;
+  box-shadow: 
+    var(--theme-shadow),
+    inset 0 2px 8px rgba(244, 114, 182, 0.05);
+}
+
+[data-theme='sakura'] .node-card-static::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(244, 114, 182, 0.1) 0%, transparent 70%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+[data-theme='sakura'] .node-card-static:hover::after {
+  opacity: 1;
+}
+
+/* --- ABYSS: Deep Pressure --- */
+[data-theme='abyss'] .smart-glass {
+  box-shadow: 
+    var(--theme-shadow),
+    inset 0 -2px 12px rgba(14, 165, 233, 0.08);
+}
+
+[data-theme='abyss'] .node-card-static {
+  border-radius: 1.25rem;
+}
+
+[data-theme='abyss'] .node-card-static::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 30%;
+  background: linear-gradient(to top, rgba(14, 165, 233, 0.08), transparent);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+[data-theme='abyss'] .node-card-static:hover::before {
+  opacity: 1;
+}
+
+.dark[data-theme='abyss'] .node-card-static {
+  box-shadow: 
+    var(--theme-shadow),
+    inset 0 1px 0 rgba(14, 165, 233, 0.1);
+}
+
+/* --- SALMON: Playful Curves --- */
+[data-theme='salmon'] .node-card-static {
+  border-radius: 2rem;
+  border-width: 2px;
+  border-style: solid;
+}
+
+[data-theme='salmon'] .node-card-static:hover {
+  border-radius: 0.75rem;
+  transform: translateY(-4px) scale(1.01);
+}
+
+/* --- SUPERNOVA: Energy Pulse --- */
+[data-theme='supernova'] .smart-glass {
+  box-shadow: 
+    var(--theme-shadow),
+    0 0 20px rgba(168, 85, 247, 0.1);
+  position: relative;
+}
+
+[data-theme='supernova'] .smart-glass::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(45deg, 
+    transparent, 
+    rgba(168, 85, 247, 0.2), 
+    transparent);
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+[data-theme='supernova'] .smart-glass:hover::before {
+  opacity: 1;
+  animation: shimmerMove 1.5s ease-in-out infinite;
+}
+
+[data-theme='supernova'] .node-card-static {
+  border-radius: 1.5rem;
+  box-shadow: 
+    var(--theme-shadow),
+    0 0 24px rgba(168, 85, 247, 0.15);
+}
+
 [data-theme='supernova'] .node-card-static:hover {
-  box-shadow: 0 0 25px rgba(147, 51, 234, 0.2);
-  border-color: rgba(147, 51, 234, 0.5);
+  box-shadow: 
+    var(--theme-shadow-hover),
+    0 0 32px rgba(168, 85, 247, 0.25),
+    inset 0 0 20px rgba(168, 85, 247, 0.1);
 }
 
-[data-theme='abyss'] .node-card-static:hover {
-  background: rgba(255, 255, 255, 0.03);
-  box-shadow: 0 0 30px rgba(0, 0, 0, 0.6);
+/* --- MARBLE: Architectural Precision --- */
+[data-theme='marble'] .node-card-static {
+  border-radius: 0.25rem;
+  letter-spacing: 0.05em;
 }
 
-/* --- ATMOSPHERE UTILITIES --- */
+[data-theme='marble'] .node-card-static:hover {
+  transform: translateY(-1px);
+  border-radius: 0.5rem;
+}
+
+.dark[data-theme='marble'] .node-card-static {
+  box-shadow: 
+    var(--theme-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* ==============================================
+   ATMOSPHERE EFFECTS
+   ============================================== */
+
 .frozen-surface {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: -1;
-  background-image: var(--frost-pattern);
-  mix-blend-mode: overlay;
-  opacity: 0.15;
+  opacity: 0;
+  transition: opacity 1s ease;
 }
 
+[data-theme='winter'] .frozen-surface {
+  background: var(--frost-pattern);
+  opacity: 0.3;
+  animation: iceBreath 10s ease-in-out infinite;
+}
+
+/* Sakura petals */
 .sakura-petal {
   pointer-events: none;
   position: fixed;
-  z-index: 1; /* Move behind the UI (Smart Glass is usually z-30+) */
+  z-index: 1;
   will-change: transform, opacity;
-  /* translateZ(0) is good, but translate3d in the animation is better */
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
+  border-radius: 50% 0 50% 0;
 }
 
-/* Updated Animation for smoother flight */
+/* ==============================================
+   KEYFRAME ANIMATIONS
+   ============================================== */
+
 @keyframes fallingPetal {
   0% { 
     transform: translate3d(0, -10vh, 0) rotate(0deg); 
     opacity: 0; 
   }
-  15% { opacity: 0.6; } /* Softer fade in */
-  85% { opacity: 0.6; } /* Stay visible longer */
+  10% { 
+    opacity: 0.8; 
+  }
+  90% { 
+    opacity: 0.8; 
+  }
   100% { 
     transform: translate3d(150px, 110vh, 0) rotate(450deg); 
     opacity: 0; 
@@ -104,23 +284,99 @@
 }
 
 @keyframes floatUp {
-  0% { transform: translate3d(0, 0, 0) scale(1); opacity: 0; }
-  20% { opacity: 0.3; }
-  100% { transform: translate3d(0, -110vh, 0) scale(1.5); opacity: 0; }
-}
-
-@keyframes shimmerMove {
-  0% { background-position: 0% 0%; }
-  100% { background-position: 400% 400%; }
+  0% { 
+    transform: translate3d(0, 0, 0) scale(0.5); 
+    opacity: 0; 
+  }
+  10% { 
+    opacity: 0.4; 
+  }
+  90% { 
+    opacity: 0.2; 
+  }
+  100% { 
+    transform: translate3d(0, -110vh, 0) scale(1.2); 
+    opacity: 0; 
+  }
 }
 
 @keyframes iceBreath {
-  0%, 100% { opacity: 0.15; transform: scale(1); }
-  50% { opacity: 0.3; transform: scale(1.05); }
+  0%, 100% { 
+    opacity: 0.2; 
+    transform: scale(1); 
+  }
+  50% { 
+    opacity: 0.35; 
+    transform: scale(1.02); 
+  }
 }
 
-/* Also ensure the shimmer move is smooth for winter */
 @keyframes shimmerMove {
-  0% { background-position: -200% 0%; }
-  100% { background-position: 200% 0%; }
+  0% { 
+    background-position: -200% center; 
+  }
+  100% { 
+    background-position: 200% center; 
+  }
+}
+
+@keyframes gentlePulse {
+  0%, 100% { 
+    opacity: 0.6; 
+    transform: scale(1); 
+  }
+  50% { 
+    opacity: 1; 
+    transform: scale(1.05); 
+  }
+}
+
+@keyframes waterFlow {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 50% 100%; }
+  100% { background-position: 100% 0%; }
+}
+
+@keyframes rippleOut {
+  0% {
+    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 0;
+  }
+  /* Ripple appears quickly */
+  10% {
+    opacity: 0.4;
+  }
+  /* Ripple starts fading out halfway through its individual cycle */
+  30% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.5);
+  }
+  /* Stays invisible for the rest of the 10s duration to let others shine */
+  100% {
+    transform: translate(-50%, -50%) scale(2.5);
+    opacity: 0;
+  }
+}
+
+/* ==============================================
+   UTILITY CLASSES
+   ============================================== */
+
+.theme-glow {
+  box-shadow: 0 0 20px var(--theme-primary-glow);
+}
+
+.theme-border-accent {
+  border-color: rgb(var(--theme-primary));
+}
+
+.theme-text-primary {
+  color: rgb(var(--theme-primary));
+}
+
+/* Smooth theme transitions */
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-duration: var(--trans-speed);
+  transition-timing-function: var(--trans-timing);
 }
