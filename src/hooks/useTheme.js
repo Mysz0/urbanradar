@@ -85,14 +85,48 @@ export function useTheme() {
           bottom.style.height = 'env(safe-area-inset-bottom, 0)';
         }
 
-        // DEBUG: Log env() computed values and heights to help diagnose iOS behavior
-        // eslint-disable-next-line no-console
-        console.debug('[useTheme] safe-area env values:', {
-          envTop: getComputedStyle(document.documentElement).getPropertyValue('padding-top'),
-          envBottom: getComputedStyle(document.documentElement).getPropertyValue('padding-bottom'),
-          safeTop: top ? top.offsetHeight : null,
-          safeBottom: bottom ? bottom.offsetHeight : null
-        });
+        // PLATFORM/WORKAROUND: Some iOS contexts return 0 for env() until a layout tick
+        const isiOS = /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+        const applyFallbackIfNeeded = () => {
+          const safeTopPx = top ? top.offsetHeight : 0;
+          const safeBottomPx = bottom ? bottom.offsetHeight : 0;
+
+          // If env() gives 0 on iOS, use a small fallback so the status/homebars will be colored
+          if (isiOS) {
+            if (safeTopPx === 0) {
+              // conservative fallback that won't dramatically alter layout
+              top.style.height = '20px';
+              top.dataset.fallback = '1';
+            } else {
+              delete top.dataset.fallback;
+            }
+
+            if (safeBottomPx === 0) {
+              bottom.style.height = '20px';
+              bottom.dataset.fallback = '1';
+            } else {
+              delete bottom.dataset.fallback;
+            }
+          }
+
+          // DEBUG: Log env() computed values and heights to help diagnose iOS behavior
+          // eslint-disable-next-line no-console
+          console.debug('[useTheme] safe-area env values:', {
+            isiOS,
+            envTop: getComputedStyle(document.documentElement).getPropertyValue('padding-top'),
+            envBottom: getComputedStyle(document.documentElement).getPropertyValue('padding-bottom'),
+            safeTop: top ? top.offsetHeight : null,
+            safeBottom: bottom ? bottom.offsetHeight : null,
+            topFallback: top ? !!top.dataset.fallback : false,
+            bottomFallback: bottom ? !!bottom.dataset.fallback : false
+          });
+        };
+
+        // Run immediate check, then re-check after a short delay to catch layout timing issues
+        applyFallbackIfNeeded();
+        setTimeout(applyFallbackIfNeeded, 120);
+        setTimeout(applyFallbackIfNeeded, 400);
 
         // On-screen debug overlay for devices without remote inspector (enable with ?debugTheme=1 or localStorage.debugTheme='1')
         try {
@@ -121,7 +155,7 @@ export function useTheme() {
             }
 
             const meta = document.querySelector('meta[name="theme-color"]');
-            dbg.textContent = `style: ${appStyle}\nmode: ${mode}\ndark: ${isDark}\nrootBg: ${rootBg}\nbodyBg: ${bodyBg}\nmeta: ${meta ? meta.getAttribute('content') : ''}\nsafeTop: ${top ? top.offsetHeight : 0}\nsafeBottom: ${bottom ? bottom.offsetHeight : 0}`;
+            dbg.textContent = `style: ${appStyle}\nmode: ${mode}\ndark: ${isDark}\nrootBg: ${rootBg}\nbodyBg: ${bodyBg}\nmeta: ${meta ? meta.getAttribute('content') : ''}\nsafeTop: ${top ? top.offsetHeight : 0} (fallback=${top && top.dataset.fallback ? 'yes' : 'no'})\nsafeBottom: ${bottom ? bottom.offsetHeight : 0} (fallback=${bottom && bottom.dataset.fallback ? 'yes' : 'no'})\nisiOS: ${isiOS}`;
           }
         } catch (e) {
           // ignore in older browsers
