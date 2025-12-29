@@ -81,7 +81,7 @@ export default function HomeTab({
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-6 duration-700">
       
-      {/* SCANNER SECTION */}
+      {/* SCANNER SECTION (ONLY PLACE TO CLAIM) */}
       <div className="flex flex-col gap-3">
         {(isNearSpot && activeSpotId && currentSpot) ? (
           <div className="flex flex-col gap-3 animate-in zoom-in-95 duration-500">
@@ -162,7 +162,7 @@ export default function HomeTab({
         label="Global Assets"
       />
 
-      {/* SEARCH AND NODES LIST */}
+      {/* SEARCH AND NODES LIST (READ ONLY) */}
       <div className="space-y-3 px-1">
         <div className="flex gap-2 h-14 w-full">
           <div className="relative flex-1">
@@ -217,16 +217,12 @@ export default function HomeTab({
               const rank = getNodeRank(node.streakCount);
               return (
                 <div key={node.id} className="relative group">
-                  {/* Ready Indicator Sidebar */}
                   {node.isReady && (
                     <div className="absolute -left-1 top-4 bottom-4 w-1 bg-[rgb(var(--theme-primary))] rounded-full z-10 shadow-[0_0_10px_var(--theme-primary-glow)]" />
                   )}
                   
-                  <div 
-                    onClick={() => claimSpot(node.id)}
-                    className="node-card-static p-5 flex items-center justify-between cursor-pointer active:scale-[0.98]"
-                  >
-                    {/* LEFT CONTENT */}
+                  {/* Removed onClick and cursor-pointer to stop list-claiming */}
+                  <div className="node-card-static p-5 flex items-center justify-between transition-all duration-300">
                     <div className="flex items-center gap-4">
                       <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-6 ${rank.bg} ${rank.color}`}>
                         {node.streakCount >= 10 ? <Trophy size={18} /> : node.streakCount > 1 ? <Flame size={18} fill="currentColor" /> : <CheckCircle2 size={18} />}
@@ -250,7 +246,6 @@ export default function HomeTab({
                       </div>
                     </div>
 
-                    {/* RIGHT CONTENT */}
                     <div className="text-right">
                       <p className="text-[11px] font-black group-hover:text-[rgb(var(--theme-primary))] transition-colors duration-300">
                         +{node.points}XP
