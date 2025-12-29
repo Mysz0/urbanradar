@@ -7,24 +7,16 @@ const WinterEffect = () => (
   <>
     {/* Base frost vignette */}
     <div 
-      className="fixed pointer-events-none z-0" 
+      className="fixed inset-0 pointer-events-none z-0" 
       style={{ 
-        top: 'env(safe-area-inset-top, 0)',
-        bottom: 'env(safe-area-inset-bottom, 0)',
-        left: 0,
-        right: 0,
         background: 'radial-gradient(circle at 50% 50%, transparent 40%, rgba(186, 230, 253, 0.15) 100%)'
       }} 
     />
     
     {/* Animated frost layer */}
     <div 
-      className="fixed pointer-events-none z-0"
+      className="fixed inset-0 pointer-events-none z-0"
       style={{ 
-        top: 'env(safe-area-inset-top, 0)',
-        bottom: 'env(safe-area-inset-bottom, 0)',
-        left: 0,
-        right: 0,
         background: 'linear-gradient(135deg, rgba(186, 230, 253, 0.08) 0%, transparent 100%)',
         animation: 'iceBreath 10s ease-in-out infinite' 
       }} 
@@ -32,12 +24,8 @@ const WinterEffect = () => (
     
     {/* Ice crystal sparkles */}
     <div 
-      className="fixed pointer-events-none z-0 opacity-20"
+      className="fixed inset-0 pointer-events-none z-0 opacity-20"
       style={{
-        top: 'env(safe-area-inset-top, 0)',
-        bottom: 'env(safe-area-inset-bottom, 0)',
-        left: 0,
-        right: 0,
         backgroundImage: `
           radial-gradient(circle at 20% 30%, rgba(186, 230, 253, 0.4) 1px, transparent 1px),
           radial-gradient(circle at 60% 70%, rgba(186, 230, 253, 0.3) 1px, transparent 1px),
@@ -67,8 +55,8 @@ const SakuraEffect = () => {
 
   return (
     <div 
-      className="pointer-events-none z-0 overflow-hidden"
-      style={{ position: 'fixed', top: 'env(safe-area-inset-top, 0)', bottom: 'env(safe-area-inset-bottom, 0)', left: 0, right: 0 }}
+      className="fixed inset-0 pointer-events-none z-0 overflow-hidden"
+      style={{ }}
     >
       {/* Soft pink gradient backdrop */}
       <div 
@@ -124,8 +112,8 @@ const KoiEffect = () => {
 
   return (
     <div 
-      className="pointer-events-none z-0"
-      style={{ position: 'fixed', top: 'env(safe-area-inset-top, 0)', bottom: 'env(safe-area-inset-bottom, 0)', left: 0, right: 0 }}
+      className="fixed inset-0 pointer-events-none z-0"
+      style={{ }}
     >
       <div 
         className="absolute inset-0 opacity-15" 
@@ -231,8 +219,8 @@ const SupernovaEffect = () => {
 
   return (
     <div 
-      className="pointer-events-none z-0 overflow-hidden"
-      style={{ position: 'fixed', top: 'env(safe-area-inset-top, 0)', bottom: 'env(safe-area-inset-bottom, 0)', left: 0, right: 0 }}
+      className="fixed inset-0 pointer-events-none z-0 overflow-hidden"
+      style={{ }}
     >
       {/* Energy field base */}
       <div 
@@ -286,8 +274,8 @@ const SupernovaEffect = () => {
    ============================================== */
 const SalmonEffect = () => (
   <div 
-    className="pointer-events-none z-0"
-    style={{ position: 'fixed', top: 'env(safe-area-inset-top, 0)', bottom: 'env(safe-area-inset-bottom, 0)', left: 0, right: 0 }}
+    className="fixed inset-0 pointer-events-none z-0"
+    style={{ }}
   >
     {/* Warm gradient waves */}
     <div 
@@ -316,8 +304,8 @@ const SalmonEffect = () => (
    ============================================== */
 const MarbleEffect = () => (
   <div 
-    className="pointer-events-none z-0"
-    style={{ position: 'fixed', top: 'env(safe-area-inset-top, 0)', bottom: 'env(safe-area-inset-bottom, 0)', left: 0, right: 0 }}
+    className="fixed inset-0 pointer-events-none z-0"
+    style={{ }}
   >
     {/* Subtle vignette */}
     <div 
