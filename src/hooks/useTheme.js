@@ -13,31 +13,30 @@ export function useTheme() {
   useLayoutEffect(() => {
     const root = window.document.documentElement;
     
-    // 1. Sync Dark Mode Class
-    if (isDark) {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-    root.style.colorScheme = mode;
-    localStorage.setItem('theme-mode', mode);
-
-    // 2. Sync Aesthetic Style (emerald, sakura, etc.)
+    // 1. Attributes & Classes
+    root.classList.toggle('dark', isDark);
     root.setAttribute('data-theme', appStyle);
-    localStorage.setItem('app-style', appStyle);
+    root.style.colorScheme = mode;
 
-    // 3. Sync Browser UI (iPhone Status Bar / Chrome Bar)
-    // We get the actual background color currently applied by your CSS variables
+    // 2. Browser UI / Safe Area Sync
     const bgColor = getComputedStyle(root).getPropertyValue('--theme-map-bg').trim();
     
-    // Find the meta tag you have in your HTML
-    let metaThemeColor = document.querySelector('meta[name="theme-color"]');
-    if (metaThemeColor && bgColor) {
-      metaThemeColor.setAttribute('content', bgColor);
+    if (bgColor) {
+      // Force background to HTML/Body for iOS safe area
+      root.style.backgroundColor = bgColor;
+      document.body.style.backgroundColor = bgColor;
+
+      // Update mobile browser chrome color
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) {
+        meta.setAttribute('content', bgColor);
+      }
     }
+
+    localStorage.setItem('theme-mode', mode);
+    localStorage.setItem('app-style', appStyle);
   }, [mode, isDark, appStyle]);
 
-  // Scroll Logic (Preserved)
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
