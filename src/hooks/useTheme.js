@@ -1,9 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect } from 'react';
 
 export function useTheme() {
-  // 'mode' is strictly light or dark
   const [mode, setMode] = useState(localStorage.getItem('theme-mode') || 'dark');
-  // 'appStyle' is the aesthetic profile (emerald, sakura, abyss, marble)
   const [appStyle, setAppStyle] = useState(localStorage.getItem('app-style') || 'emerald');
   
   const [isAtTop, setIsAtTop] = useState(true);
@@ -12,10 +10,10 @@ export function useTheme() {
 
   const isDark = mode === 'dark';
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = window.document.documentElement;
     
-    // 1. Sync Light/Dark Mode
+    // 1. Sync Dark Mode Class
     if (isDark) {
       root.classList.add('dark');
     } else {
@@ -24,9 +22,19 @@ export function useTheme() {
     root.style.colorScheme = mode;
     localStorage.setItem('theme-mode', mode);
 
-    // 2. Sync Aesthetic Style (The New Engine)
+    // 2. Sync Aesthetic Style (emerald, sakura, etc.)
     root.setAttribute('data-theme', appStyle);
     localStorage.setItem('app-style', appStyle);
+
+    // 3. Sync Browser UI (iPhone Status Bar / Chrome Bar)
+    // We get the actual background color currently applied by your CSS variables
+    const bgColor = getComputedStyle(root).getPropertyValue('--theme-map-bg').trim();
+    
+    // Find the meta tag you have in your HTML
+    let metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor && bgColor) {
+      metaThemeColor.setAttribute('content', bgColor);
+    }
   }, [mode, isDark, appStyle]);
 
   // Scroll Logic (Preserved)
@@ -45,13 +53,5 @@ export function useTheme() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
-  return { 
-    mode, 
-    setMode, 
-    appStyle, 
-    setAppStyle, 
-    isDark, 
-    isAtTop, 
-    isNavbarShrunk 
-  };
+  return { mode, setMode, appStyle, setAppStyle, isDark, isAtTop, isNavbarShrunk };
 }

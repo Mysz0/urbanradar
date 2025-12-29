@@ -26,7 +26,7 @@ export default function Header({ isAdmin, username, email, showEmail, isDark, lo
           </div>
           
           <h1 className="text-3xl font-bold tracking-tighter italic uppercase leading-none truncate transition-colors duration-500">
-            {username || 'Hunter'}<span className="text-[rgb(var(--theme-primary))] font-normal">.</span>
+            {username || ''}<span className="text-[rgb(var(--theme-primary))] font-normal">.</span>
           </h1>
 
           <div className="relative h-0">
