@@ -21,6 +21,10 @@ export function useTheme() {
       const bgColor = getComputedStyle(root).getPropertyValue('--theme-map-bg').trim();
       
       if (bgColor) {
+        // ensure CSS var is set inline so pseudo-elements and safe-area use the new color immediately
+        root.style.setProperty('--theme-map-bg', bgColor);
+        document.body.style.setProperty('--theme-map-bg', bgColor);
+
         root.style.backgroundColor = bgColor;
         document.body.style.backgroundColor = bgColor;
 
