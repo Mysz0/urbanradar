@@ -50,40 +50,37 @@ export function useTheme() {
         if (!top) {
           top = document.createElement('div');
           top.id = 'safe-area-top';
-          Object.assign(top.style, {
-            position: 'fixed',
-            left: '0',
-            right: '0',
-            top: '0',
-            height: 'env(safe-area-inset-top, 0)',
-            backgroundColor: bgColor,
-            pointerEvents: 'none',
-            zIndex: '9999',
-          });
-          document.body.appendChild(top);
-        } else {
-          top.style.backgroundColor = bgColor;
-          top.style.height = 'env(safe-area-inset-top, 0)';
+          document.body.insertBefore(top, document.body.firstChild);
         }
 
         if (!bottom) {
           bottom = document.createElement('div');
           bottom.id = 'safe-area-bottom';
-          Object.assign(bottom.style, {
-            position: 'fixed',
-            left: '0',
-            right: '0',
-            bottom: '0',
-            height: 'env(safe-area-inset-bottom, 0)',
-            backgroundColor: bgColor,
-            pointerEvents: 'none',
-            zIndex: '9999',
-          });
-          document.body.appendChild(bottom);
-        } else {
-          bottom.style.backgroundColor = bgColor;
-          bottom.style.height = 'env(safe-area-inset-bottom, 0)';
+          document.body.insertBefore(bottom, document.body.firstChild);
         }
+
+        // Always update styles (position, color, height) on every theme change
+        Object.assign(top.style, {
+          position: 'fixed',
+          left: '0',
+          right: '0',
+          top: '0',
+          height: 'env(safe-area-inset-top, 0)',
+          backgroundColor: bgColor,
+          pointerEvents: 'none',
+          zIndex: '9999',
+        });
+
+        Object.assign(bottom.style, {
+          position: 'fixed',
+          left: '0',
+          right: '0',
+          bottom: '0',
+          height: 'env(safe-area-inset-bottom, 0)',
+          backgroundColor: bgColor,
+          pointerEvents: 'none',
+          zIndex: '9999',
+        });
 
         // PLATFORM/WORKAROUND: Some iOS contexts return 0 for env() until a layout tick
         const isiOS = /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -95,7 +92,6 @@ export function useTheme() {
           // If env() gives 0 on iOS, use a small fallback so the status/homebars will be colored
           if (isiOS) {
             if (safeTopPx === 0) {
-              // conservative fallback that won't dramatically alter layout
               top.style.height = '20px';
               top.dataset.fallback = '1';
             } else {
@@ -110,12 +106,15 @@ export function useTheme() {
             }
           }
 
+          // Always ensure backgroundColor is current (force repaint)
+          top.style.backgroundColor = bgColor;
+          bottom.style.backgroundColor = bgColor;
+
           // DEBUG: Log env() computed values and heights to help diagnose iOS behavior
           // eslint-disable-next-line no-console
           console.debug('[useTheme] safe-area env values:', {
             isiOS,
-            envTop: getComputedStyle(document.documentElement).getPropertyValue('padding-top'),
-            envBottom: getComputedStyle(document.documentElement).getPropertyValue('padding-bottom'),
+            bgColor,
             safeTop: top ? top.offsetHeight : null,
             safeBottom: bottom ? bottom.offsetHeight : null,
             topFallback: top ? !!top.dataset.fallback : false,
@@ -123,10 +122,10 @@ export function useTheme() {
           });
         };
 
-        // Run immediate check, then re-check after a short delay to catch layout timing issues
+        // Run immediate check, then re-check after short delays to catch layout timing issues
         applyFallbackIfNeeded();
-        setTimeout(applyFallbackIfNeeded, 120);
-        setTimeout(applyFallbackIfNeeded, 400);
+        setTimeout(() => applyFallbackIfNeeded(), 120);
+        setTimeout(() => applyFallbackIfNeeded(), 400);
 
         // On-screen debug overlay for devices without remote inspector (enable with ?debugTheme=1 or localStorage.debugTheme='1')
         try {
