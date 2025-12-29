@@ -33,6 +33,22 @@ body {
   overscroll-behavior: none;
 }
 
+/* --- SAFE-AREA FILL (top / bottom) for notch/status bar on iOS */
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top, 0);
+  background-color: var(--theme-map-bg);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+body::before { top: 0; height: env(safe-area-inset-top, 0); }
+body::after  { bottom: 0; height: env(safe-area-inset-bottom, 0); }
+
 /* --- CUSTOM SCROLLBAR --- */
 .custom-scrollbar::-webkit-scrollbar { width: 4px; }
 .custom-scrollbar::-webkit-scrollbar-thumb {
