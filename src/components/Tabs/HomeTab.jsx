@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Radar, Flame, CheckCircle2, Trophy, Zap, Lock, Search, ChevronDown, Check } from 'lucide-react';
+import { Radar, Flame, CheckCircle2, Trophy, Zap, Lock, Search, ChevronDown, Check, X, Info } from 'lucide-react';
 import StatCard from '../Shared/StatCard';
 import { getDistance } from '../../utils/geoUtils';
 
@@ -20,6 +20,7 @@ export default function HomeTab({
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('ready'); 
   const [isSelectOpen, setIsSelectOpen] = useState(false);
+  const [selectedNode, setSelectedNode] = useState(null);
   const selectRef = useRef(null);
 
   const todayStr = new Date().toDateString();
@@ -81,6 +82,70 @@ export default function HomeTab({
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-6 duration-700">
       
+      {/* NODE DESCRIPTION MODAL */}
+      {selectedNode && (
+        <div 
+          className="fixed inset-0 z-[100000] flex items-center justify-center p-4 animate-in fade-in duration-200"
+          style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}
+          onClick={() => setSelectedNode(null)}
+        >
+          <div 
+            className="smart-glass border rounded-3xl max-w-md w-full p-6 animate-in zoom-in-95 duration-300 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setSelectedNode(null)}
+              className="absolute top-4 right-4 p-2 rounded-xl hover:bg-white/10 transition-colors"
+            >
+              <X size={18} className="opacity-50" />
+            </button>
+
+            <div className="flex items-start gap-4 mb-4">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${getNodeRank(selectedNode.streakCount).bg} ${getNodeRank(selectedNode.streakCount).color}`}>
+                {selectedNode.streakCount >= 10 ? <Trophy size={20} /> : selectedNode.streakCount > 1 ? <Flame size={20} fill="currentColor" /> : <CheckCircle2 size={20} />}
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-lg leading-tight mb-1">{selectedNode.name}</h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-[rgb(var(--theme-primary))]">
+                    +{selectedNode.points}XP
+                  </span>
+                  {selectedNode.streakCount > 1 && (
+                    <span className="text-[10px] font-bold opacity-40">
+                      • {selectedNode.streakCount}x Streak
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {selectedNode.description ? (
+              <div className="mt-4 p-4 rounded-2xl bg-white/5 border border-white/10">
+                <div className="flex items-center gap-2 mb-2">
+                  <Info size={14} className="opacity-50" />
+                  <span className="text-[10px] font-black uppercase tracking-wider opacity-50">Node Intel</span>
+                </div>
+                <p className="text-sm leading-relaxed opacity-80">
+                  {selectedNode.description}
+                </p>
+              </div>
+            ) : (
+              <div className="mt-4 p-6 rounded-2xl bg-white/5 border border-white/10 text-center">
+                <p className="text-[10px] font-black uppercase tracking-wider opacity-30">
+                  No intel available for this node
+                </p>
+              </div>
+            )}
+
+            <div className={`mt-4 p-3 rounded-2xl text-center text-[10px] font-black uppercase tracking-wider ${
+              selectedNode.isReady ? 'bg-[rgb(var(--theme-primary))]/10 text-[rgb(var(--theme-primary))]' : 'bg-white/5 opacity-40'
+            }`}>
+              {selectedNode.isReady ? 'Sync Required' : 'Secured'}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* SCANNER SECTION (ONLY PLACE TO CLAIM) */}
       <div className="flex flex-col gap-3">
         {(isNearSpot && activeSpotId && currentSpot) ? (
@@ -221,8 +286,10 @@ export default function HomeTab({
                     <div className="absolute -left-1 top-4 bottom-4 w-1 bg-[rgb(var(--theme-primary))] rounded-full z-10 shadow-[0_0_10px_var(--theme-primary-glow)]" />
                   )}
                   
-                  {/* Removed onClick and cursor-pointer to stop list-claiming */}
-                  <div className="node-card-static p-5 flex items-center justify-between transition-all duration-300">
+                  <div 
+                    onClick={() => setSelectedNode(node)}
+                    className="node-card-static p-5 flex items-center justify-between transition-all duration-300 cursor-pointer"
+                  >
                     <div className="flex items-center gap-4">
                       <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-6 ${rank.bg} ${rank.color}`}>
                         {node.streakCount >= 10 ? <Trophy size={18} /> : node.streakCount > 1 ? <Flame size={18} fill="currentColor" /> : <CheckCircle2 size={18} />}
@@ -246,10 +313,11 @@ export default function HomeTab({
                       </div>
                     </div>
 
-                    <div className="text-right">
+                    <div className="text-right flex items-center gap-3">
                       <p className="text-[11px] font-black group-hover:text-[rgb(var(--theme-primary))] transition-colors duration-300">
                         +{node.points}XP
                       </p>
+                      <Info size={14} className="opacity-30 group-hover:opacity-100 transition-opacity" />
                     </div>
                   </div>
                 </div>
