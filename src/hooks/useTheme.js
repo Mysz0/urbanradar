@@ -13,25 +13,23 @@ export function useTheme() {
   useLayoutEffect(() => {
     const root = window.document.documentElement;
     
-    // 1. Attributes & Classes
-    root.classList.toggle('dark', isDark);
     root.setAttribute('data-theme', appStyle);
+    root.classList.toggle('dark', isDark);
     root.style.colorScheme = mode;
 
-    // 2. Browser UI / Safe Area Sync
-    const bgColor = getComputedStyle(root).getPropertyValue('--theme-map-bg').trim();
-    
-    if (bgColor) {
-      // Force background to HTML/Body for iOS safe area
-      root.style.backgroundColor = bgColor;
-      document.body.style.backgroundColor = bgColor;
+    requestAnimationFrame(() => {
+      const bgColor = getComputedStyle(root).getPropertyValue('--theme-map-bg').trim();
+      
+      if (bgColor) {
+        root.style.backgroundColor = bgColor;
+        document.body.style.backgroundColor = bgColor;
 
-      // Update mobile browser chrome color
-      const meta = document.querySelector('meta[name="theme-color"]');
-      if (meta) {
-        meta.setAttribute('content', bgColor);
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) {
+          meta.setAttribute('content', bgColor);
+        }
       }
-    }
+    });
 
     localStorage.setItem('theme-mode', mode);
     localStorage.setItem('app-style', appStyle);

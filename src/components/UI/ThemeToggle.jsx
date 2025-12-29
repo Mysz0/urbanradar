@@ -2,10 +2,8 @@ import React from 'react';
 import { Sun, Moon } from 'lucide-react';
 
 export default function ThemeToggle({ themeMag, setTheme, isDark, isAtTop }) {
-  // 1. Keep your exact magnetic physics logic
   const isMagneticActive = themeMag.position.x !== 0 || themeMag.position.y !== 0;
 
-  // 2. Keep your exact glide/scroll calculation
   const glideY = isAtTop ? 'calc(4.05rem - 1.5rem)' : '0px';
   const glideX = isAtTop ? 'calc(-6.85rem + 1.5rem)' : '0px';
 
@@ -14,8 +12,6 @@ export default function ThemeToggle({ themeMag, setTheme, isDark, isAtTop }) {
     e.stopPropagation();
     themeMag.reset(); 
     
-    // NEW ENGINE LOGIC: Switch between 'light' and 'dark' strings
-    // This is what was breaking before (passing a boolean to a string state)
     const nextMode = isDark ? 'light' : 'dark';
     setTheme(nextMode);
   };
