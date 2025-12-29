@@ -12,16 +12,27 @@ export function useTheme() {
 
   useLayoutEffect(() => {
     const root = window.document.documentElement;
-    
+
     root.setAttribute('data-theme', appStyle);
     root.classList.toggle('dark', isDark);
     root.style.colorScheme = mode;
 
+    // remove any previously set inline var if present (fixes stale inline value)
+    root.style.removeProperty('--theme-map-bg');
+    document.body.style.removeProperty('--theme-map-bg');
+
     requestAnimationFrame(() => {
-      const bgColor = getComputedStyle(root).getPropertyValue('--theme-map-bg').trim();
-      
+      // read from both root and body to be robust across inheritance and specificity
+      const rootBg = getComputedStyle(root).getPropertyValue('--theme-map-bg').trim();
+      const bodyBg = getComputedStyle(document.body).getPropertyValue('--theme-map-bg').trim();
+      const bgColor = rootBg || bodyBg;
+
+      // debug to help trace why a specific value is used (remove in prod)
+      // eslint-disable-next-line no-console
+      console.debug(`[useTheme] appStyle=${appStyle} isDark=${isDark} rootBg='${rootBg}' bodyBg='${bodyBg}' => using='${bgColor}'`);
+
       if (bgColor) {
-        root.style.backgroundColor = bgColor;
+        document.documentElement.style.backgroundColor = bgColor;
         document.body.style.backgroundColor = bgColor;
 
         const meta = document.querySelector('meta[name="theme-color"]');
@@ -30,10 +41,6 @@ export function useTheme() {
         }
       }
     });
-
-    // remove any previously set inline var if present (fixes stale inline value)
-    root.style.removeProperty('--theme-map-bg');
-    document.body.style.removeProperty('--theme-map-bg');
 
     localStorage.setItem('theme-mode', mode);
     localStorage.setItem('app-style', appStyle);
