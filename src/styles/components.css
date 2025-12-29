@@ -13,12 +13,13 @@
   isolation: isolate;
   transition: all var(--trans-speed) var(--trans-timing);
   box-shadow: var(--theme-shadow);
+  filter: var(--theme-filter);
 }
 
 .smart-glass:hover {
   background: var(--theme-card-hover);
   border-color: var(--theme-border-hover);
-  box-shadow: var(--theme-shadow-hover);
+  box-shadow: var(--theme-shadow-hover), var(--theme-card-glow);
 }
 
 /* ==============================================
@@ -35,12 +36,13 @@
   transition: all 0.3s var(--trans-timing);
   overflow: hidden;
   box-shadow: var(--theme-shadow);
+  filter: var(--theme-filter);
 }
 
 .node-card-static:hover {
   border-color: var(--theme-border-hover);
   background: var(--theme-card-hover);
-  box-shadow: var(--theme-shadow-hover);
+  box-shadow: var(--theme-shadow-hover), var(--theme-card-glow);
   transform: translateY(-2px);
 }
 
