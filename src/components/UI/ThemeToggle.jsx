@@ -27,17 +27,20 @@ export default function ThemeToggle({ themeMag, setTheme, isDark, isAtTop }) {
       onMouseLeave={themeMag.reset}
       onClick={handleToggle} 
       type="button"
-      // Re-added the solid positioning and high z-index
-      className={`fixed z-[100000] p-3.5 rounded-2xl border active:scale-90 transform-gpu touch-none transition-all duration-500 flex items-center justify-center ${
-        isDark 
-          ? 'bg-zinc-900/90 border-white/10 text-[rgb(var(--theme-primary))]' 
-          : 'bg-white/90 border-black/5 text-[rgb(var(--theme-primary))] shadow-lg shadow-[var(--theme-primary-glow)]'
-      }`} 
+      className={`fixed z-[100000] p-3.5 rounded-2xl border active:scale-90 transform-gpu touch-none transition-all duration-500 flex items-center justify-center 
+        /* UPDATED: Using dynamic theme variables instead of hardcoded zinc/white */
+        bg-[var(--theme-card-bg)] 
+        border-[var(--theme-border)] 
+        text-[rgb(var(--theme-primary))] 
+        backdrop-blur-md
+        hover:border-[var(--theme-border-hover)]
+        hover:bg-[var(--theme-card-hover)]
+        shadow-[var(--theme-shadow)]
+      `} 
       style={{ 
         top: '1.5rem', 
         right: '1.5rem',
         
-        // YOUR ORIGINAL DYNAMIC TRANSFORM (Physics + Glide)
         transform: `translate3d(calc(${glideX} + ${themeMag.position.x}px), calc(${glideY} + ${themeMag.position.y}px), 0)`,
         
         transition: isMagneticActive 
@@ -48,7 +51,6 @@ export default function ThemeToggle({ themeMag, setTheme, isDark, isAtTop }) {
       }}
     >
       <div className="pointer-events-none flex items-center justify-center">
-        {/* Sun/Moon icons with New Engine Glow */}
         {isDark ? (
           <Sun size={18} className="drop-shadow-[0_0_8px_var(--theme-primary-glow)]" />
         ) : (
