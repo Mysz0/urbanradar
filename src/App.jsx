@@ -127,7 +127,7 @@ export default function App() {
         handleLogout={handleLogout} 
       />
 
-      <main className="max-w-md mx-auto px-6 -mt-16 relative z-10">
+      <main className="max-w-md mx-auto px-6 -mt-16 relative z-30">
         {activeTab === 'home' && (
           <HomeTab 
             isNearSpot={isNearSpot} 

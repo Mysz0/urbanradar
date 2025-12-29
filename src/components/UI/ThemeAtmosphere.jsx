@@ -323,17 +323,10 @@ const MarbleEffect = () => (
    MAIN COMPONENT
    ============================================== */
 function ThemeAtmosphere({ activeStyle }) {
-  const effects = {
-    winter: <WinterEffect />,
-    sakura: <SakuraEffect />,
-    koi: <KoiEffect />,
-    abyss: <AbyssEffect />,
-    supernova: <SupernovaEffect />,
-    salmon: <SalmonEffect />,
-    marble: <MarbleEffect />
-  };
-
-  return effects[activeStyle] || null;
+  // Disabled all theme overlays due to iOS safe area rendering issues.
+  // Any fixed positioned overlay breaks iOS Safari's safe area handling.
+  // The backgroundColor set by useTheme.js is sufficient for all themes.
+  return null;
 }
 
 export default React.memo(ThemeAtmosphere);
