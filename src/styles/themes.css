@@ -16,10 +16,39 @@
 }
 
 /* ==============================================
-   DEFAULT THEME: EMERALD
-   Clean, professional, balanced
+   DEFAULT THEME: NEUTRAL
+   Minimal, neutral default to avoid flash of theme color on load
    ============================================== */
 :root {
+  /* Primary color (neutral) */
+  --theme-primary: 107, 114, 128;
+  --theme-primary-glow: rgba(107, 114, 128, 0.25);
+  
+  /* Surfaces */
+  --theme-bg-glass: rgba(255, 255, 255, 0.75);
+  --theme-card-bg: rgba(255, 255, 255, 0.8);
+  --theme-card-hover: rgba(255, 255, 255, 0.9);
+  
+  /* Borders & Effects */
+  --theme-border: rgba(107, 114, 128, 0.12);
+  --theme-border-hover: rgba(107, 114, 128, 0.2);
+  --theme-shadow: 0 4px 24px -8px rgba(0, 0, 0, 0.06);
+  --theme-shadow-hover: 0 8px 32px -8px rgba(0, 0, 0, 0.08);
+  
+  /* Typography */
+  --theme-text-title: #111827;
+  --theme-text-body: #374151;
+  --theme-text-muted: #6b7280;
+  
+  /* Map/Canvas */
+  --theme-map-bg: #f8fafc;
+  
+  /* Neutral: subtle card glow */
+  --theme-card-glow: 0 0 12px rgba(107, 114, 128, 0.06);
+}
+
+/* Re-introduce EMERALD as an explicit theme to avoid default green flash */
+[data-theme='emerald'] {
   /* Primary color */
   --theme-primary: 16, 185, 129;
   --theme-primary-glow: rgba(16, 185, 129, 0.5);
@@ -47,7 +76,20 @@
   --theme-card-glow: 0 0 20px rgba(16, 185, 129, 0.1);
 }
 
-.dark:not([data-theme]), 
+.dark:not([data-theme]) {
+  --theme-bg-glass: rgba(9, 9, 11, 0.85);
+  --theme-card-bg: rgba(24, 24, 27, 0.85);
+  --theme-card-hover: rgba(39, 39, 42, 0.9);
+  --theme-border: rgba(107, 114, 128, 0.15);
+  --theme-border-hover: rgba(107, 114, 128, 0.3);
+  --theme-text-title: #e6eef7;
+  --theme-text-body: #cbd5e1;
+  --theme-text-muted: #9ca3af;
+  --theme-map-bg: #0a0a0a;
+  --theme-shadow: 0 4px 24px -8px rgba(0, 0, 0, 0.5);
+  --theme-shadow-hover: 0 8px 32px -8px rgba(0, 0, 0, 0.08);
+}
+
 .dark[data-theme='emerald'] {
   --theme-bg-glass: rgba(9, 9, 11, 0.85);
   --theme-card-bg: rgba(24, 24, 27, 0.85);
