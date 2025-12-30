@@ -158,7 +158,7 @@ export default function StoreTab({ totalPoints, shopItems = [], inventory = [], 
                   disabled={isUnlocked || !canAfford}
                   className={`relative p-4 rounded-[2rem] border transition-all duration-300 ${
                     isUnlocked 
-                      ? 'smart-glass border-green-500/50 bg-green-500/10' 
+                      ? 'smart-glass border-[rgb(var(--theme-primary))]/50 bg-[rgb(var(--theme-primary))]/10' 
                       : canAfford
                         ? 'smart-glass border-current/10 hover:border-[rgb(var(--theme-primary))]/30 active:scale-95'
                         : 'smart-glass border-current/5 opacity-40 cursor-not-allowed'
@@ -174,7 +174,7 @@ export default function StoreTab({ totalPoints, shopItems = [], inventory = [], 
                   </div>
                   <p className="font-bold text-sm capitalize mb-1">{theme.name}</p>
                   {isUnlocked ? (
-                    <div className="flex items-center justify-center gap-1 text-green-500">
+                    <div className="flex items-center justify-center gap-1 text-[rgb(var(--theme-primary))]">
                       <CheckCircle2 size={12} />
                       <span className="text-[9px] font-black uppercase">Owned</span>
                     </div>
@@ -259,9 +259,9 @@ export default function StoreTab({ totalPoints, shopItems = [], inventory = [], 
                 )}
 
                 {inv.is_active && inv.progress !== undefined && (
-                  <div className="absolute bottom-0 left-0 w-full h-1 bg-current/5 overflow-hidden">
+                  <div className="absolute bottom-0 left-5 right-5 h-0.5 overflow-hidden rounded-b-2xl">
                     <div 
-                      className="h-full bg-[rgb(var(--theme-primary))] transition-all duration-1000 ease-linear shadow-[0_0_10px_var(--theme-primary-glow)]"
+                      className="h-full bg-[rgb(var(--theme-primary))] transition-all duration-1000 ease-linear"
                       style={{ width: `${inv.progress}%` }}
                     />
                   </div>
