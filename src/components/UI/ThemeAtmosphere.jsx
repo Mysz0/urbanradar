@@ -1,5 +1,29 @@
 import React, { useMemo } from 'react';
 
+// Safe viewport wrapper that honors iOS safe areas and prevents overflow scrollbars
+const AtmosphereFrame = ({ children }) => (
+  <div
+    className="pointer-events-none"
+    style={{
+      position: 'fixed',
+      top: 'env(safe-area-inset-top, 0px)',
+      right: 'env(safe-area-inset-right, 0px)',
+      bottom: 'env(safe-area-inset-bottom, 0px)',
+      left: 'env(safe-area-inset-left, 0px)',
+      overflow: 'hidden',
+      zIndex: 0,
+      maxWidth: '100vw',
+      maxHeight: '100dvh',
+      contain: 'layout paint size',
+      transform: 'translateZ(0)',
+    }}
+  >
+    <div className="absolute inset-0" style={{ pointerEvents: 'none' }}>
+      {children}
+    </div>
+  </div>
+);
+
 /* ==============================================
    WINTER: Crystalline Frost
    ============================================== */
@@ -7,7 +31,7 @@ const WinterEffect = () => (
   <>
     {/* Base frost vignette */}
     <div 
-      className="fixed inset-0 pointer-events-none" 
+      className="absolute inset-0" 
       style={{ 
         zIndex: 0,
         background: 'radial-gradient(circle at 50% 50%, transparent 40%, rgba(186, 230, 253, 0.15) 100%)'
@@ -16,7 +40,7 @@ const WinterEffect = () => (
     
     {/* Animated frost layer - removed sway animation */}
     <div 
-      className="fixed inset-0 pointer-events-none"
+      className="absolute inset-0"
       style={{ 
         zIndex: 0,
         background: 'linear-gradient(135deg, rgba(186, 230, 253, 0.08) 0%, transparent 100%)'
@@ -25,7 +49,7 @@ const WinterEffect = () => (
     
     {/* Ice crystal sparkles */}
     <div 
-      className="fixed inset-0 pointer-events-none opacity-20"
+      className="absolute inset-0 opacity-20"
       style={{
         zIndex: 0,
         backgroundImage: `
@@ -56,10 +80,7 @@ const SakuraEffect = () => {
   }, []);
 
   return (
-    <div 
-      className="fixed inset-0 pointer-events-none overflow-hidden"
-      style={{ zIndex: 0 }}
-    >
+    <>
       {/* Soft pink gradient backdrop */}
       <div 
         className="absolute inset-0 opacity-30"
@@ -69,7 +90,7 @@ const SakuraEffect = () => {
       />
       
       {/* Falling petals */}
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 overflow-hidden">
         {petals.map((p) => (
           <div 
             key={p.id} 
@@ -94,7 +115,7 @@ const SakuraEffect = () => {
           background: 'radial-gradient(circle at 80% 80%, rgba(244, 114, 182, 0.3), transparent 70%)'
         }}
       />
-    </div>
+    </>
   );
 };
 
@@ -113,10 +134,7 @@ const KoiEffect = () => {
   }, []);
 
   return (
-    <div 
-      className="fixed inset-0 pointer-events-none"
-      style={{ zIndex: 0 }}
-    >
+    <>
       <div 
         className="absolute inset-0 opacity-15" 
         style={{ 
@@ -142,7 +160,7 @@ const KoiEffect = () => {
           }}
         />
       ))}
-    </div>
+    </>
   );
 };
 
@@ -161,10 +179,7 @@ const AbyssEffect = () => {
   }, []);
 
   return (
-    <div 
-      className="fixed inset-0 pointer-events-none"
-      style={{ zIndex: 0 }}
-    >
+    <>
       {/* Deep gradient from bottom */}
       <div 
         className="absolute inset-0"
@@ -201,7 +216,7 @@ const AbyssEffect = () => {
           }} 
         />
       ))}
-    </div>
+    </>
   );
 };
 
@@ -220,10 +235,7 @@ const SupernovaEffect = () => {
   }, []);
 
   return (
-    <div 
-      className="fixed inset-0 pointer-events-none overflow-hidden"
-      style={{ zIndex: 0 }}
-    >
+    <>
       {/* Energy field base */}
       <div 
         className="absolute inset-0"
@@ -267,7 +279,7 @@ const SupernovaEffect = () => {
           backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, white 3px)'
         }}
       />
-    </div>
+    </>
   );
 };
 
@@ -275,10 +287,7 @@ const SupernovaEffect = () => {
    SALMON: Warm Coral Waves
    ============================================== */
 const SalmonEffect = () => (
-  <div 
-    className="fixed inset-0 pointer-events-none"
-    style={{ zIndex: 0 }}
-  >
+  <>
     {/* Warm gradient waves */}
     <div 
       className="absolute inset-0 opacity-25"
@@ -298,17 +307,14 @@ const SalmonEffect = () => (
         animation: 'gentlePulse 8s ease-in-out infinite'
       }}
     />
-  </div>
+  </>
 );
 
 /* ==============================================
    MARBLE: Minimal Architectural
    ============================================== */
 const MarbleEffect = () => (
-  <div 
-    className="fixed inset-0 pointer-events-none"
-    style={{ zIndex: 0 }}
-  >
+  <>
     {/* Subtle vignette */}
     <div 
       className="absolute inset-0 opacity-5"
@@ -316,17 +322,31 @@ const MarbleEffect = () => (
         background: 'radial-gradient(circle at 50% 50%, transparent 60%, var(--theme-text-title) 100%)'
       }}
     />
-  </div>
+  </>
 );
 
 /* ==============================================
    MAIN COMPONENT
    ============================================== */
 function ThemeAtmosphere({ activeStyle }) {
-  // Disabled all theme overlays due to iOS safe area rendering issues.
-  // Any fixed positioned overlay breaks iOS Safari's safe area handling.
-  // The backgroundColor set by useTheme.js is sufficient for all themes.
-  return null;
+  const EffectComponent = useMemo(() => {
+    if (activeStyle === 'winter') return WinterEffect;
+    if (activeStyle === 'sakura') return SakuraEffect;
+    if (activeStyle === 'koi') return KoiEffect;
+    if (activeStyle === 'abyss') return AbyssEffect;
+    if (activeStyle === 'supernova') return SupernovaEffect;
+    if (activeStyle === 'salmon') return SalmonEffect;
+    if (activeStyle === 'marble') return MarbleEffect;
+    return null;
+  }, [activeStyle]);
+
+  if (!EffectComponent) return null;
+
+  return (
+    <AtmosphereFrame>
+      <EffectComponent />
+    </AtmosphereFrame>
+  );
 }
 
 export default React.memo(ThemeAtmosphere);

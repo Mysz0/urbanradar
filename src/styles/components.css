@@ -258,7 +258,7 @@
 /* Sakura petals */
 .sakura-petal {
   pointer-events: none;
-  position: fixed;
+  position: absolute;
   z-index: 1;
   will-change: transform, opacity;
   border-radius: 50% 0 50% 0;
