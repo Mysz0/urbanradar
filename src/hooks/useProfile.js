@@ -69,7 +69,7 @@ export function useProfile(user, showToast, fetchLeaderboard) {
             })
             .eq('id', userId);
 
-          if (showToast) showToast(`${newStreak} Day Streak Active!`);
+          if (showToast && newStreak > 1) showToast(`${newStreak} Day Streak Active!`);
           if (fetchLeaderboard) fetchLeaderboard();
         }
       }

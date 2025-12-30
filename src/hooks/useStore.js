@@ -50,16 +50,31 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
 
   const deactivateExpiredItem = async (inventoryId) => {
     try {
-      await supabase
-        .from('user_inventory')
-        .update({ is_active: false, activated_at: null })
-        .eq('id', inventoryId);
+      // Get item to check quantity
+      const item = inventory.find(i => i.id === inventoryId);
       
-      setInventory(prev => prev.map(i => 
-        i.id === inventoryId 
-          ? { ...i, is_active: false, activated_at: null, timeLeft: null }
-          : i
-      ));
+      if (item && item.quantity <= 0) {
+        // Delete from database if quantity is 0
+        await supabase
+          .from('user_inventory')
+          .delete()
+          .eq('id', inventoryId);
+        
+        // Remove from local state
+        setInventory(prev => prev.filter(i => i.id !== inventoryId));
+      } else {
+        // Just deactivate if quantity > 0
+        await supabase
+          .from('user_inventory')
+          .update({ is_active: false, activated_at: null })
+          .eq('id', inventoryId);
+        
+        setInventory(prev => prev.map(i => 
+          i.id === inventoryId 
+            ? { ...i, is_active: false, activated_at: null, timeLeft: null }
+            : i
+        ));
+      }
     } catch (err) {
       console.error("Auto-deactivate failed:", err);
     }
@@ -150,48 +165,34 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
     
     setLoading(true);
     try {
-      // Get theme from shop_items
-      const { data: themeItem, error: itemError } = await supabase
-        .from('shop_items')
-        .select('id')
-        .eq('name', themeName)
-        .eq('category', 'theme')
+      // Get current unlocked themes from profiles
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('unlocked_themes, total_points')
+        .eq('id', user.id)
         .single();
 
-      if (itemError) throw itemError;
+      if (profileError) throw profileError;
 
-      // Check if already in inventory
-      const { data: existing } = await supabase
-        .from('user_inventory')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('item_id', themeItem.id)
-        .maybeSingle();
+      const currentThemes = profile?.unlocked_themes || ['emerald', 'winter'];
 
-      if (existing) {
+      // Check if already unlocked
+      if (currentThemes.includes(themeName)) {
         showToast('Theme already unlocked!', 'error');
         setLoading(false);
         return;
       }
 
-      // Insert into user_inventory (trigger will auto-unlock in profiles)
-      const { error: inventoryError } = await supabase
-        .from('user_inventory')
-        .insert({
-          user_id: user.id,
-          item_id: themeItem.id,
-          quantity: 1
-        });
-
-      if (inventoryError) throw inventoryError;
-
-      // Deduct points
-      const { error: pointsError } = await supabase
+      // Update profiles: deduct points and add theme
+      const { error: updateError } = await supabase
         .from('profiles')
-        .update({ total_points: totalPoints - price })
+        .update({ 
+          total_points: profile.total_points - price,
+          unlocked_themes: [...currentThemes, themeName]
+        })
         .eq('id', user.id);
 
-      if (pointsError) throw pointsError;
+      if (updateError) throw updateError;
       
       setTotalPoints(prev => prev - price);
       showToast(`Unlocked ${themeName} theme!`, 'success');
