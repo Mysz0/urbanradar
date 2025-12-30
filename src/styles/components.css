@@ -236,6 +236,49 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
+/* --- BLACK HOLE: Gravitational Distortion --- */
+[data-theme='blackhole'] .smart-glass {
+  box-shadow: 
+    var(--theme-shadow),
+    0 0 40px rgba(139, 92, 246, 0.3),
+    inset 0 0 30px rgba(0, 0, 0, 0.8);
+}
+
+[data-theme='blackhole'] .node-card-static {
+  border-radius: 1.5rem;
+  box-shadow: 
+    var(--theme-shadow),
+    0 0 32px rgba(139, 92, 246, 0.25);
+  position: relative;
+}
+
+[data-theme='blackhole'] .node-card-static::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  background: conic-gradient(from 0deg at 50% 50%, 
+    transparent, 
+    rgba(139, 92, 246, 0.3), 
+    transparent);
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+  animation: spin 4s linear infinite;
+}
+
+[data-theme='blackhole'] .node-card-static:hover::before {
+  opacity: 1;
+}
+
+[data-theme='blackhole'] .node-card-static:hover {
+  box-shadow: 
+    var(--theme-shadow-hover),
+    0 0 48px rgba(139, 92, 246, 0.4),
+    inset 0 0 20px rgba(139, 92, 246, 0.1);
+  transform: translateY(-3px) scale(1.01);
+}
+
 /* ==============================================
    ATMOSPHERE EFFECTS
    ============================================== */
@@ -337,6 +380,25 @@
   0% { background-position: 0% 0%; }
   50% { background-position: 50% 100%; }
   100% { background-position: 100% 0%; }
+}
+
+@keyframes orbitSink {
+  0% { 
+    transform: translate(-50%, -50%) rotate(var(--orbit-angle)) translateX(var(--orbit-radius)) scale(1);
+    opacity: 0.8;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% { 
+    transform: translate(-50%, -50%) rotate(calc(var(--orbit-angle) + 360deg)) translateX(10%) scale(0.3);
+    opacity: 0;
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 @keyframes rippleOut {

@@ -2,3 +2,4 @@
 .env.local
 node_modules
 dist
+THEME_UNLOCK_SQL.sql

@@ -140,6 +140,45 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
     }
   };
 
+  const buyTheme = async (themeName, price) => {
+    if (totalPoints < price || loading) return;
+    setLoading(true);
+    try {
+      // Find theme item in shop (stored in description field)
+      const themeItem = shopItems.find(item => item.category === 'theme' && item.description === themeName);
+      if (!themeItem) {
+        showToast("Theme not found", "error");
+        setLoading(false);
+        return;
+      }
+
+      // Deduct points
+      const { error: pointsError } = await supabase
+        .from('profiles')
+        .update({ total_points: totalPoints - price })
+        .eq('id', user.id);
+
+      if (pointsError) throw pointsError;
+
+      // Insert into inventory (trigger will handle unlocking)
+      await supabase.from('user_inventory').insert({ 
+        user_id: user.id, 
+        item_id: themeItem.id, 
+        quantity: 1, 
+        is_active: false 
+      });
+      
+      setTotalPoints(prev => prev - price);
+      showToast(`Unlocked ${themeItem.name}!`, "success");
+      await fetchData();
+    } catch (err) {
+      console.error('Theme purchase error:', err);
+      showToast("Theme unlock failed", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const activateItem = async (inventoryId) => {
     if (!user || loading || isActivating.current) return;
     

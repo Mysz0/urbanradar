@@ -11,6 +11,7 @@ export function useProfile(user, showToast, fetchLeaderboard) {
   const [customRadius, setCustomRadius] = useState(250);
   const [claimRadius, setClaimRadius] = useState(20);
   const [visitData, setVisitData] = useState({ last_visit: null, streak: 0 });
+  const [unlockedThemes, setUnlockedThemes] = useState(['emerald', 'winter']);
 
   // 1. DATA FETCHING (Handles Streak Logic & State Sync)
   const fetchProfile = useCallback(async () => {
@@ -20,7 +21,7 @@ export function useProfile(user, showToast, fetchLeaderboard) {
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('username, role, total_points, show_email, last_username_change, custom_radius, claim_radius, streak_count, last_visit')
+        .select('username, role, total_points, show_email, last_username_change, custom_radius, claim_radius, streak_count, last_visit, unlocked_themes')
         .eq('id', userId)
         .maybeSingle();
 
@@ -37,6 +38,7 @@ export function useProfile(user, showToast, fetchLeaderboard) {
         setLastChange(profile.last_username_change);
         setCustomRadius(profile.custom_radius || 250);
         setClaimRadius(profile.claim_radius || 20);
+        setUnlockedThemes(profile.unlocked_themes || ['emerald', 'winter']);
 
         // Streak & Visit Logic
         const now = new Date();

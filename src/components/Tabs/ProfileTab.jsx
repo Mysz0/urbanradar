@@ -13,13 +13,40 @@ export default function ProfileTab({
   appStyle = 'emerald',
   setAppStyle = () => {},
   showToast = () => {},
-  visitData = { streak: 0 }
+  visitData = { streak: 0 },
+  unlockedThemes = ['emerald', 'winter'],
+  totalPoints = 0,
+  buyTheme = () => {}
 }) {
   const provider = user?.app_metadata?.provider || 'account';
   const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
 
   const streak = visitData?.streak || 0;
   const isSupernovaLocked = streak < 50;
+
+  const themes = [
+    { id: 'emerald', label: 'Emerald', icon: Leaf, color: 'bg-emerald-500', price: 0, free: true },
+    { id: 'winter', label: 'Winter', icon: Snowflake, color: 'bg-blue-400', price: 0, free: true },
+    { id: 'koi', label: 'Koi', icon: Waves, color: 'bg-[#EA4426]', price: 500 },
+    { id: 'sakura', label: 'Sakura', icon: Flower, color: 'bg-[#F4ACB7]', price: 750 },
+    { id: 'salmon', label: 'Salmon', icon: Fish, color: 'bg-[#FF8C73]', price: 600 },
+    { id: 'abyss', label: 'Abyss', icon: Shell, color: 'bg-[#FB923C]', price: 1000 },
+    { id: 'marble', label: 'Marble', icon: Layers, color: 'bg-[#18181b]', price: 800 },
+  ];
+
+  const handleThemeClick = (theme) => {
+    const isUnlocked = unlockedThemes.includes(theme.id);
+    
+    if (isUnlocked) {
+      setAppStyle(theme.id);
+    } else {
+      if (totalPoints < theme.price) {
+        showToast(`Need ${theme.price}XP (You have ${totalPoints}XP)`, "error");
+      } else {
+        buyTheme(theme.id, theme.price);
+      }
+    }
+  };
 
   const handleSaveIdentity = () => {
     const currentUsername = user?.username || "";
@@ -85,76 +112,33 @@ export default function ProfileTab({
         </div>
 
         <div className="grid grid-cols-2 gap-2 p-1.5 smart-glass border rounded-2xl">
-          <button 
-            onClick={() => setAppStyle('emerald')}
-            className={`flex items-center justify-center gap-2 py-3 rounded-xl transition-all ${
-              appStyle === 'emerald' ? 'bg-emerald-500 text-white shadow-lg' : 'opacity-40 hover:opacity-100'
-            }`}
-          >
-            <Leaf size={14} />
-            <span className="text-[10px] font-bold uppercase">Emerald</span>
-          </button>
+          {themes.map((theme) => {
+            const isUnlocked = unlockedThemes.includes(theme.id);
+            const Icon = theme.icon;
+            
+            return (
+              <button 
+                key={theme.id}
+                onClick={() => handleThemeClick(theme)}
+                className={`flex items-center justify-center gap-2 py-3 rounded-xl transition-all relative ${
+                  appStyle === theme.id 
+                  ? `${theme.color} text-white shadow-lg` 
+                  : isUnlocked
+                    ? 'opacity-40 hover:opacity-100'
+                    : 'bg-current/5 opacity-40 hover:opacity-60'
+                }`}
+              >
+                {!isUnlocked && <Lock size={12} className="absolute top-1 right-1 opacity-50" />}
+                <Icon size={14} />
+                <span className="text-[10px] font-bold uppercase">{theme.label}</span>
+                {!isUnlocked && !theme.free && (
+                  <span className="absolute bottom-1 text-[8px] font-black opacity-50">{theme.price}XP</span>
+                )}
+              </button>
+            );
+          })}
 
-          <button 
-            onClick={() => setAppStyle('winter')}
-            className={`flex items-center justify-center gap-2 py-3 rounded-xl transition-all ${
-              appStyle === 'winter' ? 'bg-blue-400 text-white shadow-lg' : 'opacity-40 hover:opacity-100'
-            }`}
-          >
-            <Snowflake size={14} />
-            <span className="text-[10px] font-bold uppercase">Winter</span>
-          </button>
-
-          <button 
-            onClick={() => setAppStyle('koi')}
-            className={`flex items-center justify-center gap-2 py-3 rounded-xl transition-all ${
-              appStyle === 'koi' ? 'bg-[#EA4426] text-white shadow-lg' : 'opacity-40 hover:opacity-100'
-            }`}
-          >
-            <Waves size={14} />
-            <span className="text-[10px] font-bold uppercase">Koi</span>
-          </button>
-
-          <button 
-            onClick={() => setAppStyle('sakura')}
-            className={`flex items-center justify-center gap-2 py-3 rounded-xl transition-all ${
-              appStyle === 'sakura' ? 'bg-[#F4ACB7] text-white shadow-lg' : 'opacity-40 hover:opacity-100'
-            }`}
-          >
-            <Flower size={14} />
-            <span className="text-[10px] font-bold uppercase">Sakura</span>
-          </button>
-
-          <button 
-            onClick={() => setAppStyle('salmon')}
-            className={`flex items-center justify-center gap-2 py-3 rounded-xl transition-all ${
-              appStyle === 'salmon' ? 'bg-[#FF8C73] text-white shadow-lg' : 'opacity-40 hover:opacity-100'
-            }`}
-          >
-            <Fish size={14} />
-            <span className="text-[10px] font-bold uppercase">Salmon</span>
-          </button>
-
-          <button 
-            onClick={() => setAppStyle('abyss')}
-            className={`flex items-center justify-center gap-2 py-3 rounded-xl transition-all ${
-              appStyle === 'abyss' ? 'bg-[#FB923C] text-white shadow-lg' : 'opacity-40 hover:opacity-100'
-            }`}
-          >
-            <Shell size={14} />
-            <span className="text-[10px] font-bold uppercase">Abyss</span>
-          </button>
-
-          <button 
-            onClick={() => setAppStyle('marble')}
-            className={`flex items-center justify-center gap-2 py-3 rounded-xl transition-all ${
-              appStyle === 'marble' ? 'bg-[#18181b] text-white shadow-lg' : 'opacity-40 hover:opacity-100'
-            }`}
-          >
-            <Layers size={14} />
-            <span className="text-[10px] font-bold uppercase">Marble</span>
-          </button>
-          {/* NEW LOCKED THEME: SUPERNOVA */}
+          {/* SUPERNOVA (streak-locked) */}
           <button 
             onClick={() => {
               if (isSupernovaLocked) {

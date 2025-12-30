@@ -349,6 +349,47 @@
 }
 
 /* ==============================================
+   BLACK HOLE THEME (SECRET)
+   Deep space, gravitational, cosmic void
+   ============================================== */
+[data-theme='blackhole'] {
+  --theme-primary: 139, 92, 246;
+  --theme-primary-glow: rgba(139, 92, 246, 0.6);
+  
+  --theme-bg-glass: rgba(10, 5, 20, 0.85);
+  --theme-card-bg: rgba(15, 10, 30, 0.9);
+  --theme-card-hover: rgba(25, 15, 45, 0.95);
+  
+  --theme-border: rgba(139, 92, 246, 0.2);
+  --theme-border-hover: rgba(139, 92, 246, 0.4);
+  --theme-shadow: 0 8px 48px -8px rgba(139, 92, 246, 0.4);
+  --theme-shadow-hover: 0 12px 64px -8px rgba(139, 92, 246, 0.6);
+  
+  --theme-text-title: #e9d5ff;
+  --theme-text-body: #c4b5fd;
+  --theme-text-muted: #78716c;
+  
+  --theme-map-bg: #030014;
+  
+  --theme-card-glow: 0 0 60px rgba(139, 92, 246, 0.4);
+  --theme-filter: saturate(1.4) contrast(1.15) brightness(0.95);
+}
+
+.dark[data-theme='blackhole'] {
+  --theme-bg-glass: rgba(5, 3, 15, 0.95);
+  --theme-card-bg: rgba(10, 5, 25, 0.95);
+  --theme-card-hover: rgba(20, 10, 40, 1);
+  --theme-border: rgba(139, 92, 246, 0.25);
+  --theme-border-hover: rgba(139, 92, 246, 0.5);
+  --theme-shadow: 0 8px 64px -8px rgba(139, 92, 246, 0.5);
+  --theme-shadow-hover: 0 12px 80px -8px rgba(139, 92, 246, 0.7);
+  --theme-text-title: #f3e8ff;
+  --theme-text-body: #ddd6fe;
+  --theme-text-muted: #71717a;
+  --theme-map-bg: #000000;
+}
+
+/* ==============================================
    MARBLE THEME
    Architectural, minimal, luxury black & white
    ============================================== */

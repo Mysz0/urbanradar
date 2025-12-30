@@ -68,7 +68,9 @@ export default function App() {
     updateClaimRadius,  
     detectionOptions,  
     claimOptions,
-    fetchProfile 
+    fetchProfile,
+    unlockedThemes,
+    buyTheme
   } = useGameLogic(user, showToast);
 
   const { userLocation, mapCenter, isNearSpot, canClaim, activeSpotId, radiusBonus } = useGeoLocation(
@@ -178,6 +180,9 @@ export default function App() {
             setAppStyle={setAppStyle}
             showToast={showToast}
             visitData={visitData}
+            unlockedThemes={unlockedThemes}
+            totalPoints={totalPoints}
+            buyTheme={buyTheme}
           />
         )}
 
