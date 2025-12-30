@@ -88,7 +88,7 @@ export default function App() {
       
       // Check if konami code matches
       if (JSON.stringify(newCode) === JSON.stringify(KONAMI_CODE)) {
-        showToast('🌌 Black hole unlocked! 🌌', 'success');
+        showToast('Black hole unlocked', 'success');
         setKonamiCode([]);
         
         // Automatically buy/unlock blackhole theme (price 0 = free secret unlock)
@@ -103,7 +103,7 @@ export default function App() {
 
   // Triple-tap detection for mobile - unlock blackhole by triple-tapping screen
   const handleTripleTap = useCallback(() => {
-    showToast('🌌 Black hole unlocked! 🌌', 'success');
+    showToast('Black hole unlocked', 'success');
     
     // Automatically buy/unlock blackhole theme (price 0 = free secret unlock)
     if (unlockedThemes && !unlockedThemes.includes('blackhole')) {
@@ -121,43 +121,39 @@ export default function App() {
         return { usernameTaps: 0, scanTaps: 0 };
       }
       
+      return newSequence;
+    });
+  }, []);
+
+  // Scanning box tap handler
+  const handleScanningTap = useCallback(() => {
+    setUnlockedSequence(prev => {
+      // Only count if username has been tapped 2 times
+      if (prev.usernameTaps < 2) {
+        return prev;
+      }
+      
+      const newSequence = { ...prev, scanTaps: prev.scanTaps + 1 };
+      
       // Check if sequence is complete (2 username + 5 scan)
-      if (newSequence.usernameTaps === 2 && newSequence.scanTaps === 5) {
-        showToast('🌌 Black hole unlocked! 🌌', 'success');
+      if (prev.usernameTaps === 2 && newSequence.scanTaps === 5) {
+        showToast('Black hole unlocked', 'success');
         setUnlockedSequence({ usernameTaps: 0, scanTaps: 0 });
         
         if (unlockedThemes && !unlockedThemes.includes('blackhole')) {
           buyTheme('blackhole', 0, fetchProfile);
         }
+        return { usernameTaps: 0, scanTaps: 0 };
       }
-      
-      return newSequence;
-    });
-  }, [unlockedThemes, buyTheme, fetchProfile]);
-
-  // Scanning box tap handler
-  const handleScanningTap = useCallback(() => {
-    setUnlockedSequence(prev => {
-      // Only count if username taps exist
-      if (prev.usernameTaps === 0) {
-        return prev;
-      }
-      
-      const newSequence = { ...prev, scanTaps: prev.scanTaps + 1 };
       
       // Reset if too many scanning taps without completing
       if (newSequence.scanTaps > 5) {
         return { usernameTaps: 0, scanTaps: 0 };
       }
       
-      // Check if sequence is complete (2 username + 5 scan)
-      if (newSequence.usernameTaps === 2 && newSequence.scanTaps === 5) {
-        showToast('🌌 Black hole unlocked! 🌌', 'success');
-        setUnlockedSequence({ usernameTaps: 0, scanTaps: 0 });
-        
-        if (unlockedThemes && !unlockedThemes.includes('blackhole')) {
-          buyTheme('blackhole', 0, fetchProfile);
-        }
+      return newSequence;
+    });
+  }, [unlockedThemes, buyTheme, fetchProfile]);
       }
       
       return newSequence;
