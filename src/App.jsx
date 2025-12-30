@@ -126,9 +126,7 @@ export default function App() {
       
       // Check if sequence is complete (2 username + 5 scan) and not already unlocked
       if (prev.usernameTaps === 2 && newSequence.scanTaps === 5 && unlockedThemes && !unlockedThemes.includes('blackhole')) {
-        showToast('Black hole unlocked', 'success');
         setUnlockedSequence({ usernameTaps: 0, scanTaps: 0 });
-        
         buyTheme('blackhole', 0, fetchProfile);
         return { usernameTaps: 0, scanTaps: 0 };
       }
