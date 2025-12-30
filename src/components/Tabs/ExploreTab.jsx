@@ -107,7 +107,8 @@ export default function ExploreTab({
     setIsFullScreen((prev) => !prev);
   };
 
-  const mapHeight = isFullScreen ? '100vh' : '70vh';
+  // Use dynamic viewport units to avoid iOS safe-area jump on address bar hide/show
+  const mapHeight = isFullScreen ? '100dvh' : '70vh';
 
   const MapDragHandler = () => {
     useMapEvents({

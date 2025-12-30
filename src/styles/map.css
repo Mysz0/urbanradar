@@ -21,6 +21,8 @@
 body.map-fullscreen { overflow: hidden; }
 body.map-fullscreen .navbar-shell { display: none !important; }
 body.map-fullscreen .theme-toggle { display: none !important; }
+body.map-fullscreen, body.map-fullscreen #root { height: 100dvh; padding: 0; margin: 0; }
+body:not(.map-fullscreen), body:not(.map-fullscreen) #root { height: auto; }
 
 .marker-pin-spot .dot { 
   width: 10px; height: 10px; background: #71717a; 
