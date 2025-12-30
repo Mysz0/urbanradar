@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import 'leaflet/dist/leaflet.css';
 
 // MODULAR IMPORTS
@@ -26,6 +26,8 @@ export default function App() {
   // 1. SHARED UI STATE
   const [activeTab, setActiveTab] = useState('home');
   const [statusMsg, setStatusMsg] = useState({ text: '', type: '' });
+  const [konamiCode, setKonamiCode] = useState([]);
+  const KONAMI_CODE = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
   
   // 2. LOGIC EXTRACTION (Hooks)
   const { user, loading } = useAuth();
@@ -73,6 +75,40 @@ export default function App() {
     buyTheme
   } = useGameLogic(user, showToast);
 
+  // Secret konami code detector for blackhole theme unlock (after useGameLogic)
+  const handleKonamiCode = useCallback((e) => {
+    const key = e.key.toLowerCase() === 'b' || e.key.toLowerCase() === 'a' 
+      ? e.key.toLowerCase() 
+      : e.key;
+    
+    setKonamiCode(prev => {
+      const newCode = [...prev, key].slice(-10);
+      
+      // Check if konami code matches
+      if (JSON.stringify(newCode) === JSON.stringify(KONAMI_CODE)) {
+        showToast('🌌 Black hole unlocked! 🌌', 'success');
+        setKonamiCode([]);
+        
+        // Automatically buy/unlock blackhole theme (price 0 = free secret unlock)
+        if (unlockedThemes && !unlockedThemes.includes('blackhole')) {
+          buyTheme('blackhole', 0, fetchProfile);
+        }
+      }
+      
+      return newCode;
+    });
+  }, [KONAMI_CODE, unlockedThemes, buyTheme, fetchProfile]);
+
+  // Shake detection for mobile - unlock blackhole by shaking phone
+  const handleShake = useCallback(() => {
+    showToast('🌌 Black hole unlocked! 🌌', 'success');
+    
+    // Automatically buy/unlock blackhole theme (price 0 = free secret unlock)
+    if (unlockedThemes && !unlockedThemes.includes('blackhole')) {
+      buyTheme('blackhole', 0, fetchProfile);
+    }
+  }, [unlockedThemes, buyTheme, fetchProfile]);
+
   const { userLocation, mapCenter, isNearSpot, canClaim, activeSpotId, radiusBonus } = useGeoLocation(
     user,
     spots, 
@@ -92,6 +128,48 @@ export default function App() {
     await supabase.auth.signOut();
     window.location.href = '/';
   };
+
+  // Attach konami code listener
+  useEffect(() => {
+    window.addEventListener('keydown', handleKonamiCode);
+    return () => window.removeEventListener('keydown', handleKonamiCode);
+  }, [handleKonamiCode]);
+
+  // Attach shake detector for mobile
+  useEffect(() => {
+    let lastTime = 0;
+    let lastX = 0;
+    let lastY = 0;
+    let lastZ = 0;
+    const SHAKE_THRESHOLD = 30;
+    const SHAKE_TIME_THRESHOLD = 500; // ms between shakes
+
+    const handleMotion = (event) => {
+      const { x, y, z } = event.accelerationIncludingGravity;
+      const now = Date.now();
+
+      // Calculate shake intensity
+      const deltaX = Math.abs(x - lastX);
+      const deltaY = Math.abs(y - lastY);
+      const deltaZ = Math.abs(z - lastZ);
+      const shakeMagnitude = deltaX + deltaY + deltaZ;
+
+      if (
+        shakeMagnitude > SHAKE_THRESHOLD &&
+        now - lastTime > SHAKE_TIME_THRESHOLD
+      ) {
+        lastTime = now;
+        handleShake();
+      }
+
+      lastX = x;
+      lastY = y;
+      lastZ = z;
+    };
+
+    window.addEventListener('devicemotion', handleMotion, false);
+    return () => window.removeEventListener('devicemotion', handleMotion);
+  }, [handleShake]);
 
   // UPDATED: Loading screen now uses theme variables
   if (loading) return (

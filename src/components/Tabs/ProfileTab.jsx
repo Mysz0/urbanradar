@@ -30,6 +30,7 @@ export default function ProfileTab({
     { id: 'salmon', label: 'Salmon', icon: Fish, color: 'bg-[#FF8C73]' },
     { id: 'abyss', label: 'Abyss', icon: Shell, color: 'bg-[#FB923C]' },
     { id: 'marble', label: 'Marble', icon: Layers, color: 'bg-[#18181b]' },
+    { id: 'blackhole', label: 'Blackhole', icon: Sparkles, color: 'bg-[#7C3AED]' },
   ];
 
   const handleThemeClick = (theme) => {
@@ -109,6 +110,11 @@ export default function ProfileTab({
           {themes.map((theme) => {
             const isUnlocked = unlockedThemes.includes(theme.id);
             const Icon = theme.icon;
+            
+            // Hide blackhole theme if not unlocked
+            if (theme.id === 'blackhole' && !isUnlocked) {
+              return null;
+            }
             
             return (
               <button 

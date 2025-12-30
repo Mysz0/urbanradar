@@ -37,7 +37,6 @@ export default function StoreTab({ totalPoints, shopItems = [], inventory = [], 
     { id: 'salmon', name: 'Salmon', price: 150, icon: Fish, color: '#FF8C73' },
     { id: 'abyss', name: 'Abyss', price: 200, icon: Shell, color: '#FB923C' },
     { id: 'marble', name: 'Marble', price: 250, icon: Layers, color: '#A1A1AA' },
-    { id: 'blackhole', name: 'Blackhole', price: 500, icon: Sparkles, color: '#7C3AED' },
   ];
 
   const handleBuyTheme = (theme) => {
