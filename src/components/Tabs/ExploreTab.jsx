@@ -25,12 +25,14 @@ function MapRecenter({ location, isFollowing }) {
   return null;
 }
 
-function MapInvalidator() {
+function MapInvalidator({ isFullScreen }) {
   const map = useMap();
   useEffect(() => {
-    const timer = setTimeout(() => { map.invalidateSize(); }, 250);
+    const timer = setTimeout(() => { 
+      map.invalidateSize(); 
+    }, 100);
     return () => clearTimeout(timer);
-  }, [map]);
+  }, [map, isFullScreen]);
   return null;
 }
 
@@ -165,12 +167,17 @@ export default function ExploreTab({
         <MapContainer 
           center={stableUserLoc ? [stableUserLoc.lat, stableUserLoc.lng] : fallbackCenter} 
           zoom={stableUserLoc ? 16 : 2} 
+          minZoom={3}
+          maxZoom={18}
+          maxBounds={[[-85, -180], [85, 180]]}
           zoomControl={false} 
           style={{ height: '100%', width: '100%' }}
           className="leaflet-container"
+          worldCopyJump={false}
+          maxBoundsViscosity={1.0}
         >
           <ZoomHandler setZoom={setZoom} />
-          <MapInvalidator />
+          <MapInvalidator isFullScreen={isFullScreen} />
           <MapRecenter location={stableUserLoc} isFollowing={isFollowing} />
           <MapDragHandler />
           
