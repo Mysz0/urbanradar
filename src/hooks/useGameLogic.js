@@ -37,7 +37,8 @@ export function useGameLogic(user, showToast) {
         setLeaderboard(mappedLeaderboard);
       }
     } catch (err) { 
-      console.error("Leaderboard fetch error:", err.message); 
+      if (err?.message?.includes('NetworkError')) return; // silent ignore when offline/network hiccup
+      console.error("Leaderboard fetch error:", err.message || err); 
     }
   }, []);
 

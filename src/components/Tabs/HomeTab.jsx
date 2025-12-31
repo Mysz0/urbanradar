@@ -86,12 +86,12 @@ export default function HomeTab({
       {/* NODE DESCRIPTION MODAL */}
       {selectedNode && (
         <div 
-          className="fixed inset-0 z-[100000] flex items-center justify-center p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-[100000] flex items-center justify-center p-4 animate-in fade-in slide-in-from-bottom-4 duration-300"
           style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}
           onClick={() => setSelectedNode(null)}
         >
           <div 
-            className="smart-glass border rounded-3xl max-w-md w-full p-6 animate-in zoom-in-95 duration-300 relative"
+            className="smart-glass border rounded-3xl max-w-md w-full p-6 animate-in fade-in zoom-in-90 slide-in-from-top-2 duration-300 relative"
             onClick={(e) => e.stopPropagation()}
           >
             <button

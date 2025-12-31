@@ -6,6 +6,7 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
   const isActivating = useRef(false);
+  const isBuyingTheme = useRef(false);
 
   // --- DYNAMIC BONUSES (Reactive to Inventory Changes) ---
   const bonuses = useMemo(() => {
@@ -33,21 +34,35 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
   }, [inventory]);
 
   const getItemStatus = useCallback((item) => {
+    const isStreakFreeze = (!item.shop_items?.duration_hours) || item.shop_items?.icon_name === 'Snowflake';
+
+    if (isStreakFreeze) {
+      const activeProtections = item.activated || 0;
+      return {
+        timeLeft: null,
+        progress: 100,
+        isActive: activeProtections > 0,
+        isStreakFreeze: true,
+        protectionsActive: activeProtections,
+        protectionsAvailable: item.available || 0
+      };
+    }
+
     // No active boosts
     if (!item.activated || item.activated <= 0) {
-      return { timeLeft: null, progress: 100, isActive: false };
+      return { timeLeft: null, progress: 100, isActive: false, isStreakFreeze: false };
     }
     
     // Check if expires_at exists for timed items
     if (!item.expires_at) {
-      return { timeLeft: null, progress: 100, isActive: false };
+      return { timeLeft: null, progress: 100, isActive: false, isStreakFreeze: false };
     }
     
     const now = new Date().getTime();
     const expiryTime = new Date(item.expires_at).getTime();
     const diff = expiryTime - now;
 
-    if (diff <= 0) return { timeLeft: "EXPIRED", progress: 0, isActive: true };
+    if (diff <= 0) return { timeLeft: "EXPIRED", progress: 0, isActive: true, isStreakFreeze: false };
 
     // Calculate progress based on single stack duration (1 hour per stack)
     const singleStackDuration = (item.shop_items?.duration_hours || 1) * 60 * 60 * 1000;
@@ -58,7 +73,7 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
     const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     const s = Math.floor((diff % (1000 * 60)) / 1000);
 
-    return { timeLeft: `${h}h ${m}m ${s}s`, progress, isActive: true };
+    return { timeLeft: `${h}h ${m}m ${s}s`, progress, isActive: true, isStreakFreeze: false };
   }, []);
 
   const deactivateExpiredItem = async (inventoryId) => {
@@ -198,28 +213,27 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
 
       setTotalPoints(data.newPoints);
       
-      // Auto-activate streak freeze items (they stack on same row due to unique index)
+      // Auto-activate streak freeze items (consume 1 available into activated)
       if (item.icon_name === 'Snowflake' || !item.duration_hours) {
         setTimeout(async () => {
           const { data: inv } = await supabase
             .from('user_inventory')
-            .select('id, activated')
+            .select('id, available, activated')
             .eq('user_id', user.id)
             .eq('item_id', item.id)
             .single();
           
-          // Only activate if not already active (first purchase)
-          if (inv && !inv.activated) {
+          if (inv) {
             await supabase
               .from('user_inventory')
               .update({ 
-                activated: 1
+                available: Math.max((inv.available || 1) - 1, 0),
+                activated: (inv.activated || 0) + 1
               })
               .eq('id', inv.id);
           }
-          // If already active, available was already incremented by purchase_item
           await fetchData();
-        }, 100);
+        }, 50);
       } else {
         // For timed items (XP boost, radius), fetch data immediately to show in inventory
         await fetchData();
@@ -235,13 +249,14 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
   };
 
   const buyTheme = async (themeName, price, onSuccess) => {
+    if (isBuyingTheme.current) return;
     if (totalPoints < price) {
       showToast(`Need ${price}XP (You have ${totalPoints}XP)`, "error");
       return;
     }
     
     if (loading) return;
-    
+    isBuyingTheme.current = true;
     setLoading(true);
     try {
       const { data, error } = await supabase.rpc('purchase_item', {
@@ -271,6 +286,7 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
       console.error('Purchase error:', err);
       showToast("Purchase failed", "error");
     } finally {
+      isBuyingTheme.current = false;
       setLoading(false);
     }
   };

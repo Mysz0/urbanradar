@@ -21,9 +21,10 @@ export function useGeoLocation(user, spots, customRadius, spotStreaks = {}, clai
       .from('user_inventory')
       .select('*, shop_items(*)')
       .eq('user_id', user.id)
-      .eq('is_active', true);
+      .gt('activated', 0);
 
     if (error) {
+      if (error?.message?.includes('NetworkError')) return;
       console.error("Error fetching upgrades:", error);
       return;
     }

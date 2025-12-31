@@ -240,9 +240,11 @@ export default function StoreTab({ totalPoints, shopItems = [], inventory = [], 
                   </h4>
                   <div className="flex items-center gap-2">
                     <p className={`text-[9px] font-black uppercase tracking-widest ${(inv.activated || 0) > 0 ? 'text-[rgb(var(--theme-primary))]' : 'opacity-40'}`}>
-                      {inv.isStreakFreeze ? 'Protected' : ((inv.activated || 0) > 0 ? 'System Online' : 'Standby')}
+                      {inv.isStreakFreeze 
+                        ? `Protected (${inv.activated ?? 0})`
+                        : ((inv.activated || 0) > 0 ? 'System Online' : 'Standby')}
                     </p>
-                    {(inv.activated || 0) > 0 && inv.timeLeft && (
+                    {(inv.activated || 0) > 0 && inv.timeLeft && !inv.isStreakFreeze && (
                       <div className="flex items-center gap-1 bg-black/20 px-2 py-0.5 rounded-full border border-white/5">
                         <Clock size={8} className="text-[rgb(var(--theme-primary))]" />
                         <span className="text-[9px] font-mono font-bold text-white/90">{inv.timeLeft}</span>

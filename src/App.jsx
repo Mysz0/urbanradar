@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import 'leaflet/dist/leaflet.css';
 
 // MODULAR IMPORTS
@@ -82,24 +82,36 @@ export default function App() {
     buyTheme
   } = useGameLogic(user, showToast);
 
+  const blackholeUnlockingRef = useRef(false);
+
+  useEffect(() => {
+    if (unlockedThemes && unlockedThemes.includes('blackhole')) {
+      blackholeUnlockingRef.current = false;
+    }
+  }, [unlockedThemes]);
+
   // Secret konami code detector for blackhole theme unlock (after useGameLogic)
   const handleKonamiCode = useCallback((e) => {
     const key = e.key.toLowerCase() === 'b' || e.key.toLowerCase() === 'a' 
       ? e.key.toLowerCase() 
       : e.key;
     
+    // If already unlocked, ignore sequence entirely
+    if (unlockedThemes && unlockedThemes.includes('blackhole')) {
+      return;
+    }
+    if (blackholeUnlockingRef.current) return;
+
     setKonamiCode(prev => {
       const newCode = [...prev, key].slice(-10);
       
       // Check if konami code matches
       if (JSON.stringify(newCode) === JSON.stringify(KONAMI_CODE)) {
-        showToast('Black hole unlocked', 'success');
         setKonamiCode([]);
         
         // Automatically buy/unlock blackhole theme (price 0 = free secret unlock)
-        if (unlockedThemes && !unlockedThemes.includes('blackhole')) {
-          buyTheme('blackhole', 0, fetchProfile);
-        }
+        blackholeUnlockingRef.current = true;
+        buyTheme('blackhole', 0, fetchProfile);
       }
       
       return newCode;
@@ -132,8 +144,11 @@ export default function App() {
       
       // Check if sequence is complete (2 username + 5 scan) and not already unlocked
       if (prev.usernameTaps === 2 && newSequence.scanTaps === 5 && unlockedThemes && !unlockedThemes.includes('blackhole')) {
-        setUnlockedSequence({ usernameTaps: 0, scanTaps: 0 });
-        buyTheme('blackhole', 0, fetchProfile);
+        if (!blackholeUnlockingRef.current) {
+          blackholeUnlockingRef.current = true;
+          setUnlockedSequence({ usernameTaps: 0, scanTaps: 0 });
+          buyTheme('blackhole', 0, fetchProfile);
+        }
         return { usernameTaps: 0, scanTaps: 0 };
       }
       

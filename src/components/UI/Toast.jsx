@@ -40,7 +40,7 @@ export default function Toast({ statusMsg }) {
         );
       })}
       
-      <style jsx>{`
+      <style>{`
         @keyframes slideInDown {
           from {
             transform: translateY(-20px);

@@ -34,14 +34,10 @@ export default function ProfileTab({
     { id: 'blackhole', label: 'Blackhole', icon: Sparkles, color: 'bg-[#7C3AED]' },
   ];
 
+  const unlockedThemeList = themes.filter(t => unlockedThemes.includes(t.id));
+
   const handleThemeClick = (theme) => {
-    const isUnlocked = unlockedThemes.includes(theme.id);
-    
-    if (isUnlocked) {
-      setAppStyle(theme.id);
-    } else {
-      showToast('Unlock this theme in the Store!', 'error');
-    }
+    setAppStyle(theme.id);
   };
 
   const handleSaveIdentity = () => {
@@ -108,28 +104,24 @@ export default function ProfileTab({
         </div>
 
         <div className="grid grid-cols-2 gap-2 p-1.5 smart-glass border rounded-2xl">
-          {themes.map((theme) => {
-            const isUnlocked = unlockedThemes.includes(theme.id);
+          {unlockedThemeList.length === 0 && (
+            <div className="col-span-2 text-center text-[10px] font-black uppercase tracking-widest opacity-40 py-6">
+              Unlock themes in the Store
+            </div>
+          )}
+
+          {unlockedThemeList.map((theme) => {
             const Icon = theme.icon;
-            
-            // Hide blackhole theme if not unlocked
-            if (theme.id === 'blackhole' && !isUnlocked) {
-              return null;
-            }
-            
             return (
               <button 
                 key={theme.id}
                 onClick={() => handleThemeClick(theme)}
-                className={`flex items-center justify-center gap-2 py-3 rounded-xl transition-all relative ${
+                className={`flex items-center justify-center gap-2 py-3 rounded-xl transition-all ${
                   appStyle === theme.id 
                   ? `${theme.color} text-white shadow-lg` 
-                  : isUnlocked
-                    ? 'opacity-40 hover:opacity-100'
-                    : 'bg-current/5 opacity-40 hover:opacity-60'
+                  : 'opacity-40 hover:opacity-100'
                 }`}
               >
-                {!isUnlocked && <Lock size={12} className="absolute top-1 right-1 opacity-50" />}
                 <Icon size={14} />
                 <span className="text-[10px] font-bold uppercase">{theme.label}</span>
               </button>
