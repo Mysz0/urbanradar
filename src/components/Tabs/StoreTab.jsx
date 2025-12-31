@@ -224,12 +224,12 @@ export default function StoreTab({ totalPoints, shopItems = [], inventory = [], 
               .sort((a, b) => (a.shop_items?.name || "").localeCompare(b.shop_items?.name || ""))
               .map((inv) => (
               <div key={inv.id} className="smart-glass p-5 rounded-[2.5rem] border border-current/5 flex items-center gap-4 relative overflow-hidden group">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center z-10 relative transition-all duration-500 ${inv.is_active ? 'bg-[rgb(var(--theme-primary))]/20 shadow-[0_0_15px_rgba(var(--theme-primary),0.3)]' : 'bg-current/[0.03]'}`}>
-                  {inv.is_active ? <CheckCircle2 size={24} className="text-[rgb(var(--theme-primary))]" /> : (iconMap[inv.shop_items?.icon_name] || <Package size={24} className="opacity-40" />)}
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center z-10 relative transition-all duration-500 ${(inv.activated || 0) > 0 ? 'bg-[rgb(var(--theme-primary))]/20 shadow-[0_0_15px_rgba(var(--theme-primary),0.3)]' : 'bg-current/[0.03]'}`}>
+                  {(inv.activated || 0) > 0 ? <CheckCircle2 size={24} className="text-[rgb(var(--theme-primary))]" /> : (iconMap[inv.shop_items?.icon_name] || <Package size={24} className="opacity-40" />)}
                   
-                  {inv.quantity > 0 && (
+                  {(inv.available || 0) > 0 && (
                     <div className="absolute -top-1 -right-1 bg-[rgb(var(--theme-primary))] text-white text-[8px] font-black w-6 h-6 rounded-full flex items-center justify-center border-4 border-[var(--theme-map-bg)] shadow-lg">
-                      {inv.quantity}
+                      {inv.available}
                     </div>
                   )}
                 </div>
@@ -239,10 +239,10 @@ export default function StoreTab({ totalPoints, shopItems = [], inventory = [], 
                     {inv.shop_items?.name}
                   </h4>
                   <div className="flex items-center gap-2">
-                    <p className={`text-[9px] font-black uppercase tracking-widest ${inv.is_active ? 'text-[rgb(var(--theme-primary))]' : 'opacity-40'}`}>
-                      {inv.isStreakFreeze ? 'Protected' : (inv.is_active ? 'System Online' : 'Standby')}
+                    <p className={`text-[9px] font-black uppercase tracking-widest ${(inv.activated || 0) > 0 ? 'text-[rgb(var(--theme-primary))]' : 'opacity-40'}`}>
+                      {inv.isStreakFreeze ? 'Protected' : ((inv.activated || 0) > 0 ? 'System Online' : 'Standby')}
                     </p>
-                    {inv.is_active && inv.timeLeft && (
+                    {(inv.activated || 0) > 0 && inv.timeLeft && (
                       <div className="flex items-center gap-1 bg-black/20 px-2 py-0.5 rounded-full border border-white/5">
                         <Clock size={8} className="text-[rgb(var(--theme-primary))]" />
                         <span className="text-[9px] font-mono font-bold text-white/90">{inv.timeLeft}</span>
@@ -252,16 +252,16 @@ export default function StoreTab({ totalPoints, shopItems = [], inventory = [], 
                 </div>
 
                 {/* Only show Engage/Extend button for timed items, not streak freeze */}
-                {inv.quantity > 0 && !inv.isStreakFreeze && (
+                {(inv.available || 0) > 0 && !inv.isStreakFreeze && (
                   <button 
                     onClick={() => onActivate(inv.id)}
                     className="z-10 text-[9px] font-black bg-[rgb(var(--theme-primary))]/10 text-[rgb(var(--theme-primary))] px-4 py-2.5 rounded-xl hover:bg-[rgb(var(--theme-primary))]/20 transition-all border border-[rgb(var(--theme-primary))]/20 active:scale-90 uppercase tracking-widest"
                   >
-                    {inv.is_active ? 'Extend' : 'Engage'}
+                    {(inv.activated || 0) > 0 ? 'Extend' : 'Engage'}
                   </button>
                 )}
 
-                {inv.is_active && !inv.isStreakFreeze && inv.progress !== undefined && (
+                {(inv.activated || 0) > 0 && !inv.isStreakFreeze && inv.progress !== undefined && (
                   <div className="absolute bottom-0 left-5 right-5 h-0.5 overflow-hidden rounded-b-2xl">
                     <div 
                       className="h-full bg-[rgb(var(--theme-primary))] transition-all duration-1000 ease-linear"
@@ -270,7 +270,7 @@ export default function StoreTab({ totalPoints, shopItems = [], inventory = [], 
                   </div>
                 )}
                 
-                {inv.is_active && (
+                {(inv.activated || 0) > 0 && (
                   <div className="absolute inset-0 bg-[rgb(var(--theme-primary))]/5 pointer-events-none animate-pulse" />
                 )}
               </div>
