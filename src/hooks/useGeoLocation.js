@@ -6,6 +6,9 @@ export function useGeoLocation(user, spots, customRadius, spotStreaks = {}, clai
   const [userLocation, setUserLocation] = useState(null);
   const [proximity, setProximity] = useState({ isNear: false, canClaim: false, spotId: null });
   const [radiusBonus, setRadiusBonus] = useState(0);
+  const lastLocationRef = useRef(null);
+  const lastUpdateRef = useRef(Date.now());
+  const errorLoggedRef = useRef(false);
   
   const spotsRef = useRef(spots);
   useEffect(() => { spotsRef.current = spots; }, [spots]);
@@ -111,18 +114,63 @@ export function useGeoLocation(user, spots, customRadius, spotStreaks = {}, clai
     });
   }, [spots, customRadius, claimRadius, spotStreaks, radiusBonus]);
 
-  // --- 3. GEOLOCATION WATCHER ---
+  // --- 3. GEOLOCATION WATCHER WITH ANTI-SPOOF ---
   useEffect(() => {
-    const watchId = navigator.geolocation.watchPosition(
+    let watchId = null;
+
+    watchId = navigator.geolocation.watchPosition(
       (pos) => {
         const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        const now = Date.now();
+        
+        // Anti-spoof validation
+        if (lastLocationRef.current) {
+          const timeDiff = (now - lastUpdateRef.current) / 1000; // seconds
+          const distance = getDistance(
+            lastLocationRef.current.lat, 
+            lastLocationRef.current.lng,
+            coords.lat, 
+            coords.lng
+          );
+          
+          // Max human speed: ~10 m/s (running), planes ~250 m/s
+          // If someone "moved" faster than 50 m/s, likely spoofing
+          const speed = distance / timeDiff;
+          if (speed > 50 && timeDiff > 1) {
+            console.warn('⚠️ Suspicious location change detected. Movement too fast:', Math.round(speed), 'm/s');
+            // Don't update location if teleportation detected
+            return;
+          }
+          
+          // Check accuracy - if accuracy suddenly becomes perfect (0-5m), might be spoofed
+          if (pos.coords.accuracy < 5 && lastLocationRef.current.accuracy > 20) {
+            console.warn('⚠️ Suspicious accuracy improvement detected');
+          }
+        }
+        
+        lastLocationRef.current = { ...coords, accuracy: pos.coords.accuracy };
+        lastUpdateRef.current = now;
         setUserLocation(coords);
-        checkProximity(coords); 
+        checkProximity(coords);
       },
-      (err) => console.warn(err),
+      (err) => {
+        // Only log error once to prevent console spam
+        if (!errorLoggedRef.current) {
+          errorLoggedRef.current = true;
+          if (err.code === 1) {
+            console.warn('Location access denied. Enable location permissions to use this feature.');
+          } else if (err.code === 2) {
+            console.warn('Location unavailable. Check device GPS settings.');
+          } else if (err.code === 3) {
+            console.warn('Location request timed out.');
+          }
+        }
+      },
       { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
     );
-    return () => navigator.geolocation.clearWatch(watchId);
+    return () => {
+      if (watchId) navigator.geolocation.clearWatch(watchId);
+    };
   }, [checkProximity]);
 
   // Re-calculate proximity if bonus changes while standing still
