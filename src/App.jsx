@@ -25,7 +25,7 @@ import ThemeAtmosphere from './components/UI/ThemeAtmosphere';
 export default function App() {
   // 1. SHARED UI STATE
   const [activeTab, setActiveTab] = useState('home');
-  const [statusMsg, setStatusMsg] = useState({ text: '', type: '' });
+  const [statusMsg, setStatusMsg] = useState([]);
   const [konamiCode, setKonamiCode] = useState([]);
   const [unlockedSequence, setUnlockedSequence] = useState({ usernameTaps: 0, scanTaps: 0 });
   const KONAMI_CODE = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
@@ -47,8 +47,11 @@ export default function App() {
   } = useTheme();
 
   const showToast = (text, type = 'success') => {
-    setStatusMsg({ text, type });
-    setTimeout(() => setStatusMsg({ text: '', type: '' }), 4000);
+    const id = Date.now();
+    setStatusMsg(prev => [{ id, text, type }, ...prev]); // Prepend to show at top
+    setTimeout(() => {
+      setStatusMsg(prev => prev.filter(msg => msg.id !== id));
+    }, 2000);
   };
 
   const {
@@ -180,7 +183,7 @@ export default function App() {
   return (
     <div className="min-h-screen relative pb-36 transition-all duration-700 ease-in-out bg-[var(--theme-map-bg)] text-[var(--theme-text-title)]">
 
-      <Toast statusMsg={statusMsg} setStatusMsg={setStatusMsg} />
+      <Toast statusMsg={statusMsg} />
 
       <ThemeToggle 
         themeMag={themeMag} 

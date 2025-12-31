@@ -17,22 +17,39 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
       (inv) => inv.is_active && inv.shop_items?.icon_name === 'Maximize'
     );
 
+    const hasStreakFreeze = inventory.some(
+      (inv) => inv.is_active && inv.shop_items?.icon_name === 'Snowflake'
+    );
+
     return {
       xpMultiplier: hasXPBoost ? 1.5 : 1.0,
       radiusBonus: hasRadiusBoost ? 30 : 0,
       isActive: {
         xp: hasXPBoost,
-        radius: hasRadiusBoost
+        radius: hasRadiusBoost,
+        streakFreeze: hasStreakFreeze
       }
     };
   }, [inventory]);
 
   const getItemStatus = useCallback((item) => {
-    if (!item.is_active || !item.activated_at || !item.shop_items?.duration_hours) {
+    if (!item.is_active || !item.activated_at) {
       return { timeLeft: null, progress: 100 };
     }
     
-    const durationMs = item.shop_items.duration_hours * 60 * 60 * 1000;
+    // Items with no duration (like Streak Freeze) show protection count
+    if (!item.shop_items?.duration_hours) {
+      const protections = item.quantity || 0;
+      return { 
+        timeLeft: `${protections} protection${protections !== 1 ? 's' : ''} ready`, 
+        progress: 100,
+        isStreakFreeze: true 
+      };
+    }
+    
+    // Timed items: Show time based on active_count stacks
+    const activeCount = item.active_count || 1;
+    const durationMs = item.shop_items.duration_hours * 60 * 60 * 1000 * activeCount;
     const startTime = new Date(item.activated_at).getTime();
     const expiryTime = startTime + durationMs;
     const now = new Date().getTime();
@@ -50,32 +67,49 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
 
   const deactivateExpiredItem = async (inventoryId) => {
     try {
-      // First, get the current item from database to check quantity
       const { data: currentItem } = await supabase
         .from('user_inventory')
-        .select('quantity')
+        .select('quantity, active_count')
         .eq('id', inventoryId)
         .single();
       
-      if (currentItem && currentItem.quantity <= 0) {
-        // Delete from database if quantity is 0
+      if (!currentItem) return;
+      
+      const activeCount = currentItem.active_count || 0;
+      
+      // If there are more stacks active, just decrement active_count
+      if (activeCount > 1) {
+        await supabase
+          .from('user_inventory')
+          .update({ 
+            active_count: activeCount - 1,
+            activated_at: new Date().toISOString() // Reset timer for remaining stacks
+          })
+          .eq('id', inventoryId);
+        
+        setInventory(prev => prev.map(i => 
+          i.id === inventoryId 
+            ? { ...i, active_count: activeCount - 1, activated_at: new Date().toISOString() }
+            : i
+        ));
+      } else if (currentItem.quantity <= 0) {
+        // No quantity left and last stack expired, delete
         await supabase
           .from('user_inventory')
           .delete()
           .eq('id', inventoryId);
         
-        // Remove from local state
         setInventory(prev => prev.filter(i => i.id !== inventoryId));
       } else {
-        // Just deactivate if quantity > 0
+        // Last stack expired but quantity remains, deactivate
         await supabase
           .from('user_inventory')
-          .update({ is_active: false, activated_at: null })
+          .update({ is_active: false, activated_at: null, active_count: 0 })
           .eq('id', inventoryId);
         
         setInventory(prev => prev.map(i => 
           i.id === inventoryId 
-            ? { ...i, is_active: false, activated_at: null, timeLeft: null }
+            ? { ...i, is_active: false, activated_at: null, active_count: 0, timeLeft: null }
             : i
         ));
       }
@@ -94,7 +128,19 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
         .select('*, shop_items(*)')
         .eq('user_id', user.id);
       
-      const processedInv = (inv || []).map(item => {
+      // Clean up items with 0 quantity UNLESS they're active (like streak freeze)
+      const itemsToDelete = (inv || []).filter(item => item.quantity <= 0 && !item.is_active);
+      if (itemsToDelete.length > 0) {
+        await supabase
+          .from('user_inventory')
+          .delete()
+          .in('id', itemsToDelete.map(i => i.id));
+      }
+      
+      // Keep items with quantity > 0 OR active items (even if quantity is 0)
+      const validInv = (inv || []).filter(item => item.quantity > 0 || item.is_active);
+      
+      const processedInv = validInv.map(item => {
         const status = getItemStatus(item);
         if (status.timeLeft === "EXPIRED") {
           deactivateExpiredItem(item.id);
@@ -155,8 +201,33 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
       }
 
       setTotalPoints(data.newPoints);
+      
+      // Auto-activate streak freeze items (they stack on same row due to unique index)
+      if (item.icon_name === 'Snowflake' || !item.duration_hours) {
+        setTimeout(async () => {
+          const { data: inv } = await supabase
+            .from('user_inventory')
+            .select('id, is_active')
+            .eq('user_id', user.id)
+            .eq('item_id', item.id)
+            .single();
+          
+          // Only activate if not already active (first purchase)
+          if (inv && !inv.is_active) {
+            await supabase
+              .from('user_inventory')
+              .update({ 
+                is_active: true, 
+                activated_at: new Date().toISOString() 
+              })
+              .eq('id', inv.id);
+          }
+          // If already active, quantity was already incremented by purchase_item
+          await fetchData();
+        }, 100);
+      }
+      
       showToast(`Purchased ${item.name}!`, "success");
-      await fetchData();
     } catch (err) {
       console.error('Purchase error:', err);
       showToast("Purchase failed", "error");
@@ -216,36 +287,52 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
     setLoading(true);
 
     try {
-      const durationHours = item.shop_items?.duration_hours || 1;
-      const boostDurationMs = durationHours * 60 * 60 * 1000;
+      const durationHours = item.shop_items?.duration_hours;
+      const isStreakFreeze = !durationHours;
       
-      let finalActivationAt;
+      if (isStreakFreeze) {
+        // Streak Freeze: Just activate, quantity stays as-is (represents protections)
+        const { error } = await supabase
+          .from('user_inventory')
+          .update({
+            is_active: true,
+            activated_at: new Date().toISOString()
+          })
+          .eq('id', inventoryId);
 
-      if (item.is_active && item.activated_at) {
-        // EXTENSION: Start from current expiry
-        const currentStartTime = new Date(item.activated_at).getTime();
-        const currentExpiry = currentStartTime + boostDurationMs;
-        const newExpiry = currentExpiry + boostDurationMs;
-        
-        // Normalize back to a "start time" relative to the new expiry
-        finalActivationAt = new Date(newExpiry - boostDurationMs).toISOString();
+        if (error) throw error;
+        showToast(`${item.shop_items.name} activated! ${item.quantity} protection${item.quantity > 1 ? 's' : ''} ready.`, "success");
       } else {
-        // FRESH START
-        finalActivationAt = new Date().toISOString();
+        // Timed items: Use active_count to track stacks, decrement quantity
+        const currentActiveCount = item.active_count || 0;
+        const boostDurationMs = durationHours * 60 * 60 * 1000;
+        let finalActivationAt;
+
+        if (item.is_active && item.activated_at) {
+          // EXTENSION: Calculate new expiry based on current + new duration
+          const currentStartTime = new Date(item.activated_at).getTime();
+          const currentExpiry = currentStartTime + (boostDurationMs * currentActiveCount);
+          const newExpiry = currentExpiry + boostDurationMs;
+          finalActivationAt = new Date(newExpiry - (boostDurationMs * (currentActiveCount + 1))).toISOString();
+        } else {
+          // FRESH START
+          finalActivationAt = new Date().toISOString();
+        }
+
+        const { error } = await supabase
+          .from('user_inventory')
+          .update({
+            quantity: item.quantity - 1,
+            active_count: currentActiveCount + 1,
+            is_active: true,
+            activated_at: finalActivationAt
+          })
+          .eq('id', inventoryId);
+
+        if (error) throw error;
+        showToast(`${item.shop_items.name} ${item.is_active ? 'extended' : 'activated'}! (${currentActiveCount + 1}x active)`, "success");
       }
-
-      const { error } = await supabase
-        .from('user_inventory')
-        .update({
-          quantity: item.quantity - 1,
-          is_active: true,
-          activated_at: finalActivationAt
-        })
-        .eq('id', inventoryId);
-
-      if (error) throw error;
       
-      showToast(`${item.shop_items.name} ${item.is_active ? 'extended' : 'activated'}!`, "success");
       await fetchData();
     } catch (err) {
       console.error("Activation error:", err);

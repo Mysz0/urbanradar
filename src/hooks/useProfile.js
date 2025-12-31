@@ -42,35 +42,39 @@ export function useProfile(user, showToast, fetchLeaderboard) {
         console.log('fetchProfile: Setting unlocked themes to:', profile.unlocked_themes);
         setUnlockedThemes(profile.unlocked_themes || ['emerald', 'winter']);
 
-        // Streak & Visit Logic
+        // Use database function to handle streak logic atomically
         const now = new Date();
-        const todayStr = now.toDateString();
-        let dbStreak = profile.streak_count || 0;
-        let lastVisitDate = profile.last_visit ? new Date(profile.last_visit) : null;
-        let newStreak = dbStreak;
+        const { data: streakData, error: streakError } = await supabase
+          .rpc('update_user_streak', {
+            p_user_id: userId,
+            p_current_time: now.toISOString()
+          });
 
-        if (!lastVisitDate) {
-          newStreak = 1;
-        } else if (lastVisitDate.toDateString() !== todayStr) {
-          const yesterday = new Date();
-          yesterday.setDate(yesterday.getDate() - 1);
-          newStreak = (lastVisitDate.toDateString() === yesterday.toDateString()) ? dbStreak + 1 : 1;
-        }
-
-        setVisitData({ last_visit: now.toISOString(), streak: newStreak });
-
-        // Update DB if it's a new day
-        if (!lastVisitDate || lastVisitDate.toDateString() !== todayStr) {
-          await supabase
-            .from('profiles')
-            .update({ 
-              streak_count: newStreak, 
-              last_visit: now.toISOString() 
-            })
-            .eq('id', userId);
-
-          if (showToast && newStreak > 1) showToast(`${newStreak} Day Streak Active!`);
-          if (fetchLeaderboard) fetchLeaderboard();
+        if (streakError) {
+          console.error("Streak update error:", streakError);
+        } else if (streakData) {
+          if (streakData.error) {
+            console.error("Streak function error:", streakData.error);
+          } else {
+            const newStreak = streakData.streak;
+            const oldStreak = streakData.old_streak || 0;
+            const freezeUsed = streakData.freeze_used;
+            
+            setVisitData({ last_visit: now.toISOString(), streak: newStreak });
+            
+            // Show appropriate toast messages
+            if (streakData.message !== 'Already visited today') {
+              if (freezeUsed && showToast) {
+                showToast('❄️ Streak Freeze protected your streak!', 'success');
+              } else if (newStreak === 1 && oldStreak > 1 && showToast) {
+                showToast('Streak reset to 1', 'error');
+              } else if (newStreak > 1 && showToast) {
+                showToast(`${newStreak} Day Streak Active!`);
+              }
+              
+              if (fetchLeaderboard) fetchLeaderboard();
+            }
+          }
         }
       }
     } catch (err) {

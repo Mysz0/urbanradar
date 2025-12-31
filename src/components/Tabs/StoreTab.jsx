@@ -27,7 +27,8 @@ export default function StoreTab({ totalPoints, shopItems = [], inventory = [], 
 
   const iconMap = {
     Zap: <Zap size={24} className="text-yellow-400" />,
-    Maximize: <Maximize size={24} className="text-blue-400" />
+    Maximize: <Maximize size={24} className="text-blue-400" />,
+    Snowflake: <Snowflake size={24} className="text-cyan-400" />
   };
 
   // Theme definitions with prices and icons
@@ -239,7 +240,7 @@ export default function StoreTab({ totalPoints, shopItems = [], inventory = [], 
                   </h4>
                   <div className="flex items-center gap-2">
                     <p className={`text-[9px] font-black uppercase tracking-widest ${inv.is_active ? 'text-[rgb(var(--theme-primary))]' : 'opacity-40'}`}>
-                      {inv.is_active ? 'System Online' : 'Standby'}
+                      {inv.isStreakFreeze ? 'Protected' : (inv.is_active ? 'System Online' : 'Standby')}
                     </p>
                     {inv.is_active && inv.timeLeft && (
                       <div className="flex items-center gap-1 bg-black/20 px-2 py-0.5 rounded-full border border-white/5">
@@ -250,7 +251,8 @@ export default function StoreTab({ totalPoints, shopItems = [], inventory = [], 
                   </div>
                 </div>
 
-                {inv.quantity > 0 && (
+                {/* Only show Engage/Extend button for timed items, not streak freeze */}
+                {inv.quantity > 0 && !inv.isStreakFreeze && (
                   <button 
                     onClick={() => onActivate(inv.id)}
                     className="z-10 text-[9px] font-black bg-[rgb(var(--theme-primary))]/10 text-[rgb(var(--theme-primary))] px-4 py-2.5 rounded-xl hover:bg-[rgb(var(--theme-primary))]/20 transition-all border border-[rgb(var(--theme-primary))]/20 active:scale-90 uppercase tracking-widest"
@@ -259,7 +261,7 @@ export default function StoreTab({ totalPoints, shopItems = [], inventory = [], 
                   </button>
                 )}
 
-                {inv.is_active && inv.progress !== undefined && (
+                {inv.is_active && !inv.isStreakFreeze && inv.progress !== undefined && (
                   <div className="absolute bottom-0 left-5 right-5 h-0.5 overflow-hidden rounded-b-2xl">
                     <div 
                       className="h-full bg-[rgb(var(--theme-primary))] transition-all duration-1000 ease-linear"
