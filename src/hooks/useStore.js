@@ -135,8 +135,20 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
         .select('*, shop_items(*)')
         .eq('user_id', user.id);
       
-      // Clean up items with 0 quantity UNLESS they're active (like streak freeze)
-      const itemsToDelete = (inv || []).filter(item => item.quantity <= 0 && !item.is_active);
+      // Clean up expired items: quantity=0 OR (active with expired timer)
+      const now = new Date().getTime();
+      const itemsToDelete = (inv || []).filter(item => {
+        // Delete if quantity <= 0 and not a frozen freeze
+        if (item.quantity <= 0 && item.shop_items?.icon_name !== 'Snowflake') {
+          return true;
+        }
+        // Delete if active timer-based item has expired
+        if (item.is_active && item.expires_at && item.shop_items?.duration_hours) {
+          return new Date(item.expires_at).getTime() < now;
+        }
+        return false;
+      });
+      
       if (itemsToDelete.length > 0) {
         await supabase
           .from('user_inventory')
@@ -144,8 +156,13 @@ export function useStore(user, totalPoints, setTotalPoints, showToast) {
           .in('id', itemsToDelete.map(i => i.id));
       }
       
-      // Keep items with quantity > 0 OR active items (even if quantity is 0)
-      const validInv = (inv || []).filter(item => item.quantity > 0 || item.is_active);
+      // Keep: quantity > 0 OR (active streak freeze)
+      const validInv = (inv || []).filter(item => {
+        if (item.quantity > 0) return true;
+        // Keep active streak freeze even if quantity 0 (it will be deleted when consumed)
+        if (item.is_active && item.shop_items?.icon_name === 'Snowflake') return true;
+        return false;
+      });
       
       const processedInv = validInv.map(item => {
         const status = getItemStatus(item);
