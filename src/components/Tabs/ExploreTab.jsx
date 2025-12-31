@@ -250,7 +250,7 @@ export default function ExploreTab({
                     <p className="text-[10px] font-bold truncate mb-1.5">{spot.name}</p>
 
                     <div className="flex items-center justify-between pt-1.5 border-t border-current opacity-10">
-                      <div className="flex items-center gap-1 opacity-100">
+                      <div className="flex items-center gap-2 opacity-100">
                         <button 
                           disabled={!isUnlocked}
                           onClick={() => isUnlocked && onVote(spot.id, 'upvotes')}
@@ -264,6 +264,7 @@ export default function ExploreTab({
                         >
                           <ChevronUp size={12} strokeWidth={hasUpvoted ? 4 : 2} />
                         </button>
+                        <span className="vote-count-net text-[10px] font-bold w-7 text-center">{(spot.upvotes || 0) - (spot.downvotes || 0)}</span>
                         <button 
                           disabled={!isUnlocked}
                           onClick={() => isUnlocked && onVote(spot.id, 'downvotes')}

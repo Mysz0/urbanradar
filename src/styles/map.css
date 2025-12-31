@@ -8,6 +8,30 @@
 .leaflet-popup-tip-container { display: none !important; }
 .leaflet-popup-content { margin: 0 !important; width: auto !important; }
 
+/* --- POPUP SMART-GLASS OVERRIDE --- */
+.leaflet-popup-content .smart-glass {
+  color: rgb(var(--theme-primary)) !important;
+}
+
+.leaflet-popup-content .smart-glass * {
+  opacity: 1 !important;
+  color: rgb(var(--theme-primary)) !important;
+}
+
+.leaflet-popup-content .smart-glass p:nth-of-type(2) {
+  color: white !important;
+}
+
+.leaflet-popup-content .smart-glass span {
+  color: rgb(var(--theme-primary)) !important;
+}
+
+/* --- VOTE COUNT BOX STYLING --- */
+.vote-count-net {
+  color: rgb(var(--theme-primary)) !important;
+  font-weight: 900 !important;
+}
+
 /* --- MAP UI & MARKERS --- */
 .leaflet-control-attribution, .leaflet-control-zoom { display: none !important; }
 .leaflet-container {

@@ -51,7 +51,7 @@ export function useSpots(user, showToast, totalPoints, setTotalPoints, fetchLead
 
       const merged = (spotsRes.data || []).reduce((acc, s) => {
         const c = globalCounts[s.id] || { up: 0, down: 0 };
-        acc[s.id] = { ...s, upvotes: c.up, downvotes: c.down, myvote: voteLookup[s.id] || null };
+        acc[s.id] = { ...s, upvotes: c.up, downvotes: c.down, myVote: voteLookup[s.id] || null };
         return acc;
       }, {});
 
