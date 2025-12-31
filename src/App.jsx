@@ -48,7 +48,10 @@ export default function App() {
 
   const showToast = (text, type = 'success') => {
     const id = Date.now();
-    setStatusMsg(prev => [{ id, text, type }, ...prev]); // Prepend to show at top
+    setStatusMsg(prev => {
+      const updated = [{ id, text, type }, ...prev];
+      return updated.slice(0, 3); // Keep only the 3 most recent
+    });
     setTimeout(() => {
       setStatusMsg(prev => prev.filter(msg => msg.id !== id));
     }, 2000);
