@@ -87,6 +87,36 @@ function RightClickPan() {
   return null;
 }
 
+function PriorityClickHandler({ spots, markerRefs }) {
+  const map = useMap();
+
+  useMapEvents({
+    click: (event) => {
+      if (event.originalEvent?.target?.closest('.leaflet-control')) return;
+
+      const clickPoint = map.mouseEventToContainerPoint(event.originalEvent);
+      const thresholdPx = 28;
+
+      let nearest = null;
+
+      spots.forEach((spot) => {
+        const point = map.latLngToContainerPoint([spot.lat, spot.lng]);
+        const dist = clickPoint.distanceTo(point);
+        if (dist <= thresholdPx && (!nearest || dist < nearest.dist)) {
+          nearest = { spot, dist };
+        }
+      });
+
+      if (!nearest) return;
+
+      const ref = markerRefs.current[nearest.spot.id];
+      if (ref?.openPopup) ref.openPopup();
+    }
+  });
+
+  return null;
+}
+
 function MapInterface({ stableUserLoc, claimRadius, customRadius, radiusBonus, onRecenter }) {
   const map = useMap();
   
@@ -147,6 +177,7 @@ export default function ExploreTab({
   const [zoom, setZoom] = useState(16);
   const [isFollowing, setIsFollowing] = useState(!!userLocation);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const markerRefs = useRef({});
 
   // Toggle a body class so global UI (navbar, theme toggle) can hide in fullscreen
   useEffect(() => {
@@ -195,9 +226,13 @@ export default function ExploreTab({
 
   const spotIcon = (isUnlocked) => L.divIcon({
     className: 'custom-div-icon',
-    html: `<div class="marker-pin-spot ${isUnlocked ? 'unlocked' : ''}"><div class="dot"></div></div>`,
-    iconSize: [0, 0],
-    iconAnchor: [0, 0]
+    html: `
+      <div style="width:42px;height:42px;display:flex;align-items:center;justify-content:center;pointer-events:auto;">
+        <div class="marker-pin-spot ${isUnlocked ? 'unlocked' : ''}"><div class="dot"></div></div>
+      </div>
+    `,
+    iconSize: [42, 42],
+    iconAnchor: [21, 21]
   });
 
   return (
@@ -231,6 +266,7 @@ export default function ExploreTab({
           <MapInvalidator isFullScreen={isFullScreen} />
           <MapRecenter location={stableUserLoc} isFollowing={isFollowing} />
           <RightClickPan />
+          <PriorityClickHandler spots={Object.values(spots)} markerRefs={markerRefs} />
           <MapDragHandler />
           
           <TileLayer
@@ -289,7 +325,12 @@ export default function ExploreTab({
             const hasDownvoted = spot.myVote === 'down';
 
             return (
-              <Marker key={spot.id} position={[spot.lat, spot.lng]} icon={spotIcon(isUnlocked)}>
+              <Marker
+                key={spot.id}
+                position={[spot.lat, spot.lng]}
+                icon={spotIcon(isUnlocked)}
+                ref={(node) => { if (node) markerRefs.current[spot.id] = node; }}
+              >
                 <Popup closeButton={false} offset={[0, -5]}>
                   <div className="smart-glass p-1.5 px-2 rounded-xl border min-w-[140px] shadow-2xl overflow-hidden">
                     <div className="flex items-center justify-between mb-0.5">
