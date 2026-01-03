@@ -14,12 +14,22 @@ import {
   AlertTriangle,
   X
 } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 
 function ChangeView({ center }) {
   const map = useMap();
   map.setView(center, 15);
+  return null;
+}
+
+function MapClickCapture({ onSelect }) {
+  useMapEvents({
+    click: (event) => {
+      const { lat, lng } = event.latlng;
+      onSelect({ lat, lng });
+    }
+  });
   return null;
 }
 
@@ -182,6 +192,11 @@ export default function AdminTab({
         <div className="h-48 w-full rounded-[2rem] overflow-hidden border border-current/10 relative z-0">
           <MapContainer center={previewCenter} zoom={15} style={{ height: '100%', width: '100%' }} zoomControl={false}>
             <TileLayer url={isDark ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"} />
+            <MapClickCapture onSelect={({ lat, lng }) => setNewSpot(prev => ({
+              ...prev,
+              lat: lat.toFixed(6),
+              lng: lng.toFixed(6)
+            }))} />
             {newSpot.lat && newSpot.lng && (
               <>
                 <Marker position={previewCenter} icon={getPreviewIcon()} />
