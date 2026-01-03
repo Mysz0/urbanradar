@@ -4,13 +4,13 @@
   "description": "Discover, Sync, and Dominate. A real-world location game where every spot found is a step toward the top of the leaderboard.",
   "icons": [
     {
-      "src": "/icon-512.png",
+      "src": "/icon.png",
       "type": "image/png",
       "sizes": "608x608",
       "purpose": "any"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/icon.png",
       "type": "image/png",
       "sizes": "608x608",
       "purpose": "maskable"
