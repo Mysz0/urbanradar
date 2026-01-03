@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Terminal, 
   Trash2, 
@@ -30,6 +30,56 @@ function MapClickCapture({ onSelect }) {
       onSelect({ lat, lng });
     }
   });
+  return null;
+}
+
+function RightClickPan() {
+  const map = useMap();
+
+  useEffect(() => {
+    const container = map.getContainer();
+    let isPanning = false;
+    let lastPoint = null;
+
+    const handleContextMenu = (event) => {
+      event.preventDefault();
+    };
+
+    const handleMouseDown = (event) => {
+      if (event.button !== 2) return;
+      event.preventDefault();
+      isPanning = true;
+      lastPoint = map.mouseEventToContainerPoint(event);
+    };
+
+    const handleMouseMove = (event) => {
+      if (!isPanning || !lastPoint) return;
+      const currentPoint = map.mouseEventToContainerPoint(event);
+      const delta = lastPoint.subtract(currentPoint);
+      if (delta.x !== 0 || delta.y !== 0) {
+        map.panBy(delta, { animate: false });
+        lastPoint = currentPoint;
+      }
+    };
+
+    const handleMouseUp = () => {
+      isPanning = false;
+      lastPoint = null;
+    };
+
+    container.addEventListener('contextmenu', handleContextMenu);
+    container.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      container.removeEventListener('contextmenu', handleContextMenu);
+      container.removeEventListener('mousedown', handleMouseDown);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [map]);
+
   return null;
 }
 
@@ -192,6 +242,7 @@ export default function AdminTab({
         <div className="h-48 w-full rounded-[2rem] overflow-hidden border border-current/10 relative z-0">
           <MapContainer center={previewCenter} zoom={15} style={{ height: '100%', width: '100%' }} zoomControl={false}>
             <TileLayer url={isDark ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"} />
+            <RightClickPan />
             <MapClickCapture onSelect={({ lat, lng }) => setNewSpot(prev => ({
               ...prev,
               lat: lat.toFixed(6),

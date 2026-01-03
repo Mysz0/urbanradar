@@ -36,6 +36,57 @@ function MapInvalidator({ isFullScreen }) {
   return null;
 }
 
+function RightClickPan() {
+  const map = useMap();
+
+  useEffect(() => {
+    const container = map.getContainer();
+    let isPanning = false;
+    let lastPoint = null;
+
+    const handleContextMenu = (event) => {
+      // Keep the UI clean while enabling right-button panning
+      event.preventDefault();
+    };
+
+    const handleMouseDown = (event) => {
+      if (event.button !== 2) return; // right button only
+      event.preventDefault();
+      isPanning = true;
+      lastPoint = map.mouseEventToContainerPoint(event);
+    };
+
+    const handleMouseMove = (event) => {
+      if (!isPanning || !lastPoint) return;
+      const currentPoint = map.mouseEventToContainerPoint(event);
+      const delta = lastPoint.subtract(currentPoint);
+      if (delta.x !== 0 || delta.y !== 0) {
+        map.panBy(delta, { animate: false });
+        lastPoint = currentPoint;
+      }
+    };
+
+    const handleMouseUp = () => {
+      isPanning = false;
+      lastPoint = null;
+    };
+
+    container.addEventListener('contextmenu', handleContextMenu);
+    container.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      container.removeEventListener('contextmenu', handleContextMenu);
+      container.removeEventListener('mousedown', handleMouseDown);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [map]);
+
+  return null;
+}
+
 function MapInterface({ stableUserLoc, claimRadius, customRadius, radiusBonus, onRecenter }) {
   const map = useMap();
   
@@ -179,6 +230,7 @@ export default function ExploreTab({
           <ZoomHandler setZoom={setZoom} />
           <MapInvalidator isFullScreen={isFullScreen} />
           <MapRecenter location={stableUserLoc} isFollowing={isFollowing} />
+          <RightClickPan />
           <MapDragHandler />
           
           <TileLayer
